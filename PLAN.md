@@ -44,9 +44,9 @@
   1. 就绪 JDK 21（本机 DevEco Studio 自带 JBR 21.0.6，完整 JDK 含 javac，复制至 `tools/jdk-21`；设计报告 5.1 要求 17+，21 满足，口径已同步至设计报告 v0.2）；
   2. 安装 Docker Desktop 与 WSL2（Docker 后端）；
   3. 核对硬件资源满足设计报告 4.6.3(5)：可用内存 ≥ 12 GB、磁盘空闲 ≥ 40 GB。
-- **验收标准**：① `java -version` 输出 21；② `docker info` 返回服务器版本；③ `wsl --status` 正常；④ 内存/磁盘达标
+- **验收标准**：① `java -version` 输出 21 ✅；② `docker info` 返回服务器版本（CLI 已装 29.7.2 ✅，引擎运行状态待用户目视确认，见 STATE 风险 #11）；③ `wsl --status` 正常 ✅；④ 内存/磁盘达标（内存 15.7 GB ✅；**磁盘 C 空闲 15.8 GB ❌，须清理至 ≥30 GB**，见 D-15）
 - **产出物**：JDK 21（`tools/jdk-21`，已加入 .gitignore）；Docker Desktop + WSL2 环境
-- **人工环节**：Docker Desktop 安装需管理员权限与可能的重启；BIOS 虚拟化需人工核对（任务管理器→性能→虚拟化）
+- **人工环节**：Docker Desktop 安装需管理员权限与可能的重启；BIOS 虚拟化需人工核对（任务管理器→性能→虚拟化）；磁盘清理（powercfg /h off、cleanmgr 等，见 STATE 风险 #10）
 - **提交**：开始标记提交（HEAD）；完成后收尾提交
 
 ---

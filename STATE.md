@@ -42,6 +42,7 @@
 | 2026-09-11 | 3ebe329 | S19 进展：口径调整 JDK 17→21（本机 DevEco JBR 21.0.6 复制至 tools/jdk-21，java/javac 验证通过）；下载 JDK 不可行（沙箱 TLS 凭据不可用 + 镜像不通），记录于风险表；设计报告 5.1.2/4.3.1/技术栈基线同步更新并升版 v0.2 | AI |
 | 2026-09-11 | 本步（HEAD） | 一致性核对（应用户要求）：全量检索确认 JDK 17 表述已全部替换为 21；修正 STATE 当前步骤行残留"JDK17"字样；标注 D-2 的 JDK 版本部分被 D-13 细化；回填各条时间线/版本表提交号 | AI |
 | 2026-09-11 | 本步（HEAD） | S19 进展（用户侧）：用户执行 `wsl --install`——WSL 2.7.13 与内核 6.18.33 安装成功（AI 侧实测确认），Ubuntu 发行版因 GitHub DNS 解析失败未下载（项目不需要，Docker Desktop 自带发行版）；Docker Desktop 安装进行中。据此登记风险 #9 与 Docker 镜像加速预案 | AI |
+| 2026-09-11 | 本步（HEAD） | S19 验收初核：① JDK21 ✅ ② Docker CLI 29.7.2 已装、引擎运行状态待用户目视确认（沙箱无法访问 named pipe，风险 #11） ③ WSL ✅ ④ 内存 15.7GB ✅ / **磁盘 C 空闲仅 15.8GB ❌**。据此登记 D-14（WSL 内存 8GB）、D-15（S20 开工前置：C 盘 ≥30GB）、风险 #10（磁盘不足与清理预案） | AI |
 
 ## 4. 决策记录（永不删除，只可被新决策取代）
 
@@ -59,6 +60,8 @@
 | D-10 | 本项目一切工作遵守 project-governance 治理纪律（git 分步提交 + PLAN/STATE 唯一权威） | 用户 2026-09-11 要求：随时可回滚、严格分步、持久记忆、杜绝上下文矛盾 | 有效 |
 | D-11 | 开发起点：先环境后代码，顺序 S19（环境准备）→ S20（六组件）→ S21（最小链路），再扩展业务；文档步骤 S10/S11 冻结至实现完成后 | 探测确认 Docker/WSL2 未装、JDK 为 1.8——环境是硬阻塞；且课程阶段划分与设计报告 4.6.4 均为"自下而上逐层验证"；用户 2026-09-11 确认 | 有效 |
 | D-13 | JDK 口径由 17 调整为 21（细化 D-2 的 JDK 版本部分）：使用本机 DevEco Studio 自带 JBR 21.0.6（完整 JDK，含 javac），复制至 `tools/jdk-21` 使用；构建时以命令内联 `JAVA_HOME` 覆盖全局（全局 JAVA_HOME 仍指向 JDK 8，不改系统环境变量） | 沙箱网络 TLS 凭据不可用（SEC_E_NO_CREDENTIALS），Adoptium 与镜像均无法下载；本机已具备完整 JDK 21，且 Spring Boot 3.2 支持 17~21，21 满足要求；设计报告 5.1.2/4.3.1/技术栈基线已同步更新（v0.2） | 有效 |
+| D-14 | WSL2 内存分配 8 GB、swap 8 GB（通过 `.wslconfig` 设置） | 本机总内存实测 15.7 GB，按约 50% 分配留足 Windows 开销；取代此前"10~12 GB"的口头建议 | 有效 |
+| D-15 | S20 开工前置条件：C 盘空闲 ≥ 30 GB（当前 15.8 GB，须先清理）；期间不启动 Kibana | 六组件镜像约 7~8 GB + vhdx 增长，15.8 GB 必然爆盘（风险 #10） | 有效 |
 
 ## 5. 术语与口径注册表（全项目唯一权威口径，改口径必须先改本表）
 
@@ -80,13 +83,15 @@
 
 1. 【待回填】设计报告 5.4 节 16 张截图、6.6 节全部测试结果与结论、6.7 节优化前后对比——须实际运行后据实填写（D-9）。
 2. 排错预案 P-1~P-15（设计报告 5.3 节）：Kafka 地址回传、NameNode 重复格式化、WebHDFS 重定向、ES yellow、refresh 语义、geo 经纬序、时区等。
-3. 宿主机内存建议 ≥ 12 GB；资源不足时先停 Kibana、减少仿真实例（设计报告 4.6.3(5)）。
+3. 宿主机内存建议 ≥ 12 GB；实测本机总内存 **15.7 GB**（勉强达标）→ WSL2 内存分配定为 **8 GB**（D-14），资源不足时先停 Kibana、减少仿真实例（设计报告 4.6.3(5)）。
 4. Word 打开期间会在工作区生成 `~$*.docx` 锁文件——已被 .gitignore 排除；注意 Word 占用时不要删除/覆盖对应 docx。
 5. 版本库目前仅存本地，无远端；异地备份为候选步骤 S60。
 6. 测试用例 TC/IT/PT 仅完成设计（第 6 章），尚未执行——执行是候选步骤 S50。
 7. 全局 `JAVA_HOME` 仍指向 JDK 8（1.8.0_151）：所有 Java 构建命令必须内联覆盖 `JAVA_HOME` 指向 `tools\jdk-21`（见 D-13）；用户可自行修改系统环境变量（可选）。
 8. 沙箱网络限制：AI 执行环境的 curl/Invoke-WebRequest 因 TLS 凭据不可用（SEC_E_NO_CREDENTIALS）无法下载外部文件；需要联网下载（Docker Desktop 安装包等）时由用户在系统终端执行。
 9. 用户机器访问 GitHub 失败（`wsl --install` 拉取发行版列表时 raw.githubusercontent.com DNS 解析失败，WININET_E_NAME_NOT_RESOLVED）。当前状态：WSL 2.7.13 与内核 6.18.33 已装好（AI 侧实测），仅缺 Ubuntu 发行版——**项目不需要 Ubuntu**（Docker Desktop 自带 docker-desktop 发行版）。引申风险：S20 从 Docker Hub 拉镜像可能同样受阻；预案：Docker Desktop 配置国内 registry mirror（中科大/网易/阿里加速器），S20 第一步先 `docker pull hello-world` 验证。
+10. **磁盘空间不达标（S19 验收项④未过）**：C 盘空闲仅 **15.8 GB**（设计要求 ≥40 GB），且本机仅 C 一个盘符。缓解预案：① `powercfg /h off` 关闭休眠回收约 6 GB；② 磁盘清理（cleanmgr/系统临时文件/回收站）；③ `.wslconfig` 设 `memory=8GB swap=8GB`；④ 开发期不启动 Kibana；⑤ Docker Desktop 磁盘镜像上限设合理值。S20 开工条件：C 盘空闲 ≥30 GB（否则与用户确认缩减镜像方案）。
+11. AI 沙箱无法通过 docker CLI 确认引擎状态（named pipe `dockerDesktopLinuxEngine` 被沙箱拒绝：permission denied）；docker 引擎运行状态须由用户目视鲸鱼图标（绿色=Engine running）或用户自行在系统终端执行 `docker info` 确认。
 
 ## 7. 下一步计划
 
