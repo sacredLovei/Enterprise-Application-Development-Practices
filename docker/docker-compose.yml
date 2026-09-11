@@ -1,0 +1,188 @@
+# 无人机-机器狗空地协同巡检集成平台 —— 六组件 Docker 编排
+# 依据：设计报告 4.6 节（部署拓扑/端口表/关键决策）；镜像版本与 STATE 注册表一致
+name: inspection-platform
+
+networks:
+  inspection-net:
+    driver: bridge
+
+volumes:
+  hdfs-name:
+  hdfs-data:
+  mongo-data:
+  kafka-data:
+  es-data:
+  kibana-data:
+
+services:
+  # ============ 分布式文件系统 Hadoop HDFS ============
+  namenode:
+    image: apache/hadoop:3.3.6
+    container_name: namenode
+    hostname: namenode
+    ports:
+      - "9870:9870"                    # Web UI（仅运维查看）
+    environment:
+      HDFS_NAMENODE_USER: root
+      HDFS_DATANODE_USER: root
+      HADOOP_HOME: /opt/hadoop
+    volumes:
+      - hdfs-name:/data
+      - ./hadoop/core-site.xml:/opt/hadoop/etc/hadoop/core-site.xml:ro
+      - ./hadoop/hdfs-site.xml:/opt/hadoop/etc/hadoop/hdfs-site.xml:ro
+    command: >
+      bash -c "if [ ! -d /data/name/current ]; then
+                 echo '[init] 首次启动，格式化 NameNode';
+                 hdfs namenode -format -nonInteractive -force;
+               else
+                 echo '[init] NameNode 元数据已存在，跳过格式化（格式化守卫）';
+               fi
+               && exec hdfs namenode"
+    healthcheck:
+      test: ["CMD", "bash", "-c", "</dev/tcp/127.0.0.1/9870"]
+      interval: 15s
+      timeout: 5s
+      retries: 30
+      start_period: 30s
+    networks: [inspection-net]
+
+  datanode:
+    image: apache/hadoop:3.3.6
+    container_name: datanode
+    hostname: datanode
+    depends_on:
+      namenode:
+        condition: service_healthy
+    ports:
+      - "9864:9864"                    # 仅运维查看
+    environment:
+      HDFS_NAMENODE_USER: root
+      HDFS_DATANODE_USER: root
+      HADOOP_HOME: /opt/hadoop
+    volumes:
+      - hdfs-data:/data
+      - ./hadoop/core-site.xml:/opt/hadoop/etc/hadoop/core-site.xml:ro
+      - ./hadoop/hdfs-site.xml:/opt/hadoop/etc/hadoop/hdfs-site.xml:ro
+    command: ["bash", "-c", "exec hdfs datanode"]
+    healthcheck:
+      test: ["CMD", "bash", "-c", "</dev/tcp/127.0.0.1/9864"]
+      interval: 15s
+      timeout: 5s
+      retries: 30
+      start_period: 30s
+    networks: [inspection-net]
+
+  # ============ 分布式数据库 MongoDB（单节点副本集 rs0） ============
+  mongodb:
+    image: mongo:6.0
+    container_name: mongodb
+    hostname: mongodb
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongo-data:/data/db
+    command: ["mongod", "--replSet", "rs0", "--bind_ip_all"]
+    healthcheck:
+      test: ["CMD", "mongosh", "--quiet", "--eval", "db.adminCommand('ping').ok"]
+      interval: 10s
+      timeout: 5s
+      retries: 30
+      start_period: 15s
+    networks: [inspection-net]
+
+  # ============ 消息中间件 Kafka（KRaft 单节点，双监听器） ============
+  # 内部 PLAINTEXT://kafka:9092 供容器应用；外部 EXTERNAL://localhost:9094 供本机 IDE 调试
+  # 双监听器设计依据：设计报告 4.6.3(1)，规避 advertised.listeners 地址回传问题
+  kafka:
+    image: bitnami/kafka:3.6
+    container_name: kafka
+    hostname: kafka
+    ports:
+      - "9094:9094"
+    environment:
+      KAFKA_CFG_NODE_ID: "1"
+      KAFKA_CFG_PROCESS_ROLES: controller,broker
+      KAFKA_CFG_CONTROLLER_QUORUM_VOTERS: 1@kafka:9093
+      KAFKA_CFG_LISTENERS: PLAINTEXT://:9092,CONTROLLER://:9093,EXTERNAL://:9094
+      KAFKA_CFG_ADVERTISED_LISTENERS: PLAINTEXT://kafka:9092,EXTERNAL://localhost:9094
+      KAFKA_CFG_LISTENER_SECURITY_PROTOCOL_MAP: CONTROLLER:PLAINTEXT,PLAINTEXT:PLAINTEXT,EXTERNAL:PLAINTEXT
+      KAFKA_CFG_CONTROLLER_LISTENER_NAMES: CONTROLLER
+      KAFKA_CFG_INTER_BROKER_LISTENER_NAME: PLAINTEXT
+      ALLOW_PLAINTEXT_LISTENER: "yes"
+      KAFKA_CFG_AUTO_CREATE_TOPICS_ENABLE: "false"    # 主题必须显式创建（口径可控）
+    volumes:
+      - kafka-data:/bitnami/kafka
+    healthcheck:
+      test: ["CMD-SHELL", "/opt/bitnami/kafka/bin/kafka-topics.sh --bootstrap-server localhost:9092 --list >/dev/null 2>&1 || exit 1"]
+      interval: 15s
+      timeout: 10s
+      retries: 30
+      start_period: 30s
+    networks: [inspection-net]
+
+  # ============ 检索引擎 Elasticsearch（单节点，安全关闭，堆 1GB） ============
+  elasticsearch:
+    image: docker.elastic.co/elasticsearch/elasticsearch:8.13.0
+    container_name: elasticsearch
+    hostname: elasticsearch
+    ports:
+      - "9200:9200"                    # 仅运维查看
+    environment:
+      discovery.type: single-node
+      xpack.security.enabled: "false"  # 仿真环境关闭安全认证（设计报告 4.6.3）
+      ES_JAVA_OPTS: -Xms1g -Xmx1g      # 内存受限（D-14），堆固定 1GB
+      bootstrap.memory_lock: "false"
+    ulimits:
+      memlock:
+        soft: -1
+        hard: -1
+    volumes:
+      - es-data:/usr/share/elasticsearch/data
+    healthcheck:
+      test: ["CMD-SHELL", "curl -fs http://localhost:9200/_cluster/health || exit 1"]
+      interval: 20s
+      timeout: 10s
+      retries: 30
+      start_period: 60s
+    networks: [inspection-net]
+
+  # ============ 可视化 Kibana（经 Nginx /kibana/ 访问） ============
+  kibana:
+    image: docker.elastic.co/kibana/kibana:8.13.0
+    container_name: kibana
+    hostname: kibana
+    environment:
+      ELASTICSEARCH_HOSTS: http://elasticsearch:9200
+      SERVER_BASEPATH: /kibana
+      SERVER_REWRITEBASEPATH: "true"
+    depends_on:
+      elasticsearch:
+        condition: service_healthy
+    volumes:
+      - kibana-data:/usr/share/kibana/data
+    healthcheck:
+      test: ["CMD-SHELL", "curl -fs http://localhost:5601/api/status || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 30
+      start_period: 60s
+    networks: [inspection-net]
+
+  # ============ 网关 Nginx（唯一对外入口 :8080） ============
+  nginx:
+    image: nginx:1.25-alpine
+    container_name: nginx
+    hostname: nginx
+    ports:
+      - "8080:80"                      # 唯一业务入口（设计报告 4.6.2 端口表）
+    volumes:
+      - ./nginx/conf.d:/etc/nginx/conf.d:ro
+    depends_on:
+      kibana:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://localhost/ >/dev/null 2>&1 || exit 1"]
+      interval: 15s
+      timeout: 5s
+      retries: 20
+    networks: [inspection-net]
