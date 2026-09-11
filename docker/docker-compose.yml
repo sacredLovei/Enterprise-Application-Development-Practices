@@ -23,21 +23,18 @@ services:
     ports:
       - "9870:9870"                    # Web UI（仅运维查看）
     environment:
-      HDFS_NAMENODE_USER: root
-      HDFS_DATANODE_USER: root
-      HADOOP_HOME: /opt/hadoop
+      # 镜像内置格式化守卫：/data/name 存在则跳过 format（设计报告 4.6.3(2)，防 P-2）
+      ENSURE_NAMENODE_DIR: /data/name
+      # envtoconf 机制：环境变量生成 core-site/hdfs-site（替代挂载配置文件）
+      CORE_CONF_fs_defaultFS: hdfs://namenode:8020
+      HDFS_CONF_dfs_replication: "2"           # 副本数=2（D-8）
+      HDFS_CONF_dfs_namenode_name_dir: /data/name
+      HDFS_CONF_dfs_datanode_data_dir: /data/data
+      HDFS_CONF_dfs_webhdfs_enabled: "true"    # WebHDFS（设计报告 5.2.3）
+      HDFS_CONF_dfs_permissions_enabled: "false"
     volumes:
       - hdfs-name:/data
-      - ./hadoop/core-site.xml:/opt/hadoop/etc/hadoop/core-site.xml:ro
-      - ./hadoop/hdfs-site.xml:/opt/hadoop/etc/hadoop/hdfs-site.xml:ro
-    command: >
-      bash -c "if [ ! -d /data/name/current ]; then
-                 echo '[init] 首次启动，格式化 NameNode';
-                 hdfs namenode -format -nonInteractive -force;
-               else
-                 echo '[init] NameNode 元数据已存在，跳过格式化（格式化守卫）';
-               fi
-               && exec hdfs namenode"
+    command: ["hdfs", "namenode"]
     healthcheck:
       test: ["CMD", "bash", "-c", "</dev/tcp/127.0.0.1/9870"]
       interval: 15s
@@ -56,14 +53,18 @@ services:
     ports:
       - "9864:9864"                    # 仅运维查看
     environment:
-      HDFS_NAMENODE_USER: root
-      HDFS_DATANODE_USER: root
-      HADOOP_HOME: /opt/hadoop
+      # 镜像内置等待机制：等 NameNode 端口就绪再启动（starter.sh WAITFOR）
+      WAITFOR: namenode:9870
+      WAITFOR_TIMEOUT: "240"
+      CORE_CONF_fs_defaultFS: hdfs://namenode:8020
+      HDFS_CONF_dfs_replication: "2"
+      HDFS_CONF_dfs_namenode_name_dir: /data/name
+      HDFS_CONF_dfs_datanode_data_dir: /data/data
+      HDFS_CONF_dfs_webhdfs_enabled: "true"
+      HDFS_CONF_dfs_permissions_enabled: "false"
     volumes:
       - hdfs-data:/data
-      - ./hadoop/core-site.xml:/opt/hadoop/etc/hadoop/core-site.xml:ro
-      - ./hadoop/hdfs-site.xml:/opt/hadoop/etc/hadoop/hdfs-site.xml:ro
-    command: ["bash", "-c", "exec hdfs datanode"]
+    command: ["hdfs", "datanode"]
     healthcheck:
       test: ["CMD", "bash", "-c", "</dev/tcp/127.0.0.1/9864"]
       interval: 15s

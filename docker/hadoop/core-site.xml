@@ -1,9 +1,0 @@
-<?xml version="1.0" encoding="UTF-8"?>
-<?xml-stylesheet type="text/xsl" href="configuration.xsl"?>
-<configuration>
-  <!-- 容器内以服务名访问 NameNode RPC（设计报告 5.2.3(2)） -->
-  <property>
-    <name>fs.defaultFS</name>
-    <value>hdfs://namenode:8020</value>
-  </property>
-</configuration>
