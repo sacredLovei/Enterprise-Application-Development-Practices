@@ -55,7 +55,7 @@
 ## 已激活待执行步骤（执行顺序 S19 → S20 → S21）
 
 ### S20 Docker 六组件环境（原候选，2026-09-11 激活）
-- **状态**：pending
+- **状态**：in_progress
 - **目标**：一键起齐 HDFS / MongoDB / Kafka / ES / Kibana / Nginx
 - **内容**：docker-compose.yml、各组件配置文件（core-site/hdfs-site、ES mapping 与安全关闭、Kafka 双监听器 KRaft、Nginx conf）、初始化脚本（Mongo 副本集、Kafka 主题）、健康检查与启动顺序
 - **验收标准**：`docker compose up -d` 后六组件全部 healthy；按设计报告 4.6.4 六步验证逐层通过（含 Kafka 双监听器内外连通、WebHDFS 上传下载、ES 建索引）
