@@ -1,0 +1,15 @@
+# ---- 治理与备份 ----
+_backups/
+
+# ---- Java / Maven ----
+target/
+*.class
+
+# ---- Node / 前端 ----
+node_modules/
+dist/
+
+# ---- 日志与临时文件 ----
+*.log
+.DS_Store
+Thumbs.db
