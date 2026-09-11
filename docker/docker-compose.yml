@@ -169,6 +169,73 @@ services:
       start_period: 90s
     networks: [inspection-net]
 
+  # ============ 业务服务后端（无状态双实例，演示负载均衡） ============
+  backend-1:
+    image: inspection-backend:0.1
+    build:
+      context: ../backend
+      dockerfile: Dockerfile
+    container_name: backend-1
+    hostname: backend-1
+    environment:
+      SERVER_PORT: "8081"
+      APP_INSTANCE_ID: backend-1
+      MONGODB_URI: mongodb://mongodb:27017/inspection
+      KAFKA_SERVERS: kafka:9092
+    depends_on:
+      mongodb:
+        condition: service_healthy
+      kafka:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://127.0.0.1:8081/actuator/health >/dev/null 2>&1 || exit 1"]
+      interval: 15s
+      timeout: 5s
+      retries: 20
+      start_period: 40s
+    networks: [inspection-net]
+
+  backend-2:
+    image: inspection-backend:0.1
+    build:
+      context: ../backend
+      dockerfile: Dockerfile
+    container_name: backend-2
+    hostname: backend-2
+    environment:
+      SERVER_PORT: "8082"
+      APP_INSTANCE_ID: backend-2
+      MONGODB_URI: mongodb://mongodb:27017/inspection
+      KAFKA_SERVERS: kafka:9092
+    depends_on:
+      mongodb:
+        condition: service_healthy
+      kafka:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://127.0.0.1:8082/actuator/health >/dev/null 2>&1 || exit 1"]
+      interval: 15s
+      timeout: 5s
+      retries: 20
+      start_period: 40s
+    networks: [inspection-net]
+
+  # ============ 设备仿真（无人机，生产者） ============
+  uav-sim:
+    image: inspection-simulator:0.1
+    build:
+      context: ../simulator
+      dockerfile: Dockerfile
+    container_name: uav-sim
+    hostname: uav-sim
+    environment:
+      SIM_DEVICE_ID: UAV-001
+      KAFKA_SERVERS: kafka:9092
+    depends_on:
+      kafka:
+        condition: service_healthy
+    networks: [inspection-net]
+
   # ============ 网关 Nginx（唯一对外入口 :8080） ============
   nginx:
     image: nginx:1.25-alpine
@@ -180,6 +247,10 @@ services:
       - ./nginx/conf.d:/etc/nginx/conf.d:ro
     depends_on:
       kibana:
+        condition: service_healthy
+      backend-1:
+        condition: service_healthy
+      backend-2:
         condition: service_healthy
     healthcheck:
       # busybox wget 连 localhost 先解析 ::1，而 nginx 仅监听 IPv4 且 busybox 不回退 → 必须用 127.0.0.1（风险 #15）

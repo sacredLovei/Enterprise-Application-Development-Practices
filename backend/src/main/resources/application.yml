@@ -1,0 +1,35 @@
+server:
+  port: ${SERVER_PORT:8081}
+
+app:
+  instance-id: ${APP_INSTANCE_ID:backend-1}
+
+spring:
+  application:
+    name: inspection-backend
+  data:
+    mongodb:
+      # 容器内默认 mongodb:27017；本机 IDE 调试时用 MONGODB_URI 覆盖为 localhost:27017
+      uri: ${MONGODB_URI:mongodb://mongodb:27017/inspection}
+  kafka:
+    # 容器内默认 kafka:9092（内部监听器）；本机 IDE 调试时用 localhost:9094（外部监听器，D-6）
+    bootstrap-servers: ${KAFKA_SERVERS:kafka:9092}
+    consumer:
+      group-id: biz-storage-consumer
+      auto-offset-reset: earliest
+      enable-auto-commit: false          # 关闭自动提交：业务成功才提交（5.2.2）
+      key-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+      value-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+    producer:
+      key-serializer: org.apache.kafka.common.serialization.StringSerializer
+      value-serializer: org.apache.kafka.common.serialization.StringSerializer
+      acks: all
+    listener:
+      ack-mode: manual_immediate
+      concurrency: 3
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health

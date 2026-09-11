@@ -1,0 +1,20 @@
+spring:
+  application:
+    name: inspection-simulator
+  kafka:
+    # 容器内默认 kafka:9092（内部监听器）；本机 IDE 调试时用 localhost:9094（D-6）
+    bootstrap-servers: ${KAFKA_SERVERS:kafka:9092}
+    producer:
+      key-serializer: org.apache.kafka.common.serialization.StringSerializer
+      value-serializer: org.apache.kafka.common.serialization.StringSerializer
+      acks: all
+      properties:
+        enable.idempotence: true
+        max.in.flight.requests.per.connection: 1
+
+sim:
+  device-id: ${SIM_DEVICE_ID:UAV-001}
+
+logging:
+  level:
+    com.course.inspection.sim: INFO
