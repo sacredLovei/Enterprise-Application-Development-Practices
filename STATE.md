@@ -13,7 +13,7 @@
 | 项目 | 无人机-机器狗空地协同巡检集成平台（选题 1 园区安防，课程：企业应用开发实践） |
 | 当前步骤 | **S19 开发环境准备**（JDK17 / Docker Desktop / WSL2 / 硬件核对），in_progress |
 | 最近完成 | S02 治理体系初始化（提交 dbb68f8） |
-| 进行中事项 | S19（本机 JDK 为 1.8.0_151，须换 17；Docker 与 WSL2 均未安装——详见时间线） |
+| 进行中事项 | S19（JDK 21 已就绪；Docker Desktop 与 WSL2 未安装——待用户手动安装后验证） |
 | 当前版本 | 里程碑 v0.1；S19 开始标记提交（HEAD） |
 | 工作树状态 | 干净（随每次提交保持） |
 
@@ -38,6 +38,7 @@
 | 2026-09-11 | 35ec3d7 | 将上述锁文件移出索引（磁盘文件保留，因 Word 可能仍占用） | AI |
 | 2026-09-11 | HEAD（本步） | S02：创建 PLAN.md / STATE.md / skill / 设计报告修订记录表 | AI |
 | 2026-09-11 | HEAD（本步） | 计划调整（用户确认）：文档步骤 S10/S11 冻结；插入 S19（环境准备）与 S21（最小业务链路）；激活 S20（六组件环境）；原 S30 拆分为 S30（后端全量）+ S31（仿真全量）。同时记录探测结论：本机 Docker/WSL2 未安装、JAVA_HOME 指向 JDK 1.8.0_151（与设计要求的 JDK 17 不符） | AI |
+| 2026-09-11 | HEAD（本步） | S19 进展：口径调整 JDK 17→21（本机 DevEco JBR 21.0.6 复制至 tools/jdk-21，java/javac 验证通过）；下载 JDK 不可行（沙箱 TLS 凭据不可用 + 镜像不通），记录于风险表；设计报告 5.1.2/4.3.1/技术栈基线同步更新并升版 v0.2 | AI |
 
 ## 4. 决策记录（永不删除，只可被新决策取代）
 
@@ -54,12 +55,13 @@
 | D-9 | 测试实际结果/状态/截图一律不预填，实施后据实回填 | 课程学术诚信要求"不虚构测试结果"（设计报告文档状态说明 / 第 6 章） | 有效 |
 | D-10 | 本项目一切工作遵守 project-governance 治理纪律（git 分步提交 + PLAN/STATE 唯一权威） | 用户 2026-09-11 要求：随时可回滚、严格分步、持久记忆、杜绝上下文矛盾 | 有效 |
 | D-11 | 开发起点：先环境后代码，顺序 S19（环境准备）→ S20（六组件）→ S21（最小链路），再扩展业务；文档步骤 S10/S11 冻结至实现完成后 | 探测确认 Docker/WSL2 未装、JDK 为 1.8——环境是硬阻塞；且课程阶段划分与设计报告 4.6.4 均为"自下而上逐层验证"；用户 2026-09-11 确认 | 有效 |
+| D-13 | JDK 口径由 17 调整为 21（细化 D-2 的 JDK 版本部分）：使用本机 DevEco Studio 自带 JBR 21.0.6（完整 JDK，含 javac），复制至 `tools/jdk-21` 使用；构建时以命令内联 `JAVA_HOME` 覆盖全局（全局 JAVA_HOME 仍指向 JDK 8，不改系统环境变量） | 沙箱网络 TLS 凭据不可用（SEC_E_NO_CREDENTIALS），Adoptium 与镜像均无法下载；本机已具备完整 JDK 21，且 Spring Boot 3.2 支持 17~21，21 满足要求；设计报告 5.1.2/4.3.1/技术栈基线已同步更新（v0.2） | 有效 |
 
 ## 5. 术语与口径注册表（全项目唯一权威口径，改口径必须先改本表）
 
 | 类别 | 口径 |
 |---|---|
-| 组件版本 | Hadoop HDFS 3.3.6；MongoDB 6.0（副本集 rs0）；Kafka 3.6（KRaft，无 ZooKeeper）；Elasticsearch/Kibana 8.13.0；Nginx 1.25-alpine；Spring Boot 3.2 + JDK 17；Vue 3.4 |
+| 组件版本 | Hadoop HDFS 3.3.6；MongoDB 6.0（副本集 rs0）；Kafka 3.6（KRaft，无 ZooKeeper）；Elasticsearch/Kibana 8.13.0；Nginx 1.25-alpine；Spring Boot 3.2 + JDK 21（本机 `tools/jdk-21`，源自 DevEco Studio JBR 21.0.6，含 javac；17+ 均可）；Vue 3.4 |
 | 端口 | 唯一入口 Nginx **8080**；后端实例 8081/8082；NameNode 9870(WebUI)/8020(RPC)；DataNode 9864；MongoDB 27017；Kafka 内 9092 / 控制器 9093 / 外 9094；ES 9200；Kibana 5601 |
 | Kafka 主题 | `uav.telemetry`(3 分区)、`robot.telemetry`(2)、`device.heartbeat`(3)、`inspection.alarm`(3)、`inspection.image.meta`(2)、`task.command`(2，下行)、`task.log`(2)、`inspection.dlq` |
 | 消费组 | `biz-storage-consumer`、`biz-alarm-consumer`、`biz-stats-consumer`、`sim-uav`、`sim-robot` |
@@ -79,9 +81,11 @@
 4. Word 打开期间会在工作区生成 `~$*.docx` 锁文件——已被 .gitignore 排除；注意 Word 占用时不要删除/覆盖对应 docx。
 5. 版本库目前仅存本地，无远端；异地备份为候选步骤 S60。
 6. 测试用例 TC/IT/PT 仅完成设计（第 6 章），尚未执行——执行是候选步骤 S50。
+7. 全局 `JAVA_HOME` 仍指向 JDK 8（1.8.0_151）：所有 Java 构建命令必须内联覆盖 `JAVA_HOME` 指向 `tools\jdk-21`（见 D-13）；用户可自行修改系统环境变量（可选）。
+8. 沙箱网络限制：AI 执行环境的 curl/Invoke-WebRequest 因 TLS 凭据不可用（SEC_E_NO_CREDENTIALS）无法下载外部文件；需要联网下载（Docker Desktop 安装包等）时由用户在系统终端执行。
 
 ## 7. 下一步计划
 
-- **S19 进行中**：AI 完成 JDK 17 安装（`tools/jdk-17`，不入库）；用户完成 Docker Desktop + WSL2 安装（需管理员权限、可能重启、BIOS 虚拟化核对）→ 双方验证验收标准后 S19 置 done。
+- **S19 进行中**：JDK 21 已就绪（`tools/jdk-21`，验证通过）；待用户完成 Docker Desktop + WSL2 安装（需管理员权限、可能重启、BIOS 虚拟化核对）→ 双方验证验收标准后 S19 置 done。
 - 之后依次：S20（六组件环境）→ S21（最小业务链路）→ S30/S31（业务与仿真全量）→ S40（前端）→ S50（测试）→ 解冻 S10/S11（文档收尾）。
 - 任何新工作先在此与 PLAN.md 登记，再执行。
