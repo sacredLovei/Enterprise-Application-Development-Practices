@@ -73,12 +73,13 @@
 - **里程碑 tag**：v0.2
 
 ### S21 最小业务链路（插入步骤，2026-09-11 用户确认）
-- **状态**：pending
+- **状态**：in_progress
 - **目标**：打通一条最细的垂直切片：仿真心跳 → Kafka → 后端消费 → MongoDB → API → Nginx
 - **内容**：simulator 最小版（单无人机心跳 5 s + 遥测 2 s 生产者）；backend 最小版（消费落库 + `GET /api/devices` + `X-Backend-Instance` 头）；Nginx 接入
 - **验收标准**：`curl http://localhost:8080/api/devices` 返回设备数据且心跳时间持续更新；响应头可见实例号；Kafka 无消息丢失抽查通过
 - **产出物**：`simulator/`、`backend/` 最小可运行工程
 - **依据**：设计报告 4.4.1 / 5.2.1 / 5.2.2
+- **提交**：开始标记本步提交（HEAD）
 
 ---
 
