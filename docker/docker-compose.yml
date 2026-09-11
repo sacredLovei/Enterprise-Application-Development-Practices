@@ -182,7 +182,8 @@ services:
       kibana:
         condition: service_healthy
     healthcheck:
-      test: ["CMD-SHELL", "wget -qO- http://localhost/ >/dev/null 2>&1 || exit 1"]
+      # busybox wget 连 localhost 先解析 ::1，而 nginx 仅监听 IPv4 且 busybox 不回退 → 必须用 127.0.0.1（风险 #15）
+      test: ["CMD-SHELL", "wget -qO- http://127.0.0.1/ >/dev/null 2>&1 || exit 1"]
       interval: 15s
       timeout: 5s
       retries: 20

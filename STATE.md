@@ -107,6 +107,7 @@
 12. **Docker Hub DNS 污染（S20 运行验收受阻）**：本机默认 DNS 将 registry-1.docker.io 解析为 127.0.0.1/::1（阿里 DNS 223.5.5.5 可正确解析），docker.io 直连不可用；docker.elastic.co 未受污染可直连。**应对（2026-09-11 实测）**：镜像源通道可用——docker.1ms.run / docker.xuanyuan.me / docker.m.daocloud.io / hub.rat.dev 均通（dockerproxy.net TLS 超时不可用）。**升级（D-17）**：用户 Clash Verge 代理（7897）就绪，Docker Desktop 配置手动代理后官方源直连可用，镜像源降级为兜底。
 13. **apache/hadoop 镜像 envtoconf 机制存在 bug（已踩坑，已修复）**：`CORE_CONF_*`/`HDFS_CONF_*` 环境变量触发 `to_conf` 转换，其对 `process_properties` 返回的字典直接迭代解包 → `ValueError: too many values to unpack`，NameNode/DataNode 启动即崩。**结论**：本项目禁用 envtoconf 环境变量，HDFS 配置一律用挂载的 `core-site.xml`/`hdfs-site.xml`（无 CORE_/HDFS_ 环境变量时 envtoconf 为 no-op，不覆盖挂载文件）；`ENSURE_NAMENODE_DIR`（格式化守卫）与 `WAITFOR`（启动等待）仍可用（属 starter.sh，非 envtoconf）。
 14. **Kibana basePath 反代坑（已踩坑，已修复）**：Kibana 设 `SERVER_BASEPATH=/kibana` 后，容器内状态接口变为 `/kibana/api/status`（裸 `/api/status` 返回 404）→ 原健康检查永远失败（Kibana 一直 health: starting）；Nginx 反代必须 `proxy_pass http://kibana:5601;`（**不带尾斜杠**，保留 /kibana 前缀），带尾斜杠会剥前缀导致 404。两处已对齐。
+15. **alpine busybox wget 的 IPv6 localhost 坑（已踩坑，已修复）**：busybox wget 连 `localhost` 优先解析 `::1`，而 nginx 仅监听 IPv4 且 busybox 不回退 → "Connection refused"，nginx 健康检查永远失败（nginx 实际运行正常）。**结论**：容器内健康检查/自检一律用 `127.0.0.1` 而非 `localhost`（nginx 已改；kibana 的 curl 有回退机制不受影响）。
 
 ## 7. 下一步计划
 
