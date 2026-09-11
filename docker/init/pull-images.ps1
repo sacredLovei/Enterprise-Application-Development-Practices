@@ -10,14 +10,14 @@ foreach ($img in $dockerIoImages) {
     if ($LASTEXITCODE -eq 0) { Write-Output "Already exists, skip: $img"; continue }
 
     Write-Output "Try direct pull: $img"
-    docker pull $img 2>&1 | Select-Object -Last 1
+    docker pull $img
     if ($LASTEXITCODE -eq 0) { Write-Output "OK (direct): $img"; continue }
 
     Write-Output "Direct pull failed, falling back to mirrors..."
     $ok = $false
     foreach ($m in $mirrors) {
         Write-Output "Try mirror $m/$img ..."
-        docker pull "$m/$img" 2>&1 | Select-Object -Last 1
+        docker pull "$m/$img"
         if ($LASTEXITCODE -eq 0) {
             docker tag "$m/$img" $img
             Write-Output "OK (via $m, retagged): $img"
@@ -30,8 +30,8 @@ foreach ($img in $dockerIoImages) {
 }
 
 Write-Output "Pull elastic official images (direct)..."
-docker pull docker.elastic.co/elasticsearch/elasticsearch:8.13.0 2>&1 | Select-Object -Last 1
-docker pull docker.elastic.co/kibana/kibana:8.13.0 2>&1 | Select-Object -Last 1
+docker pull docker.elastic.co/elasticsearch/elasticsearch:8.13.0
+docker pull docker.elastic.co/kibana/kibana:8.13.0
 
 Write-Output ""
 Write-Output "===== Image inventory ====="
