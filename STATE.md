@@ -11,9 +11,9 @@
 | 项 | 值 |
 |---|---|
 | 项目 | 无人机-机器狗空地协同巡检集成平台（选题 1 园区安防，课程：企业应用开发实践） |
-| 当前步骤 | **S19 开发环境准备**（JDK21 / Docker Desktop / WSL2 / 硬件核对），in_progress |
-| 最近完成 | S02 治理体系初始化（提交 dbb68f8） |
-| 进行中事项 | S19（JDK 21 已就绪；Docker Desktop 与 WSL2 未安装——待用户手动安装后验证） |
+| 当前步骤 | **S19 已收尾 → S20 Docker 六组件环境**（下一步，即将开始） |
+| 最近完成 | S19 开发环境准备（JDK21 / Docker Desktop 29.7.2 运行中 / WSL2 2.7.13 / 磁盘 50 GB，四项验收全过） |
+| 进行中事项 | 无 |
 | 当前版本 | 里程碑 v0.1；S19 开始标记提交 2199642；JDK 口径调整提交 3ebe329 |
 | 工作树状态 | 干净（随每次提交保持） |
 
@@ -28,6 +28,7 @@
 | （S02） | dbb68f8 | 治理体系：PLAN/STATE/skill project-governance/修订记录表 | 2026-09-11 |
 | （S19 开始） | 2199642 | 计划调整：插入 S19/S21、激活 S20、冻结 S10/S11；S19 开始 | 2026-09-11 |
 | （S19 中） | 3ebe329 | 口径调整：JDK 17→21（本机 DevEco JBR 21.0.6 → tools/jdk-21）；设计报告升版 v0.2 | 2026-09-11 |
+| （S19 完成） | 本步提交（HEAD） | 环境四项验收全过：JDK21 / Docker 引擎运行（用户目视确认）/ WSL / 磁盘 50GB | 2026-09-11 |
 
 ## 3. 变更时间线（只增不改）
 
@@ -43,6 +44,7 @@
 | 2026-09-11 | 本步（HEAD） | 一致性核对（应用户要求）：全量检索确认 JDK 17 表述已全部替换为 21；修正 STATE 当前步骤行残留"JDK17"字样；标注 D-2 的 JDK 版本部分被 D-13 细化；回填各条时间线/版本表提交号 | AI |
 | 2026-09-11 | 本步（HEAD） | S19 进展（用户侧）：用户执行 `wsl --install`——WSL 2.7.13 与内核 6.18.33 安装成功（AI 侧实测确认），Ubuntu 发行版因 GitHub DNS 解析失败未下载（项目不需要，Docker Desktop 自带发行版）；Docker Desktop 安装进行中。据此登记风险 #9 与 Docker 镜像加速预案 | AI |
 | 2026-09-11 | 本步（HEAD） | S19 验收初核：① JDK21 ✅ ② Docker CLI 29.7.2 已装、引擎运行状态待用户目视确认（沙箱无法访问 named pipe，风险 #11） ③ WSL ✅ ④ 内存 15.7GB ✅ / **磁盘 C 空闲仅 15.8GB ❌**。据此登记 D-14（WSL 内存 8GB）、D-15（S20 开工前置：C 盘 ≥30GB）、风险 #10（磁盘不足与清理预案） | AI |
+| 2026-09-11 | 本步（HEAD） | S19 收尾：用户确认 Docker 引擎已启动（鲸鱼变绿）并完成磁盘清理，C 盘空闲 15.8 → **50 GB**；验收标准①②③④全部通过，S19 置 done，风险 #10/#11 销项 | AI |
 
 ## 4. 决策记录（永不删除，只可被新决策取代）
 
@@ -90,8 +92,8 @@
 7. 全局 `JAVA_HOME` 仍指向 JDK 8（1.8.0_151）：所有 Java 构建命令必须内联覆盖 `JAVA_HOME` 指向 `tools\jdk-21`（见 D-13）；用户可自行修改系统环境变量（可选）。
 8. 沙箱网络限制：AI 执行环境的 curl/Invoke-WebRequest 因 TLS 凭据不可用（SEC_E_NO_CREDENTIALS）无法下载外部文件；需要联网下载（Docker Desktop 安装包等）时由用户在系统终端执行。
 9. 用户机器访问 GitHub 失败（`wsl --install` 拉取发行版列表时 raw.githubusercontent.com DNS 解析失败，WININET_E_NAME_NOT_RESOLVED）。当前状态：WSL 2.7.13 与内核 6.18.33 已装好（AI 侧实测），仅缺 Ubuntu 发行版——**项目不需要 Ubuntu**（Docker Desktop 自带 docker-desktop 发行版）。引申风险：S20 从 Docker Hub 拉镜像可能同样受阻；预案：Docker Desktop 配置国内 registry mirror（中科大/网易/阿里加速器），S20 第一步先 `docker pull hello-world` 验证。
-10. **磁盘空间不达标（S19 验收项④未过）**：C 盘空闲仅 **15.8 GB**（设计要求 ≥40 GB），且本机仅 C 一个盘符。缓解预案：① `powercfg /h off` 关闭休眠回收约 6 GB；② 磁盘清理（cleanmgr/系统临时文件/回收站）；③ `.wslconfig` 设 `memory=8GB swap=8GB`；④ 开发期不启动 Kibana；⑤ Docker Desktop 磁盘镜像上限设合理值。S20 开工条件：C 盘空闲 ≥30 GB（否则与用户确认缩减镜像方案）。
-11. AI 沙箱无法通过 docker CLI 确认引擎状态（named pipe `dockerDesktopLinuxEngine` 被沙箱拒绝：permission denied）；docker 引擎运行状态须由用户目视鲸鱼图标（绿色=Engine running）或用户自行在系统终端执行 `docker info` 确认。
+10. **磁盘空间不达标（S19 验收项④未过）**：C 盘空闲仅 **15.8 GB**（设计要求 ≥40 GB），且本机仅 C 一个盘符。缓解预案：① `powercfg /h off` 关闭休眠回收约 6 GB；② 磁盘清理（cleanmgr/系统临时文件/回收站）；③ `.wslconfig` 设 `memory=8GB swap=8GB`；④ 开发期不启动 Kibana；⑤ Docker Desktop 磁盘镜像上限设合理值。**已解决（2026-09-11）**：用户清理后 C 盘空闲 50 GB，满足 D-15 开工条件；④ 相应解除（Kibana 正常启动）。
+11. AI 沙箱无法通过 docker CLI 确认引擎状态（named pipe `dockerDesktopLinuxEngine` 被沙箱拒绝：permission denied）；docker 引擎运行状态须由用户目视鲸鱼图标（绿色=Engine running）或用户自行在系统终端执行 `docker info` 确认。**已确认（2026-09-11）**：用户目视鲸鱼变绿，引擎运行中；S20 起 AI 执行 docker 命令仍需经沙箱升级授权（danger-full-access）或由用户代跑。
 
 ## 7. 下一步计划
 
