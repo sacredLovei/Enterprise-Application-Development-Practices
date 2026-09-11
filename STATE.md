@@ -41,6 +41,7 @@
 | 2026-09-11 | 2199642 | 计划调整（用户确认）：文档步骤 S10/S11 冻结；插入 S19（环境准备）与 S21（最小业务链路）；激活 S20（六组件环境）；原 S30 拆分为 S30（后端全量）+ S31（仿真全量）。同时记录探测结论：本机 Docker/WSL2 未安装、JAVA_HOME 指向 JDK 1.8.0_151（与设计要求的 JDK 17 不符） | AI |
 | 2026-09-11 | 3ebe329 | S19 进展：口径调整 JDK 17→21（本机 DevEco JBR 21.0.6 复制至 tools/jdk-21，java/javac 验证通过）；下载 JDK 不可行（沙箱 TLS 凭据不可用 + 镜像不通），记录于风险表；设计报告 5.1.2/4.3.1/技术栈基线同步更新并升版 v0.2 | AI |
 | 2026-09-11 | 本步（HEAD） | 一致性核对（应用户要求）：全量检索确认 JDK 17 表述已全部替换为 21；修正 STATE 当前步骤行残留"JDK17"字样；标注 D-2 的 JDK 版本部分被 D-13 细化；回填各条时间线/版本表提交号 | AI |
+| 2026-09-11 | 本步（HEAD） | S19 进展（用户侧）：用户执行 `wsl --install`——WSL 2.7.13 与内核 6.18.33 安装成功（AI 侧实测确认），Ubuntu 发行版因 GitHub DNS 解析失败未下载（项目不需要，Docker Desktop 自带发行版）；Docker Desktop 安装进行中。据此登记风险 #9 与 Docker 镜像加速预案 | AI |
 
 ## 4. 决策记录（永不删除，只可被新决策取代）
 
@@ -85,6 +86,7 @@
 6. 测试用例 TC/IT/PT 仅完成设计（第 6 章），尚未执行——执行是候选步骤 S50。
 7. 全局 `JAVA_HOME` 仍指向 JDK 8（1.8.0_151）：所有 Java 构建命令必须内联覆盖 `JAVA_HOME` 指向 `tools\jdk-21`（见 D-13）；用户可自行修改系统环境变量（可选）。
 8. 沙箱网络限制：AI 执行环境的 curl/Invoke-WebRequest 因 TLS 凭据不可用（SEC_E_NO_CREDENTIALS）无法下载外部文件；需要联网下载（Docker Desktop 安装包等）时由用户在系统终端执行。
+9. 用户机器访问 GitHub 失败（`wsl --install` 拉取发行版列表时 raw.githubusercontent.com DNS 解析失败，WININET_E_NAME_NOT_RESOLVED）。当前状态：WSL 2.7.13 与内核 6.18.33 已装好（AI 侧实测），仅缺 Ubuntu 发行版——**项目不需要 Ubuntu**（Docker Desktop 自带 docker-desktop 发行版）。引申风险：S20 从 Docker Hub 拉镜像可能同样受阻；预案：Docker Desktop 配置国内 registry mirror（中科大/网易/阿里加速器），S20 第一步先 `docker pull hello-world` 验证。
 
 ## 7. 下一步计划
 
