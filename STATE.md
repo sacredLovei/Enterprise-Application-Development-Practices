@@ -11,10 +11,10 @@
 | 项 | 值 |
 |---|---|
 | 项目 | 无人机-机器狗空地协同巡检集成平台（选题 1 园区安防，课程：企业应用开发实践） |
-| 当前步骤 | **S21 最小业务链路**（in_progress：simulator/backend 代码落地 → 构建 → 部署 → 验收） |
-| 最近完成 | S12 六组件导读段（第 2 章，v0.4）；S20 六组件环境（tag v0.2） |
+| 当前步骤 | 无进行中步骤；**S21 已收尾**，下一步 S30/S31（业务与仿真全量，待用户确认顺序） |
+| 最近完成 | S21 最小业务链路（验收全过，tag v0.3） |
 | 进行中事项 | 无 |
-| 当前版本 | 里程碑 v0.2（六组件环境可用）；v0.1（设计方案） |
+| 当前版本 | 里程碑 v0.3（最小链路闭环）；v0.2（六组件环境）；v0.1（设计方案） |
 | 工作树状态 | 干净（随每次提交保持） |
 
 ## 2. 版本表
@@ -54,6 +54,7 @@
 | 2026-09-11 | 本步（HEAD） | S20 恢复排错（envtoconf bug）：恢复批次健康等待超时，定位到 namenode/datanode 因 `CORE_CONF_*` 环境变量触发 envtoconf `to_conf` 解析崩溃（ValueError）；回退为挂载 `core-site.xml`/`hdfs-site.xml`（重建此前删除的配置文件），保留 ENSURE_NAMENODE_DIR 与 WAITFOR；登记风险 #13 | AI |
 | 2026-09-11 | 本步（HEAD） | S12 完成（用户要求）：报告第 2 章新增无编号导读块"六组件速览"——一句话定位表、数据流串联、三个关键分工；口径与注册表核对一致；修订记录升版 v0.4 | AI |
 | 2026-09-11 | 本步（HEAD） | S21 开始（最小业务链路）：计划产出 simulator（心跳 5s/遥测 2s 生产者）与 backend（消费落库 + /api/devices + 实例头）最小工程，经 Maven 构建（需代理下载依赖）后容器化部署并验收 | AI |
+| 2026-09-11 | 本步（HEAD） | S21 完成：验收四连全过（API 返回设备数据、心跳 15s 内更新、实例号 10 次请求 5/5 交替、LAG=0 且 device_status 1087 条）；排错三例入册（#17 沙箱禁写 ~/.m2→m2repo 重定向、#18 BuildKit 不走代理→先 pull 后 build、#19 nginx 配置热重载）；沙箱临时目录被系统清理导致一次通道故障（重建恢复） | AI |
 
 ## 4. 决策记录（永不删除，只可被新决策取代）
 
@@ -114,6 +115,8 @@
 16. **GBK 管道编码坑（已踩坑，已修复）**：Windows 下 `Get-Content -Raw | docker exec -i mongodb mongosh` 以 GBK 解码 UTF-8 脚本，中文注释变乱码并破坏 JS 字符串 → rs.initiate 从未执行成功（表现：`no replset config has been received`）。**结论**：经管道送入容器的脚本一律纯 ASCII（`mongo-rs-init.js` 已改），或显式 `-Encoding UTF8` 读取。
 17. **沙箱禁写 ~/.m2（已踩坑，已修复）**：Maven 默认本地仓库 `C:\Users\黎Li\.m2\repository` 位于工作区外，沙箱拒绝写入（`AccessDeniedException`）。**结论**：`.mvn/maven-settings-proxy.xml` 中 `<localRepository>` 重定向到工作区 `tools\m2repo`（已 gitignore），所有构建走 `-s .mvn/maven-settings-proxy.xml`，无需升级授权。
 18. **BuildKit 不走 Docker Desktop 代理（已踩坑，已修复）**：`docker build` 拉基础镜像时直连 auth.docker.io 超时（本机 DNS 污染 + 无直连），而 `docker pull`（引擎级）走配置的代理正常。**结论**：构建前先 `docker pull eclipse-temurin:21-jre-alpine` 让基础镜像落本地，`docker build` 即离线完成；此模式已写入 S21 部署流程。
+19. **nginx bind 挂载配置不热重载（已踩坑，已修复）**：`nginx/conf.d` 为 bind 挂载，仅改配置文件内容不会让 nginx 重新加载（`compose up` 也不因挂载文件内容变化而重建容器）→ 新加的 `/api/` 路由 404。**结论**：改 nginx 配置后必须 `docker compose restart nginx`（或 `nginx -s reload`）。
+20. **S21 已知项（非缺陷，S30/S31 处理）**：① 仿真电量已降至 0（S21 无充电逻辑，S31 补返航/充电）；② S20 验收残留的两条非法 `ping` 消息在 device.heartbeat 分区 0/2 解析失败且未提交 offset（手动 ack 设计使然），S30 死信机制接管。
 
 ## 7. 下一步计划
 

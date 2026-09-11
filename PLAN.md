@@ -73,13 +73,14 @@
 - **里程碑 tag**：v0.2
 
 ### S21 最小业务链路（插入步骤，2026-09-11 用户确认）
-- **状态**：in_progress
+- **状态**：done
 - **目标**：打通一条最细的垂直切片：仿真心跳 → Kafka → 后端消费 → MongoDB → API → Nginx
 - **内容**：simulator 最小版（单无人机心跳 5 s + 遥测 2 s 生产者）；backend 最小版（消费落库 + `GET /api/devices` + `X-Backend-Instance` 头）；Nginx 接入
 - **验收标准**：`curl http://localhost:8080/api/devices` 返回设备数据且心跳时间持续更新；响应头可见实例号；Kafka 无消息丢失抽查通过
-- **产出物**：`simulator/`、`backend/` 最小可运行工程
+- **验收结论**（2026-09-11）：**全部通过**。① API 返回 UAV-001（ONLINE）；② 心跳 15 秒内更新（12:38:44 → 12:38:59）；③ 连续 10 次请求实例号 backend-1/backend-2 完美交替（5/5）；④ LAG=0、device_status 1087 条持续增长。期间排错 3 例（风险 #17 沙箱禁写 ~/.m2、#18 BuildKit 不走代理、#19 nginx bind 挂载不热重载），留 2 项已知项：仿真电量已耗尽（S21 无充电逻辑，S31 补）、S20 验收残留的两条非法"ping"消息停在未提交 offset（S30 死信机制接管）
+- **产出物**：`simulator/`、`backend/` 最小可运行工程（镜像 inspection-backend:0.1 / inspection-simulator:0.1）
 - **依据**：设计报告 4.4.1 / 5.2.1 / 5.2.2
-- **提交**：开始标记本步提交（HEAD）
+- **里程碑 tag**：v0.3（原型可跑：最小链路闭环）
 
 ---
 
