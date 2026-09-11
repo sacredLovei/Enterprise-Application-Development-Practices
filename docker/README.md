@@ -43,9 +43,9 @@ docker exec namenode bash -c 'echo "s20-check" > /tmp/s20.txt && hdfs dfs -put /
 # ③ MongoDB：副本集状态
 docker exec mongodb mongosh --quiet --eval "rs.status().ok"
 # ④ Kafka：主题列表 + 生产消费自检
-docker exec kafka /opt/bitnami/kafka/bin/kafka-topics.sh --bootstrap-server localhost:9092 --list
-echo "ping" | docker exec -i kafka /opt/bitnami/kafka/bin/kafka-console-producer.sh --bootstrap-server localhost:9092 --topic device.heartbeat
-docker exec kafka /opt/bitnami/kafka/bin/kafka-console-consumer.sh --bootstrap-server localhost:9092 --topic device.heartbeat --from-beginning --max-messages 1 --timeout-ms 10000
+docker exec kafka /opt/kafka/bin/kafka-topics.sh --bootstrap-server localhost:9092 --list
+echo "ping" | docker exec -i kafka /opt/kafka/bin/kafka-console-producer.sh --bootstrap-server localhost:9092 --topic device.heartbeat
+docker exec kafka /opt/kafka/bin/kafka-console-consumer.sh --bootstrap-server localhost:9092 --topic device.heartbeat --from-beginning --max-messages 1 --timeout-ms 10000
 # ⑤ ES：集群健康 + 建索引
 curl.exe http://localhost:9200/_cluster/health
 curl.exe -X PUT "http://localhost:9200/inspection_alarm_v1" -H "Content-Type: application/json" -d "{\"settings\":{\"number_of_shards\":1,\"number_of_replicas\":0},\"mappings\":{\"dynamic\":\"strict\",\"properties\":{\"alarmId\":{\"type\":\"keyword\"},\"deviceId\":{\"type\":\"keyword\"},\"location\":{\"type\":\"geo_point\"},\"occurredTime\":{\"type\":\"date\"}}}}"

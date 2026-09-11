@@ -48,13 +48,14 @@
 | 2026-09-11 | 本步（HEAD） | S20 开始（六组件环境）：即将产出 docker-compose.yml、组件配置、初始化脚本 | AI |
 | 2026-09-11 | 本步（HEAD） | S20 运行受阻与应对：`docker compose up -d` 因 Docker Hub DNS 污染失败（registry-1.docker.io → 127.0.0.1）；实测镜像源四通一不通（见风险 #12），elastic 官方源直连成功（ES 8.13.0 已拉取）；登记 D-16，产出 `docker/init/pull-images.ps1` | AI |
 | 2026-09-11 | 本步（HEAD） | S20 交接（用户决定）：AI 侧后台拉取速度偏慢，取消之；镜像拉取改由**用户在本机系统终端**执行 `docker/init/pull-images.ps1`（含镜像源与重标记逻辑）。镜像就绪后由 AI 继续 compose 启动 + 初始化 + 验收 | AI |
+| 2026-09-11 | 本步（HEAD） | S20 口径变更（Kafka 换镜像，D-18）：实测 bitnami/kafka:3.6 与 4.1 在 Docker Hub 均 404（Bitnami 已下架公开 Kafka 镜像），用户直连拉取 apache/kafka:4.0.0 成功；compose/脚本/README/设计报告（v0.3）/注册表全部同步 | AI |
 
 ## 4. 决策记录（永不删除，只可被新决策取代）
 
 | 编号 | 决策 | 理由 | 状态 |
 |---|---|---|---|
 | D-1 | 选题 1：园区安防空地协同巡检集成平台 | 推荐基础题，仿真逻辑最简、闭环完整 | 有效 |
-| D-2 | 技术栈：Kafka 3.6(KRaft) + MongoDB 6.0 + Spring Boot 3.2(Java17) + Vue 3 | 用户 2026-09-11 选定推荐组合；论证见设计报告 2.3.3 / 4.3.2 | 有效（JDK 版本部分被 D-13 细化为 21） |
+| D-2 | 技术栈：Kafka 3.6(KRaft) + MongoDB 6.0 + Spring Boot 3.2(Java17) + Vue 3 | 用户 2026-09-11 选定推荐组合；论证见设计报告 2.3.3 / 4.3.2 | 有效（JDK 版本部分被 D-13 细化为 21；Kafka 版本/镜像部分被 D-18 取代） |
 | D-3 | 文档先 Markdown 后转 Word | 便于反复修改与补截图，定稿再转 | 有效 |
 | D-4 | 后端为单体多实例（不引入微服务框架） | 课程考察中间件集成而非服务治理；无状态多实例足以演示负载均衡（设计报告 4.2.2） | 有效 |
 | D-5 | MongoDB 为权威数据源，ES 为检索副本；允许秒级不一致，由对账补偿 | 保证告警不因检索组件抖动而丢失（设计报告 2.5.2 / 5.2.2） | 有效 |
@@ -69,12 +70,13 @@
 | D-15 | S20 开工前置条件：C 盘空闲 ≥ 30 GB（当前 15.8 GB，须先清理）；期间不启动 Kibana | 六组件镜像约 7~8 GB + vhdx 增长，15.8 GB 必然爆盘（风险 #10） | 有效 |
 | D-16 | docker.io 镜像经国内镜像源拉取并重标记为官方名（`docker/init/pull-images.ps1`），镜像源顺序：docker.1ms.run → docker.xuanyuan.me → docker.m.daocloud.io → hub.rat.dev；ES/Kibana 走官方源 docker.elastic.co 直连；compose 文件保持官方镜像名不变 | 本机 DNS 污染致 Docker Hub 直连失败（风险 #12），四个镜像源实测可用；重标记方案不改 compose、无需改引擎配置，换干净网络后可无缝回直连 | 有效（经 D-17 补充：有代理时直连优先，镜像源降级为兜底） |
 | D-17 | Docker 镜像拉取通道升级：用户提供 Clash Verge 代理（mihomo 混合端口 `127.0.0.1:7897`，实测开放）；Docker Desktop 配置手动代理（HTTP/HTTPS 均指向该地址）后，`pull-images.ps1` 改为**官方源直连优先、镜像源兜底** | 代理通道速度快且可直连官方源，镜像源仅作降级；Clash Verge 需开"允许局域网"使 WSL 引擎可达 | 有效 |
+| D-18 | Kafka 镜像由 `bitnami/kafka:3.6` 更换为官方镜像 **`apache/kafka:4.0.0`**（取代 D-2 的 Kafka 版本/镜像部分）：Bitnami 已下架全部公开 Kafka 镜像（Apache 邮件列表 [DEPRECATION] 通告，Docker Hub 返回 404），官方镜像持续维护且 4.x 为纯 KRaft 架构；compose 环境变量由 `KAFKA_CFG_*` 改为官方 `KAFKA_*` 命名，数据目录 `/var/lib/kafka/data`，脚本路径 `/opt/kafka/bin` | 2026-09-11 实测：bitnami/kafka:3.6 与 4.1 均 "not found"；apache/kafka:4.0.0 经代理直连拉取成功；官方镜像与设计 KRaft 单节点双监听器方案完全兼容 | 有效 |
 
 ## 5. 术语与口径注册表（全项目唯一权威口径，改口径必须先改本表）
 
 | 类别 | 口径 |
 |---|---|
-| 组件版本 | Hadoop HDFS 3.3.6；MongoDB 6.0（副本集 rs0）；Kafka 3.6（KRaft，无 ZooKeeper）；Elasticsearch/Kibana 8.13.0；Nginx 1.25-alpine；Spring Boot 3.2 + JDK 21（本机 `tools/jdk-21`，源自 DevEco Studio JBR 21.0.6，含 javac；17+ 均可）；Vue 3.4 |
+| 组件版本 | Hadoop HDFS 3.3.6；MongoDB 6.0（副本集 rs0）；Kafka **4.0.0（官方镜像 apache/kafka，纯 KRaft，ZooKeeper 已移除）**；Elasticsearch/Kibana 8.13.0；Nginx 1.25-alpine；Spring Boot 3.2 + JDK 21（本机 `tools/jdk-21`，源自 DevEco Studio JBR 21.0.6，含 javac；17+ 均可）；Vue 3.4 |
 | 端口 | 唯一入口 Nginx **8080**；后端实例 8081/8082；NameNode 9870(WebUI)/8020(RPC)；DataNode 9864；MongoDB 27017；Kafka 内 9092 / 控制器 9093 / 外 9094；ES 9200；Kibana 5601 |
 | Kafka 主题 | `uav.telemetry`(3 分区)、`robot.telemetry`(2)、`device.heartbeat`(3)、`inspection.alarm`(3)、`inspection.image.meta`(2)、`task.command`(2，下行)、`task.log`(2)、`inspection.dlq` |
 | 消费组 | `biz-storage-consumer`、`biz-alarm-consumer`、`biz-stats-consumer`、`sim-uav`、`sim-robot` |

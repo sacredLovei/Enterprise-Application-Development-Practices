@@ -3,7 +3,7 @@
 # 用法：在项目根目录执行  powershell -ExecutionPolicy Bypass -File docker\init\pull-images.ps1
 $ErrorActionPreference = "Continue"
 $mirrors = @("docker.1ms.run", "docker.xuanyuan.me", "docker.m.daocloud.io", "hub.rat.dev")
-$dockerIoImages = @("apache/hadoop:3.3.6", "mongo:6.0", "bitnami/kafka:3.6", "nginx:1.25-alpine")
+$dockerIoImages = @("apache/hadoop:3.3.6", "mongo:6.0", "apache/kafka:4.0.0", "nginx:1.25-alpine")
 
 foreach ($img in $dockerIoImages) {
     $exists = docker image inspect $img 2>$null
