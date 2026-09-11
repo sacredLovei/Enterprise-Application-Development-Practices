@@ -49,6 +49,7 @@
 | 2026-09-11 | 本步（HEAD） | S20 运行受阻与应对：`docker compose up -d` 因 Docker Hub DNS 污染失败（registry-1.docker.io → 127.0.0.1）；实测镜像源四通一不通（见风险 #12），elastic 官方源直连成功（ES 8.13.0 已拉取）；登记 D-16，产出 `docker/init/pull-images.ps1` | AI |
 | 2026-09-11 | 本步（HEAD） | S20 交接（用户决定）：AI 侧后台拉取速度偏慢，取消之；镜像拉取改由**用户在本机系统终端**执行 `docker/init/pull-images.ps1`（含镜像源与重标记逻辑）。镜像就绪后由 AI 继续 compose 启动 + 初始化 + 验收 | AI |
 | 2026-09-11 | 本步（HEAD） | S20 口径变更（Kafka 换镜像，D-18）：实测 bitnami/kafka:3.6 与 4.1 在 Docker Hub 均 404（Bitnami 已下架公开 Kafka 镜像），用户直连拉取 apache/kafka:4.0.0 成功；compose/脚本/README/设计报告（v0.3）/注册表全部同步 | AI |
+| 2026-09-11 | 本步（HEAD） | S20 中断（用户关机赶路）：六镜像全部就绪；`docker compose up -d` 已执行，ES 已就绪（9200 返回 200），HDFS/Kibana/Nginx 启动中；验收批次（Mongo rs.initiate、Kafka 主题、HDFS 读写、生产消费）**未完成**。所有初始化步骤均幂等（rs.initiate 可重入、--if-not-exists、ENSURE_NAMENODE_DIR 格式化守卫），下次开机可直接重跑验收，无数据丢失风险（数据在命名卷中）。本次修正：同步更新了过期的 §7 下一步计划（此前仍停留在 S19 措辞） | AI |
 
 ## 4. 决策记录（永不删除，只可被新决策取代）
 
@@ -106,6 +107,6 @@
 
 ## 7. 下一步计划
 
-- **S19 进行中**：JDK 21 已就绪（`tools/jdk-21`，验证通过）；待用户完成 Docker Desktop + WSL2 安装（需管理员权限、可能重启、BIOS 虚拟化核对）→ 双方验证验收标准后 S19 置 done。
-- 之后依次：S20（六组件环境）→ S21（最小业务链路）→ S30/S31（业务与仿真全量）→ S40（前端）→ S50（测试）→ 解冻 S10/S11（文档收尾）。
+- **S20 进行中（中断恢复）**：六镜像就绪；compose up 已执行但验收批次未跑完。**恢复步骤（下次开机）**：① 启动 Docker Desktop 等鲸鱼变绿；② 告知 AI"继续 S20"，AI 重跑验收批次（幂等：`docker compose up -d` + 健康等待 + mongo rs.initiate + kafka topics --if-not-exists + HDFS 读写 + 生产消费 + HTTP 端点复测）。若 NameNode 启动异常（极小概率：关机时机恰逢首次格式化），按风险表处置（检查 `docker compose logs namenode`，必要时删 hdfs-name 卷重新初始化，仅测试数据无损失）。
+- S20 验收通过后：S21（最小业务链路）→ S30/S31（业务与仿真全量）→ S40（前端）→ S50（测试）→ 解冻 S10/S11（文档收尾）。
 - 任何新工作先在此与 PLAN.md 登记，再执行。
