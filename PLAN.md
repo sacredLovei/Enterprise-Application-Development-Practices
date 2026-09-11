@@ -55,12 +55,14 @@
 ## 已激活待执行步骤（执行顺序 S19 → S20 → S21）
 
 ### S20 Docker 六组件环境（原候选，2026-09-11 激活）
-- **状态**：in_progress
+- **状态**：done
 - **目标**：一键起齐 HDFS / MongoDB / Kafka / ES / Kibana / Nginx
 - **内容**：docker-compose.yml、各组件配置文件（core-site/hdfs-site、ES mapping 与安全关闭、Kafka 双监听器 KRaft、Nginx conf）、初始化脚本（Mongo 副本集、Kafka 主题）、健康检查与启动顺序
 - **验收标准**：`docker compose up -d` 后六组件全部 healthy；按设计报告 4.6.4 六步验证逐层通过（含 Kafka 双监听器内外连通、WebHDFS 上传下载、ES 建索引）
+- **验收结论**（2026-09-11）：**全部通过**。六组件 healthy（namenode/datanode/mongodb/kafka/elasticsearch/kibana/nginx）；MongoDB 副本集 rs0 PRIMARY（ok=1）；Kafka 8 业务主题全部创建；HDFS 写入读回 `s20-ok`；Kafka 生产/消费 `ping` 往返；HTTP 端点：ES `green`、NameNode WebUI 200、Nginx 8080 网关存活页 200、Kibana 经 /kibana/ 反代全插件 available。期间修复 4 个真实排错案例（风险 #13~#16：envtoconf 崩溃、Kibana basePath、busybox IPv6、GBK 管道编码），均为答辩素材
 - **产出物**：`docker/` 目录全套
 - **依据**：设计报告 4.6 节（拓扑/端口表/关键决策）与 5.2.6（Nginx 配置全文）
+- **里程碑 tag**：v0.2
 
 ### S21 最小业务链路（插入步骤，2026-09-11 用户确认）
 - **状态**：pending

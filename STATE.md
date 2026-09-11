@@ -11,10 +11,10 @@
 | 项 | 值 |
 |---|---|
 | 项目 | 无人机-机器狗空地协同巡检集成平台（选题 1 园区安防，课程：企业应用开发实践） |
-| 当前步骤 | **S20 Docker 六组件环境**（in_progress：部署配置 + 运行验收） |
-| 最近完成 | S19 开发环境准备（四项验收全过，提交 b396607） |
+| 当前步骤 | 无进行中步骤；**S20 已收尾**，下一步 S21（最小业务链路，待用户确认启动） |
+| 最近完成 | S20 Docker 六组件环境（验收全过，tag v0.2） |
 | 进行中事项 | 无 |
-| 当前版本 | 里程碑 v0.1；S19 开始标记提交 2199642；JDK 口径调整提交 3ebe329 |
+| 当前版本 | 里程碑 v0.2（六组件环境可用）；v0.1（设计方案） |
 | 工作树状态 | 干净（随每次提交保持） |
 
 ## 2. 版本表
@@ -29,6 +29,7 @@
 | （S19 开始） | 2199642 | 计划调整：插入 S19/S21、激活 S20、冻结 S10/S11；S19 开始 | 2026-09-11 |
 | （S19 中） | 3ebe329 | 口径调整：JDK 17→21（本机 DevEco JBR 21.0.6 → tools/jdk-21）；设计报告升版 v0.2 | 2026-09-11 |
 | （S19 完成） | 本步提交（HEAD） | 环境四项验收全过：JDK21 / Docker 引擎运行（用户目视确认）/ WSL / 磁盘 50GB | 2026-09-11 |
+| v0.2 | 本步提交（HEAD） | 里程碑：S20 六组件环境验收全过（六组件 healthy、rs0 PRIMARY、8 主题、HDFS 读写、生产消费、四端点 HTTP 验证） | 2026-09-11 |
 
 ## 3. 变更时间线（只增不改）
 
@@ -108,9 +109,11 @@
 13. **apache/hadoop 镜像 envtoconf 机制存在 bug（已踩坑，已修复）**：`CORE_CONF_*`/`HDFS_CONF_*` 环境变量触发 `to_conf` 转换，其对 `process_properties` 返回的字典直接迭代解包 → `ValueError: too many values to unpack`，NameNode/DataNode 启动即崩。**结论**：本项目禁用 envtoconf 环境变量，HDFS 配置一律用挂载的 `core-site.xml`/`hdfs-site.xml`（无 CORE_/HDFS_ 环境变量时 envtoconf 为 no-op，不覆盖挂载文件）；`ENSURE_NAMENODE_DIR`（格式化守卫）与 `WAITFOR`（启动等待）仍可用（属 starter.sh，非 envtoconf）。
 14. **Kibana basePath 反代坑（已踩坑，已修复）**：Kibana 设 `SERVER_BASEPATH=/kibana` 后，容器内状态接口变为 `/kibana/api/status`（裸 `/api/status` 返回 404）→ 原健康检查永远失败（Kibana 一直 health: starting）；Nginx 反代必须 `proxy_pass http://kibana:5601;`（**不带尾斜杠**，保留 /kibana 前缀），带尾斜杠会剥前缀导致 404。两处已对齐。
 15. **alpine busybox wget 的 IPv6 localhost 坑（已踩坑，已修复）**：busybox wget 连 `localhost` 优先解析 `::1`，而 nginx 仅监听 IPv4 且 busybox 不回退 → "Connection refused"，nginx 健康检查永远失败（nginx 实际运行正常）。**结论**：容器内健康检查/自检一律用 `127.0.0.1` 而非 `localhost`（nginx 已改；kibana 的 curl 有回退机制不受影响）。
+16. **GBK 管道编码坑（已踩坑，已修复）**：Windows 下 `Get-Content -Raw | docker exec -i mongodb mongosh` 以 GBK 解码 UTF-8 脚本，中文注释变乱码并破坏 JS 字符串 → rs.initiate 从未执行成功（表现：`no replset config has been received`）。**结论**：经管道送入容器的脚本一律纯 ASCII（`mongo-rs-init.js` 已改），或显式 `-Encoding UTF8` 读取。
 
 ## 7. 下一步计划
 
-- **S20 进行中（中断恢复）**：六镜像就绪；compose up 已执行但验收批次未跑完。**恢复步骤（下次开机）**：① 启动 Docker Desktop 等鲸鱼变绿；② 告知 AI"继续 S20"，AI 重跑验收批次（幂等：`docker compose up -d` + 健康等待 + mongo rs.initiate + kafka topics --if-not-exists + HDFS 读写 + 生产消费 + HTTP 端点复测）。若 NameNode 启动异常（极小概率：关机时机恰逢首次格式化），按风险表处置（检查 `docker compose logs namenode`，必要时删 hdfs-name 卷重新初始化，仅测试数据无损失）。
-- S20 验收通过后：S21（最小业务链路）→ S30/S31（业务与仿真全量）→ S40（前端）→ S50（测试）→ 解冻 S10/S11（文档收尾）。
+- **S20 已完成**（tag v0.2）。六组件环境当前运行中，日常运维见 `docker/README.md`（`compose up/down`、看日志；严禁 `down -v`）。
+- **下一步 S21 最小业务链路**（待用户确认启动）：simulator 最小版（心跳 5s/遥测 2s 生产者）+ backend 最小版（消费落库 + `GET /api/devices` + `X-Backend-Instance` 头）+ Nginx `/api/` 上游；验收：`curl http://localhost:8080/api/devices` 返回设备数据且心跳时间更新、响应头可见实例号。
+- 之后：S30/S31（业务与仿真全量）→ S40（前端）→ S50（测试）→ 解冻 S10/S11（文档收尾）。
 - 任何新工作先在此与 PLAN.md 登记，再执行。
