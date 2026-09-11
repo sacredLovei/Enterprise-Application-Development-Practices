@@ -50,6 +50,7 @@
 | 2026-09-11 | 本步（HEAD） | S20 交接（用户决定）：AI 侧后台拉取速度偏慢，取消之；镜像拉取改由**用户在本机系统终端**执行 `docker/init/pull-images.ps1`（含镜像源与重标记逻辑）。镜像就绪后由 AI 继续 compose 启动 + 初始化 + 验收 | AI |
 | 2026-09-11 | 本步（HEAD） | S20 口径变更（Kafka 换镜像，D-18）：实测 bitnami/kafka:3.6 与 4.1 在 Docker Hub 均 404（Bitnami 已下架公开 Kafka 镜像），用户直连拉取 apache/kafka:4.0.0 成功；compose/脚本/README/设计报告（v0.3）/注册表全部同步 | AI |
 | 2026-09-11 | 本步（HEAD） | S20 中断（用户关机赶路）：六镜像全部就绪；`docker compose up -d` 已执行，ES 已就绪（9200 返回 200），HDFS/Kibana/Nginx 启动中；验收批次（Mongo rs.initiate、Kafka 主题、HDFS 读写、生产消费）**未完成**。所有初始化步骤均幂等（rs.initiate 可重入、--if-not-exists、ENSURE_NAMENODE_DIR 格式化守卫），下次开机可直接重跑验收，无数据丢失风险（数据在命名卷中）。本次修正：同步更新了过期的 §7 下一步计划（此前仍停留在 S19 措辞） | AI |
+| 2026-09-11 | 本步（HEAD） | S20 恢复排错（envtoconf bug）：恢复批次健康等待超时，定位到 namenode/datanode 因 `CORE_CONF_*` 环境变量触发 envtoconf `to_conf` 解析崩溃（ValueError）；回退为挂载 `core-site.xml`/`hdfs-site.xml`（重建此前删除的配置文件），保留 ENSURE_NAMENODE_DIR 与 WAITFOR；登记风险 #13 | AI |
 
 ## 4. 决策记录（永不删除，只可被新决策取代）
 
@@ -104,6 +105,7 @@
 10. **磁盘空间不达标（S19 验收项④未过）**：C 盘空闲仅 **15.8 GB**（设计要求 ≥40 GB），且本机仅 C 一个盘符。缓解预案：① `powercfg /h off` 关闭休眠回收约 6 GB；② 磁盘清理（cleanmgr/系统临时文件/回收站）；③ `.wslconfig` 设 `memory=8GB swap=8GB`；④ 开发期不启动 Kibana；⑤ Docker Desktop 磁盘镜像上限设合理值。**已解决（2026-09-11）**：用户清理后 C 盘空闲 50 GB，满足 D-15 开工条件；④ 相应解除（Kibana 正常启动）。
 11. AI 沙箱无法通过 docker CLI 确认引擎状态（named pipe `dockerDesktopLinuxEngine` 被沙箱拒绝：permission denied）；docker 引擎运行状态须由用户目视鲸鱼图标（绿色=Engine running）或用户自行在系统终端执行 `docker info` 确认。**已确认（2026-09-11）**：用户目视鲸鱼变绿，引擎运行中；S20 起 AI 执行 docker 命令需经沙箱升级授权（danger-full-access，用户已批准该模式）。
 12. **Docker Hub DNS 污染（S20 运行验收受阻）**：本机默认 DNS 将 registry-1.docker.io 解析为 127.0.0.1/::1（阿里 DNS 223.5.5.5 可正确解析），docker.io 直连不可用；docker.elastic.co 未受污染可直连。**应对（2026-09-11 实测）**：镜像源通道可用——docker.1ms.run / docker.xuanyuan.me / docker.m.daocloud.io / hub.rat.dev 均通（dockerproxy.net TLS 超时不可用）。**升级（D-17）**：用户 Clash Verge 代理（7897）就绪，Docker Desktop 配置手动代理后官方源直连可用，镜像源降级为兜底。
+13. **apache/hadoop 镜像 envtoconf 机制存在 bug（已踩坑，已修复）**：`CORE_CONF_*`/`HDFS_CONF_*` 环境变量触发 `to_conf` 转换，其对 `process_properties` 返回的字典直接迭代解包 → `ValueError: too many values to unpack`，NameNode/DataNode 启动即崩。**结论**：本项目禁用 envtoconf 环境变量，HDFS 配置一律用挂载的 `core-site.xml`/`hdfs-site.xml`（无 CORE_/HDFS_ 环境变量时 envtoconf 为 no-op，不覆盖挂载文件）；`ENSURE_NAMENODE_DIR`（格式化守卫）与 `WAITFOR`（启动等待）仍可用（属 starter.sh，非 envtoconf）。
 
 ## 7. 下一步计划
 
