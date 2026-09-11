@@ -67,7 +67,8 @@
 | D-13 | JDK 口径由 17 调整为 21（细化 D-2 的 JDK 版本部分）：使用本机 DevEco Studio 自带 JBR 21.0.6（完整 JDK，含 javac），复制至 `tools/jdk-21` 使用；构建时以命令内联 `JAVA_HOME` 覆盖全局（全局 JAVA_HOME 仍指向 JDK 8，不改系统环境变量） | 沙箱网络 TLS 凭据不可用（SEC_E_NO_CREDENTIALS），Adoptium 与镜像均无法下载；本机已具备完整 JDK 21，且 Spring Boot 3.2 支持 17~21，21 满足要求；设计报告 5.1.2/4.3.1/技术栈基线已同步更新（v0.2） | 有效 |
 | D-14 | WSL2 内存分配 8 GB、swap 8 GB（通过 `.wslconfig` 设置） | 本机总内存实测 15.7 GB，按约 50% 分配留足 Windows 开销；取代此前"10~12 GB"的口头建议 | 有效 |
 | D-15 | S20 开工前置条件：C 盘空闲 ≥ 30 GB（当前 15.8 GB，须先清理）；期间不启动 Kibana | 六组件镜像约 7~8 GB + vhdx 增长，15.8 GB 必然爆盘（风险 #10） | 有效 |
-| D-16 | docker.io 镜像经国内镜像源拉取并重标记为官方名（`docker/init/pull-images.ps1`），镜像源顺序：docker.1ms.run → docker.xuanyuan.me → docker.m.daocloud.io → hub.rat.dev；ES/Kibana 走官方源 docker.elastic.co 直连；compose 文件保持官方镜像名不变 | 本机 DNS 污染致 Docker Hub 直连失败（风险 #12），四个镜像源实测可用；重标记方案不改 compose、无需改引擎配置，换干净网络后可无缝回直连 | 有效 |
+| D-16 | docker.io 镜像经国内镜像源拉取并重标记为官方名（`docker/init/pull-images.ps1`），镜像源顺序：docker.1ms.run → docker.xuanyuan.me → docker.m.daocloud.io → hub.rat.dev；ES/Kibana 走官方源 docker.elastic.co 直连；compose 文件保持官方镜像名不变 | 本机 DNS 污染致 Docker Hub 直连失败（风险 #12），四个镜像源实测可用；重标记方案不改 compose、无需改引擎配置，换干净网络后可无缝回直连 | 有效（经 D-17 补充：有代理时直连优先，镜像源降级为兜底） |
+| D-17 | Docker 镜像拉取通道升级：用户提供 Clash Verge 代理（mihomo 混合端口 `127.0.0.1:7897`，实测开放）；Docker Desktop 配置手动代理（HTTP/HTTPS 均指向该地址）后，`pull-images.ps1` 改为**官方源直连优先、镜像源兜底** | 代理通道速度快且可直连官方源，镜像源仅作降级；Clash Verge 需开"允许局域网"使 WSL 引擎可达 | 有效 |
 
 ## 5. 术语与口径注册表（全项目唯一权威口径，改口径必须先改本表）
 
@@ -84,6 +85,7 @@
 | 节奏指标 | 心跳 5 s；遥测 2 s；离线阈值 15 s（3 个心跳周期）；遥测端到端 P95 < 1.5 s；检索 P95 < 500 ms；并发 ≥ 50 msg/s；网关 ≥ 200 QPS |
 | 文档文件 | `课程设计报告_第2-6章_园区安防巡检平台.md`（主交付文档，v0.1，基线提交 3056752）；头部含修订记录表 |
 | 修订记录约定 | 每次改正式文档须在头部修订记录表加一行：日期/版本/摘要/提交号 |
+| 网络通道 | 代理：Clash Verge（mihomo）混合端口 `127.0.0.1:7897`，Docker Desktop 手动代理配置用；镜像拉取：官方源直连优先、镜像源兜底（D-16/D-17）；镜像源可用清单见风险 #12 |
 
 ## 6. 已知问题与风险
 
@@ -98,7 +100,7 @@
 9. 用户机器访问 GitHub 失败（`wsl --install` 拉取发行版列表时 raw.githubusercontent.com DNS 解析失败，WININET_E_NAME_NOT_RESOLVED）。当前状态：WSL 2.7.13 与内核 6.18.33 已装好（AI 侧实测），仅缺 Ubuntu 发行版——**项目不需要 Ubuntu**（Docker Desktop 自带 docker-desktop 发行版）。引申风险：S20 从 Docker Hub 拉镜像可能同样受阻；预案：Docker Desktop 配置国内 registry mirror（中科大/网易/阿里加速器），S20 第一步先 `docker pull hello-world` 验证。
 10. **磁盘空间不达标（S19 验收项④未过）**：C 盘空闲仅 **15.8 GB**（设计要求 ≥40 GB），且本机仅 C 一个盘符。缓解预案：① `powercfg /h off` 关闭休眠回收约 6 GB；② 磁盘清理（cleanmgr/系统临时文件/回收站）；③ `.wslconfig` 设 `memory=8GB swap=8GB`；④ 开发期不启动 Kibana；⑤ Docker Desktop 磁盘镜像上限设合理值。**已解决（2026-09-11）**：用户清理后 C 盘空闲 50 GB，满足 D-15 开工条件；④ 相应解除（Kibana 正常启动）。
 11. AI 沙箱无法通过 docker CLI 确认引擎状态（named pipe `dockerDesktopLinuxEngine` 被沙箱拒绝：permission denied）；docker 引擎运行状态须由用户目视鲸鱼图标（绿色=Engine running）或用户自行在系统终端执行 `docker info` 确认。**已确认（2026-09-11）**：用户目视鲸鱼变绿，引擎运行中；S20 起 AI 执行 docker 命令需经沙箱升级授权（danger-full-access，用户已批准该模式）。
-12. **Docker Hub DNS 污染（S20 运行验收受阻）**：本机默认 DNS 将 registry-1.docker.io 解析为 127.0.0.1/::1（阿里 DNS 223.5.5.5 可正确解析），docker.io 直连不可用；docker.elastic.co 未受污染可直连。**应对（2026-09-11 实测）**：镜像源通道可用——docker.1ms.run / docker.xuanyuan.me / docker.m.daocloud.io / hub.rat.dev 均通（dockerproxy.net TLS 超时不可用）；采用"镜像源拉取 + 重标记官方名"方案（`docker/init/pull-images.ps1`，D-16）。若用户日后更换干净 DNS（223.5.5.5）或使用代理，可恢复直连。
+12. **Docker Hub DNS 污染（S20 运行验收受阻）**：本机默认 DNS 将 registry-1.docker.io 解析为 127.0.0.1/::1（阿里 DNS 223.5.5.5 可正确解析），docker.io 直连不可用；docker.elastic.co 未受污染可直连。**应对（2026-09-11 实测）**：镜像源通道可用——docker.1ms.run / docker.xuanyuan.me / docker.m.daocloud.io / hub.rat.dev 均通（dockerproxy.net TLS 超时不可用）。**升级（D-17）**：用户 Clash Verge 代理（7897）就绪，Docker Desktop 配置手动代理后官方源直连可用，镜像源降级为兜底。
 
 ## 7. 下一步计划
 
