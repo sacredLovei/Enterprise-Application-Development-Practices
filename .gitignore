@@ -1,6 +1,9 @@
 # ---- 治理与备份 ----
 _backups/
 
+# ---- Office 临时锁文件 ----
+~$*
+
 # ---- Java / Maven ----
 target/
 *.class
