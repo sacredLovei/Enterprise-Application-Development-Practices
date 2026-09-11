@@ -47,6 +47,7 @@
 | 2026-09-11 | 本步（HEAD） | S19 收尾：用户确认 Docker 引擎已启动（鲸鱼变绿）并完成磁盘清理，C 盘空闲 15.8 → **50 GB**；验收标准①②③④全部通过，S19 置 done，风险 #10/#11 销项 | AI |
 | 2026-09-11 | 本步（HEAD） | S20 开始（六组件环境）：即将产出 docker-compose.yml、组件配置、初始化脚本 | AI |
 | 2026-09-11 | 本步（HEAD） | S20 运行受阻与应对：`docker compose up -d` 因 Docker Hub DNS 污染失败（registry-1.docker.io → 127.0.0.1）；实测镜像源四通一不通（见风险 #12），elastic 官方源直连成功（ES 8.13.0 已拉取）；登记 D-16，产出 `docker/init/pull-images.ps1` | AI |
+| 2026-09-11 | 本步（HEAD） | S20 交接（用户决定）：AI 侧后台拉取速度偏慢，取消之；镜像拉取改由**用户在本机系统终端**执行 `docker/init/pull-images.ps1`（含镜像源与重标记逻辑）。镜像就绪后由 AI 继续 compose 启动 + 初始化 + 验收 | AI |
 
 ## 4. 决策记录（永不删除，只可被新决策取代）
 
