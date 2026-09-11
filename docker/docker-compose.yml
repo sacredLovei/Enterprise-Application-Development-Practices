@@ -161,11 +161,12 @@ services:
     volumes:
       - kibana-data:/usr/share/kibana/data
     healthcheck:
-      test: ["CMD-SHELL", "curl -fs http://localhost:5601/api/status || exit 1"]
+      # basePath=/kibana 时状态接口位于 /kibana/api/status（S20 排错实录，见 STATE 风险 #14）
+      test: ["CMD-SHELL", "curl -fs http://localhost:5601/kibana/api/status || exit 1"]
       interval: 30s
       timeout: 10s
       retries: 30
-      start_period: 60s
+      start_period: 90s
     networks: [inspection-net]
 
   # ============ 网关 Nginx（唯一对外入口 :8080） ============
