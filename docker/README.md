@@ -3,11 +3,20 @@
 > 依据：设计报告 4.6 节（部署拓扑图 4-3、容器清单表 4-2、关键部署决策 4.6.3、验证顺序 4.6.4）。
 > 镜像版本与 `STATE.md` 术语注册表一致，改动版本必须先改注册表（治理纪律 §6.2）。
 
+## 0. 首次拉取镜像（本机 Docker Hub DNS 被污染，必须走镜像源）
+
+```powershell
+# 本机默认 DNS 将 registry-1.docker.io 解析为 127.0.0.1（STATE 风险 #12），直接 compose up 会失败。
+# 先经镜像源拉取并重标记为官方名（2026-09-11 实测可用源：docker.1ms.run / docker.xuanyuan.me / docker.m.daocloud.io / hub.rat.dev）
+powershell -ExecutionPolicy Bypass -File init\pull-images.ps1
+# ES/Kibana 官方源 docker.elastic.co 未受污染，脚本内直连拉取
+```
+
 ## 1. 启动
 
 ```powershell
 cd <项目根目录>/docker
-docker compose up -d            # 拉取镜像 + 启动（首次拉镜像约 7~8 GB，视网络需 10~40 分钟）
+docker compose up -d            # 镜像已就绪时不再触发拉取
 docker compose ps               # 期望：六服务全部 healthy
 ```
 
