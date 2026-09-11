@@ -112,6 +112,7 @@
 14. **Kibana basePath 反代坑（已踩坑，已修复）**：Kibana 设 `SERVER_BASEPATH=/kibana` 后，容器内状态接口变为 `/kibana/api/status`（裸 `/api/status` 返回 404）→ 原健康检查永远失败（Kibana 一直 health: starting）；Nginx 反代必须 `proxy_pass http://kibana:5601;`（**不带尾斜杠**，保留 /kibana 前缀），带尾斜杠会剥前缀导致 404。两处已对齐。
 15. **alpine busybox wget 的 IPv6 localhost 坑（已踩坑，已修复）**：busybox wget 连 `localhost` 优先解析 `::1`，而 nginx 仅监听 IPv4 且 busybox 不回退 → "Connection refused"，nginx 健康检查永远失败（nginx 实际运行正常）。**结论**：容器内健康检查/自检一律用 `127.0.0.1` 而非 `localhost`（nginx 已改；kibana 的 curl 有回退机制不受影响）。
 16. **GBK 管道编码坑（已踩坑，已修复）**：Windows 下 `Get-Content -Raw | docker exec -i mongodb mongosh` 以 GBK 解码 UTF-8 脚本，中文注释变乱码并破坏 JS 字符串 → rs.initiate 从未执行成功（表现：`no replset config has been received`）。**结论**：经管道送入容器的脚本一律纯 ASCII（`mongo-rs-init.js` 已改），或显式 `-Encoding UTF8` 读取。
+17. **沙箱禁写 ~/.m2（已踩坑，已修复）**：Maven 默认本地仓库 `C:\Users\黎Li\.m2\repository` 位于工作区外，沙箱拒绝写入（`AccessDeniedException`）。**结论**：`.mvn/maven-settings-proxy.xml` 中 `<localRepository>` 重定向到工作区 `tools\m2repo`（已 gitignore），所有构建走 `-s .mvn/maven-settings-proxy.xml`，无需升级授权。
 
 ## 7. 下一步计划
 
