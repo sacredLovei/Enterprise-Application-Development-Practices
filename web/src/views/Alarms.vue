@@ -3,11 +3,21 @@ import { ref, onMounted, onUnmounted } from 'vue'
 import request from '../api/request'
 
 const form = ref({ alarmType: '', level: '', deviceId: '', keyword: '', from: 'now-24h', to: 'now' })
+const devices = ref([])
 const page = ref(0)
 const size = 15
 const result = ref({ total: 0, records: [] })
-let timer, debounceTimer
+let timer, debounceTimer, deviceTimer
 let seq = 0   // 请求序号：丢弃过期响应，防止自动刷新与手动检索竞态覆盖新结果
+
+// 设备下拉选项：动态取自设备台账（/api/devices），增删设备自动更新，无硬编码
+async function loadDevices() {
+  try {
+    devices.value = await request.get('/devices')
+  } catch (e) {
+    console.error('load devices failed', e)
+  }
+}
 
 async function search() {
   const my = ++seq
@@ -42,10 +52,12 @@ function goPage(p) {
 const totalPages = () => Math.max(1, Math.ceil(result.value.total / size))
 
 onMounted(() => {
+  loadDevices()
   search()
-  timer = setInterval(search, 5000)   // 自动刷新沿用当前筛选与页码
+  timer = setInterval(search, 5000)          // 自动刷新沿用当前筛选与页码
+  deviceTimer = setInterval(loadDevices, 30000)   // 设备清单 30s 刷新
 })
-onUnmounted(() => { clearInterval(timer); clearTimeout(debounceTimer) })
+onUnmounted(() => { clearInterval(timer); clearTimeout(debounceTimer); clearInterval(deviceTimer) })
 </script>
 
 <template>
@@ -64,7 +76,12 @@ onUnmounted(() => { clearInterval(timer); clearTimeout(debounceTimer) })
         <option value="CRITICAL">严重</option>
         <option value="WARN">警告</option>
       </select>
-      <input v-model="form.deviceId" placeholder="设备编号" style="width:140px" @input="onFilterInput" />
+      <select v-model="form.deviceId" @change="onFilterInput">
+        <option value="">全部设备</option>
+        <option v-for="d in devices" :key="d.deviceId" :value="d.deviceId">
+          {{ d.deviceId }}（{{ d.deviceType === 'UAV' ? '无人机' : '机器狗' }}·{{ d.status }}）
+        </option>
+      </select>
       <input v-model="form.keyword" placeholder="关键词" style="width:140px" @input="onFilterInput" />
       <button @click="page = 0; search()">检索</button>
     </div>

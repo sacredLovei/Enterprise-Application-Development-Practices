@@ -4,8 +4,9 @@ import request from '../api/request'
 
 const form = ref({ taskType: 'POINT_REVIEW', deviceId: '', priority: 2, remark: '' })
 const tasks = ref([])
+const devices = ref([])
 const msg = ref('')
-let timer
+let timer, deviceTimer
 
 async function load() {
   try {
@@ -15,10 +16,22 @@ async function load() {
   }
 }
 
+// 设备下拉选项：动态取自设备台账，增删设备自动更新
+async function loadDevices() {
+  try {
+    devices.value = await request.get('/devices')
+    if (!form.value.deviceId && devices.value.length) {
+      form.value.deviceId = devices.value.find(d => d.status === 'ONLINE')?.deviceId || ''
+    }
+  } catch (e) {
+    console.error('load devices failed', e)
+  }
+}
+
 async function submit() {
   msg.value = ''
   if (!form.value.deviceId) {
-    msg.value = '请填写执行设备编号（如 ROBOT-001）'
+    msg.value = '请选择执行设备'
     return
   }
   try {
@@ -46,9 +59,11 @@ async function cancel(taskId) {
 
 onMounted(() => {
   load()
-  timer = setInterval(load, 10000)   // 任务列表 10s 刷新（设计报告 5.2.7）
+  loadDevices()
+  timer = setInterval(load, 10000)               // 任务列表 10s 刷新（设计报告 5.2.7）
+  deviceTimer = setInterval(loadDevices, 30000)  // 设备清单 30s 刷新
 })
-onUnmounted(() => clearInterval(timer))
+onUnmounted(() => { clearInterval(timer); clearInterval(deviceTimer) })
 </script>
 
 <template>
@@ -61,7 +76,11 @@ onUnmounted(() => clearInterval(timer))
         <option value="POINT_REVIEW">定点复核</option>
         <option value="RETURN_HOME">返航</option>
       </select>
-      <input v-model="form.deviceId" placeholder="设备编号，如 ROBOT-001" style="width:220px" />
+      <select v-model="form.deviceId" style="min-width:220px">
+        <option v-for="d in devices" :key="d.deviceId" :value="d.deviceId">
+          {{ d.deviceId }}（{{ d.deviceType === 'UAV' ? '无人机' : '机器狗' }}·{{ d.status }}·电量{{ d.battery }}%）
+        </option>
+      </select>
       <select v-model="form.priority">
         <option :value="1">优先级 1（高）</option>
         <option :value="2">优先级 2（中）</option>
