@@ -1,6 +1,7 @@
 package com.course.inspection.device;
 
 import com.course.inspection.common.HeartbeatMsg;
+import com.course.inspection.common.RobotTelemetryMsg;
 import com.course.inspection.common.UavTelemetryMsg;
 import org.springframework.data.mongodb.core.MongoTemplate;
 import org.springframework.data.mongodb.core.query.Criteria;
@@ -45,6 +46,22 @@ public class DeviceStore {
         doc.setAltitude(m.altitude());
         doc.setSpeed(m.speed());
         doc.setBattery(m.battery());
+        mongo.insert(doc);
+    }
+
+    public void saveRobotTelemetry(RobotTelemetryMsg m) {
+        DeviceStatusDoc doc = new DeviceStatusDoc();
+        doc.setDeviceId(m.deviceId());
+        doc.setTs(Instant.ofEpochMilli(m.ts()));
+        doc.setLng(m.lng());
+        doc.setLat(m.lat());
+        doc.setSpeed(m.speed());
+        doc.setBattery(m.battery());
+        doc.setIrMaxTemp(m.irMaxTemp());
+        doc.setAmbientTemp(m.ambientTemp());
+        doc.setHumidity(m.humidity());
+        doc.setSmoke(m.smoke());
+        doc.setGas(m.gas());
         mongo.insert(doc);
     }
 

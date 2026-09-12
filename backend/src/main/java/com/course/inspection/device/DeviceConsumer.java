@@ -2,6 +2,7 @@ package com.course.inspection.device;
 
 import com.course.inspection.common.HeartbeatMsg;
 import com.course.inspection.common.Json;
+import com.course.inspection.common.RobotTelemetryMsg;
 import com.course.inspection.common.UavTelemetryMsg;
 import org.apache.kafka.clients.consumer.ConsumerRecord;
 import org.slf4j.Logger;
@@ -48,6 +49,19 @@ public class DeviceConsumer {
             ack.acknowledge();
         } catch (Exception e) {
             log.error("遥测消费失败，不提交 offset 等待重投 partition={} offset={}",
+                    record.partition(), record.offset(), e);
+        }
+    }
+
+    /** 机器狗遥测（S40 补上：此前未消费导致地图无机器狗位置）。 */
+    @KafkaListener(topics = "robot.telemetry", groupId = "biz-storage-consumer")
+    public void onRobotTelemetry(ConsumerRecord<String, String> record, Acknowledgment ack) {
+        try {
+            RobotTelemetryMsg msg = Json.fromJson(record.value(), RobotTelemetryMsg.class);
+            store.saveRobotTelemetry(msg);
+            ack.acknowledge();
+        } catch (Exception e) {
+            log.error("机器狗遥测消费失败，不提交 offset 等待重投 partition={} offset={}",
                     record.partition(), record.offset(), e);
         }
     }

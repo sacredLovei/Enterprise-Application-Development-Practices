@@ -25,6 +25,13 @@ public class DeviceStatusDoc {
     private double speed;
     private int battery;
 
+    // 机器狗专属传感字段（无人机记录为 null，文档型数据库异构载荷，设计报告 2.2.1 / 4.5.1）
+    private Double irMaxTemp;
+    private Double ambientTemp;
+    private Double humidity;
+    private Double smoke;
+    private Double gas;
+
     public String getId() {
         return id;
     }
@@ -87,5 +94,45 @@ public class DeviceStatusDoc {
 
     public void setBattery(int battery) {
         this.battery = battery;
+    }
+
+    public Double getIrMaxTemp() {
+        return irMaxTemp;
+    }
+
+    public void setIrMaxTemp(Double irMaxTemp) {
+        this.irMaxTemp = irMaxTemp;
+    }
+
+    public Double getAmbientTemp() {
+        return ambientTemp;
+    }
+
+    public void setAmbientTemp(Double ambientTemp) {
+        this.ambientTemp = ambientTemp;
+    }
+
+    public Double getHumidity() {
+        return humidity;
+    }
+
+    public void setHumidity(Double humidity) {
+        this.humidity = humidity;
+    }
+
+    public Double getSmoke() {
+        return smoke;
+    }
+
+    public void setSmoke(Double smoke) {
+        this.smoke = smoke;
+    }
+
+    public Double getGas() {
+        return gas;
+    }
+
+    public void setGas(Double gas) {
+        this.gas = gas;
     }
 }
