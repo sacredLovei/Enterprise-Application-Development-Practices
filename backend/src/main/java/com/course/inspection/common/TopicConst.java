@@ -13,6 +13,7 @@ public final class TopicConst {
 
     public static final String GROUP_STORAGE = "biz-storage-consumer";
     public static final String GROUP_ALARM   = "biz-alarm-consumer";
+    public static final String GROUP_TASK    = "biz-task-consumer";
 
     private TopicConst() {
     }
