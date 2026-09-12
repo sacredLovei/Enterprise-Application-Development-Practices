@@ -199,10 +199,10 @@ public class TelemetryGenerator {
 
     private void initSweepPath() {
         double latStep = 40.0 / 111_000d;
-        double lngSpan = 360.0 / (111_000d * Math.cos(Math.toRadians(sweepBaseLat)));
+        double lngSpan = 200.0 / (111_000d * Math.cos(Math.toRadians(sweepBaseLat)));
         double lng0 = sweepBaseLng - lngSpan / 2;
         double lng1 = sweepBaseLng + lngSpan / 2;
-        int rows = 6;
+        int rows = 4;
         path = new ArrayList<>();
         for (int r = 0; r < rows; r++) {
             double rowLat = sweepBaseLat + r * latStep;

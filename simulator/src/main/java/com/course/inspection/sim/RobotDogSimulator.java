@@ -24,13 +24,13 @@ public class RobotDogSimulator extends DeviceSimulator {
         super(kafka);
     }
 
-    /** 遥测：2 秒一次（FR-1.3）。地面行进速度 1.2 m/s。通信中断时停发（S40 修复）。 */
+    /** 遥测：2 秒一次（FR-1.3）。地面行进速度 3.5 m/s（真实机器狗跑动速度，S33 调整便于观察）。通信中断时停发（S40 修复）。 */
     @Scheduled(fixedRate = 2_000)
     public void telemetry() {
         if (!isCommUp()) {
             return;
         }
-        double[] pos = advance(1.2, 2);
+        double[] pos = advance(3.5, 2);
         long now = System.currentTimeMillis();
         if (now < overheatUntil) {
             irTemp = 110 + Math.random() * 15;
@@ -48,10 +48,9 @@ public class RobotDogSimulator extends DeviceSimulator {
                 round(50 + Math.random() * 10),   // 湿度
                 round(Math.random() * 0.05),      // 烟雾
                 round(Math.random() * 0.03),      // 可燃气
-                round(1.2 + Math.random() * 0.3),
+                round(3.5 + Math.random() * 0.5),
                 battery,
-                now);
-        send("robot.telemetry", msg);
+                now);        send("robot.telemetry", msg);
         checkTaskCompletion();
     }
 
