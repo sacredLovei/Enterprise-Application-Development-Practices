@@ -142,7 +142,7 @@ onUnmounted(() => { clearInterval(timer); clearInterval(deviceTimer) })
           <td><span class="badge" :class="'st-' + (t.status || '').toLowerCase()">{{ t.status }}</span></td>
           <td>{{ formatTime(t.createTime) }}</td>
           <td>{{ t.status === 'DONE' || t.status === 'FAILED' || t.status === 'CANCELLED' ? formatTime(t.finishTime) : '—' }}</td>
-          <td><button v-if="t.status === 'DISPATCHED'" class="ghost" @click="cancel(t.taskId)">取消</button></td>
+          <td><button v-if="t.status === 'DISPATCHED' || t.status === 'RUNNING'" class="ghost" @click="cancel(t.taskId)">取消</button></td>
         </tr>
       </tbody>
     </table>

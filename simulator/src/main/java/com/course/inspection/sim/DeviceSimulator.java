@@ -127,11 +127,39 @@ public abstract class DeviceSimulator {
             log.warn("指令被拒（通信中断） deviceId={} taskId={}", deviceId, cmd.taskId());
             return;
         }
+        if ("CANCEL_TASK".equals(cmd.taskType())) {
+            cancelTask(cmd.taskId());
+            return;
+        }
         taskQueue.offer(cmd);
         log.info("指令入队 deviceId={} taskId={} priority={} 队列长度={}",
                 deviceId, cmd.taskId(), cmd.priority(), taskQueue.size());
         maybeStartNext();
     }
+
+    /**
+     * 取消任务（S33 增强，用户要求：RUNNING 可取消，取消后返航）。
+     * 执行中 → 中止并回执 CANCELLED → 返航（非任务行为，到家后继续队列）；
+     * 排队中 → 移出队列并回执 CANCELLED。
+     */
+    private synchronized void cancelTask(String taskId) {
+        boolean removed = taskQueue.removeIf(c -> c.taskId().equals(taskId));
+        if (taskId.equals(currentTaskId)) {
+            receipt(taskId, "CANCELLED");
+            currentTaskId = null;
+            currentTaskType = null;
+            taskDoneSent = false;
+            beginHome();
+            returningHome = true;
+            log.info("任务被取消并返航 deviceId={} taskId={}", deviceId, taskId);
+        } else if (removed) {
+            receipt(taskId, "CANCELLED");
+            log.info("排队任务被取消 deviceId={} taskId={}", deviceId, taskId);
+        }
+    }
+
+    /** 取消后的返航为非任务行为：到家后恢复巡逻并继续队列。 */
+    private volatile boolean returningHome = false;
 
     private final java.util.concurrent.PriorityBlockingQueue<TaskCommandMsg> taskQueue =
             new java.util.concurrent.PriorityBlockingQueue<>(16, (a, b) -> {
@@ -191,8 +219,16 @@ public abstract class DeviceSimulator {
                 return t;
             });
 
-    /** 每遥测 tick 检查任务是否完成，完成即回执 DONE 并取下一个优先级最高的任务。 */
+    /** 每遥测 tick 检查任务完成，完成即回执 DONE 并取下一个优先级最高的任务。 */
     protected void checkTaskCompletion() {
+        if (returningHome) {
+            if (track.pointArrived()) {
+                returningHome = false;
+                track.startPatrolLoop();
+                maybeStartNext();
+            }
+            return;
+        }
         if (currentTaskId == null || taskDoneSent) {
             return;
         }

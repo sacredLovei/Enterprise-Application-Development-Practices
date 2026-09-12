@@ -29,7 +29,7 @@ public class TaskService {
     private static final Logger log = LoggerFactory.getLogger(TaskService.class);
 
     private static final DateTimeFormatter SEQ = DateTimeFormatter.ofPattern("yyyyMMddHHmmss");
-    private static final Set<String> CANCELABLE = Set.of("DISPATCHED", "CREATED");
+    private static final Set<String> CANCELABLE = Set.of("DISPATCHED", "CREATED", "RUNNING");
 
     private final MongoTemplate mongo;
     private final KafkaTemplate<String, String> kafka;
@@ -109,6 +109,7 @@ public class TaskService {
         switch (m.action()) {
             case "COMMAND_RECEIVED" -> transit(m.taskId(), Set.of("DISPATCHED"), "RUNNING");
             case "DONE" -> transit(m.taskId(), Set.of("DISPATCHED", "RUNNING"), "DONE");
+            case "CANCELLED" -> transit(m.taskId(), Set.of("DISPATCHED", "RUNNING"), "CANCELLED");
             default -> { /* EXECUTING 等动作仅归档，不改状态 */ }
         }
     }
@@ -117,19 +118,38 @@ public class TaskService {
     private void transit(String taskId, Set<String> from, String to) {
         Query query = Query.query(Criteria.where("taskId").is(taskId).and("status").in(from));
         Update update = new Update().set("status", to);
-        if ("DONE".equals(to)) {
+        if ("DONE".equals(to) || "CANCELLED".equals(to)) {
             update.set("finishTime", Instant.now());
         }
         var r = mongo.updateFirst(query, update, TaskDoc.class);
         log.info("任务状态流转 taskId={} -> {} 生效={}", taskId, to, r.getModifiedCount() > 0);
     }
 
-    /** 取消任务（仅 DISPATCHED/CREATED 可取消；条件更新防并发脏写，设计报告 5.2.4(5)）。 */
+    /**
+     * 取消任务（S33 增强：DISPATCHED/CREATED/RUNNING 均可取消）。
+     * 取消指令经 task.command 下发（CANCEL_TASK），由设备回执 CANCELLED 驱动最终状态；
+     * 设备离线/不存在时直接置 CANCELLED（指令无法送达）。
+     */
     public boolean cancel(String taskId) {
-        Query query = Query.query(Criteria.where("taskId").is(taskId).and("status").in(CANCELABLE));
-        Update update = new Update().set("status", "CANCELLED").set("finishTime", Instant.now());
-        var r = mongo.updateFirst(query, update, TaskDoc.class);
-        log.info("取消任务 taskId={} 生效={}", taskId, r.getModifiedCount() > 0);
-        return r.getModifiedCount() > 0;
+        TaskDoc task = mongo.findById(taskId, TaskDoc.class);
+        if (task == null || !CANCELABLE.contains(task.getStatus())) {
+            return false;
+        }
+        var device = mongo.findById(task.getDeviceId(),
+                com.course.inspection.device.DeviceDoc.class);
+        if (device == null || !"ONLINE".equals(device.getStatus())) {
+            // 设备离线：指令无法送达，直接置为已取消
+            mongo.updateFirst(Query.query(Criteria.where("taskId").is(taskId)),
+                    new Update().set("status", "CANCELLED").set("finishTime", Instant.now()),
+                    TaskDoc.class);
+            log.info("设备离线，直接取消任务 taskId={}", taskId);
+            return true;
+        }
+        // 下发取消指令：设备中止执行（或在队列中移除）并回执 CANCELLED，随后返航
+        TaskCommandMsg cmd = new TaskCommandMsg(taskId, "CANCEL_TASK", task.getDeviceId(),
+                1, System.currentTimeMillis(), null, null);
+        kafka.send(TopicConst.TASK_COMMAND, task.getDeviceId(), Json.toJson(cmd));
+        log.info("取消指令已下发 taskId={} deviceId={}", taskId, task.getDeviceId());
+        return true;
     }
 }
