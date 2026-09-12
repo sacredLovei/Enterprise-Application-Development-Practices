@@ -27,7 +27,7 @@ public class RobotDogSimulator extends DeviceSimulator {
     /** 遥测：2 秒一次（FR-1.3）。地面行进速度 3.5 m/s（真实机器狗跑动速度，S33 调整便于观察）。通信中断时停发（S40 修复）。 */
     @Scheduled(fixedRate = 2_000)
     public void telemetry() {
-        if (!isCommUp()) {
+        if (!isCommUp() || isPoweredOff()) {
             return;
         }
         double[] pos = advance(3.5, 2);

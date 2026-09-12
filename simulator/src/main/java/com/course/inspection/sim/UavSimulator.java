@@ -25,7 +25,7 @@ public class UavSimulator extends DeviceSimulator {
     /** 遥测：2 秒一次（FR-1.3）。速度 12 m/s。通信中断时停发（S40 修复）。 */
     @Scheduled(fixedRate = 2_000)
     public void telemetry() {
-        if (!isCommUp()) {
+        if (!isCommUp() || isPoweredOff()) {
             return;
         }
         double[] pos = advance(12, 2);
@@ -42,7 +42,7 @@ public class UavSimulator extends DeviceSimulator {
     /** 随机隐患发现：每 30 秒以约 15% 概率产生周界入侵告警（演示数据，FR-1.4 语义）。 */
     @Scheduled(fixedDelay = 30_000)
     public void patrolScan() {
-        if (!isCommUp() || random.nextDouble() >= 0.15) {
+        if (!isCommUp() || isPoweredOff() || random.nextDouble() >= 0.15) {
             return;
         }
         emitAlarm("PERIMETER_BREACH", "CRITICAL", "周界检测到疑似人员活动，待地面复核");

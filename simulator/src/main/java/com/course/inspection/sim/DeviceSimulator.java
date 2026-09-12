@@ -35,6 +35,7 @@ public abstract class DeviceSimulator {
     protected volatile int battery = 100;
     private volatile boolean recharging = false;
     private volatile boolean batteryLowFired = false;
+    private volatile boolean poweredOff = false;
     private volatile long rechargeDeadline = 0;
 
     private final AtomicBoolean commEnabled = new AtomicBoolean(true);
@@ -48,18 +49,26 @@ public abstract class DeviceSimulator {
         return commEnabled.get();
     }
 
-    /** 心跳：5 秒一次（FR-1.2）；COMM_OFFLINE 注入后停止。 */
+    /** 心跳：5 秒一次（FR-1.2）；COMM_OFFLINE 注入或断电后停止。 */
     @Scheduled(fixedRate = 5_000)
     public final void heartbeat() {
         if (!commEnabled.get()) {
             return;
         }
         tickBattery();
+        if (poweredOff) {
+            return;   // 断电：不发心跳，仅内部维护充电计时
+        }
         HeartbeatMsg msg = new HeartbeatMsg(deviceId, deviceType, battery, null, System.currentTimeMillis());
         send("device.heartbeat", msg);
     }
 
-    /** 电量循环：消耗 → 归零触发告警 → 回充（S31 新增，解决 S21 遗留项 #20①）。 */
+    /** 是否断电（电量归零后为 true，回充完成恢复 false）。 */
+    protected boolean isPoweredOff() {
+        return poweredOff;
+    }
+
+    /** 电量循环（S34 增强）：归零 → 断电下线 + 中止任务 → 回充 → 自动恢复上线。 */
     private void tickBattery() {
         long now = System.currentTimeMillis();
         if (recharging) {
@@ -67,7 +76,12 @@ public abstract class DeviceSimulator {
                 battery = 100;
                 recharging = false;
                 batteryLowFired = false;
-                log.info("回充完成 deviceId={} battery=100", deviceId);
+                if (poweredOff) {
+                    poweredOff = false;
+                    log.info("充电完成，设备重新上线 deviceId={}", deviceId);
+                } else {
+                    log.info("回充完成 deviceId={} battery=100", deviceId);
+                }
             }
             return;
         }
@@ -78,7 +92,16 @@ public abstract class DeviceSimulator {
             batteryLowFired = true;
             recharging = true;
             rechargeDeadline = now + RECHARGE_MILLIS;
+            poweredOff = true;
             emitAlarm("BATTERY_LOW", "WARN", "电量耗尽，自动返航回充");
+            // 断电中止当前任务（回执 FAILED，由后端置状态）
+            if (currentTaskId != null) {
+                receipt(currentTaskId, "FAILED");
+                log.info("断电中止任务 deviceId={} taskId={}", deviceId, currentTaskId);
+                currentTaskId = null;
+                currentTaskType = null;
+                taskDoneSent = false;
+            }
         }
     }
 
@@ -127,8 +150,21 @@ public abstract class DeviceSimulator {
             log.warn("指令被拒（通信中断） deviceId={} taskId={}", deviceId, cmd.taskId());
             return;
         }
+        // 控制指令（S34 手动上下线，复用故障注入机制）
+        if ("COMM_OFFLINE".equals(cmd.taskType())) {
+            injectFault("COMM_OFFLINE");
+            return;
+        }
+        if ("COMM_RESTORE".equals(cmd.taskType())) {
+            injectFault("COMM_RESTORE");
+            return;
+        }
         if ("CANCEL_TASK".equals(cmd.taskType())) {
             cancelTask(cmd.taskId());
+            return;
+        }
+        if (poweredOff) {
+            log.warn("设备断电，指令被拒 deviceId={} taskId={}", deviceId, cmd.taskId());
             return;
         }
         taskQueue.offer(cmd);

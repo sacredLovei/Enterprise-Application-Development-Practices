@@ -6,6 +6,7 @@ import { formatTime } from '../utils/time'
 const devices = ref([])
 const filter = ref({ status: '', deviceType: '' })
 const lastUpdated = ref('')
+const msg = ref('')
 let timer
 
 async function load() {
@@ -14,6 +15,18 @@ async function load() {
     lastUpdated.value = new Date().toLocaleTimeString('zh-CN', { hour12: false })
   } catch (e) {
     console.error(e)
+  }
+}
+
+/** 手动上下线（S34）：经后端控制指令下发，15s 内状态翻转。 */
+async function control(deviceId, action) {
+  msg.value = ''
+  try {
+    await request.post(`/devices/${deviceId}/${action}`)
+    msg.value = `${deviceId} 已下发${action === 'offline' ? '下线' : '上线'}指令（15 秒内生效）`
+    setTimeout(load, 16000)
+  } catch (e) {
+    msg.value = '操作失败：' + (e.response?.data?.message || e.message)
   }
 }
 
@@ -44,9 +57,10 @@ onUnmounted(() => clearInterval(timer))
       <button class="ghost" @click="load">手动刷新</button>
       <span class="hint">上次刷新：{{ lastUpdated || '—' }}（自动每 5 秒）</span>
     </div>
+    <div v-if="msg" class="hint">{{ msg }}</div>
     <table class="grid">
       <thead>
-        <tr><th>设备编号</th><th>类型</th><th>状态</th><th>电量</th><th>注册时间</th><th>最后心跳</th></tr>
+        <tr><th>设备编号</th><th>类型</th><th>状态</th><th>电量</th><th>注册时间</th><th>最后心跳</th><th>操作</th></tr>
       </thead>
       <tbody>
         <tr v-for="d in filtered()" :key="d.deviceId">
@@ -56,6 +70,10 @@ onUnmounted(() => clearInterval(timer))
           <td>{{ d.battery }}%</td>
           <td>{{ formatTime(d.registerTime) }}</td>
           <td>{{ formatTime(d.lastHeartbeat) }}</td>
+          <td>
+            <button v-if="d.status === 'ONLINE'" class="ghost" @click="control(d.deviceId, 'offline')">手动下线</button>
+            <button v-else class="ghost" @click="control(d.deviceId, 'online')">手动上线</button>
+          </td>
         </tr>
       </tbody>
     </table>

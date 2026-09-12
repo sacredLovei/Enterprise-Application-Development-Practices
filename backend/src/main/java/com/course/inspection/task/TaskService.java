@@ -110,6 +110,7 @@ public class TaskService {
             case "COMMAND_RECEIVED" -> transit(m.taskId(), Set.of("DISPATCHED"), "RUNNING");
             case "DONE" -> transit(m.taskId(), Set.of("DISPATCHED", "RUNNING"), "DONE");
             case "CANCELLED" -> transit(m.taskId(), Set.of("DISPATCHED", "RUNNING"), "CANCELLED");
+            case "FAILED" -> transit(m.taskId(), Set.of("DISPATCHED", "RUNNING"), "FAILED");
             default -> { /* EXECUTING 等动作仅归档，不改状态 */ }
         }
     }
@@ -118,7 +119,7 @@ public class TaskService {
     private void transit(String taskId, Set<String> from, String to) {
         Query query = Query.query(Criteria.where("taskId").is(taskId).and("status").in(from));
         Update update = new Update().set("status", to);
-        if ("DONE".equals(to) || "CANCELLED".equals(to)) {
+        if ("DONE".equals(to) || "CANCELLED".equals(to) || "FAILED".equals(to)) {
             update.set("finishTime", Instant.now());
         }
         var r = mongo.updateFirst(query, update, TaskDoc.class);
