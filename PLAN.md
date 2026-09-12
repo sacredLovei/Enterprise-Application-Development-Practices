@@ -177,3 +177,25 @@
 - **内容**：`git bundle create` 离线快照或推送远端仓库
 - **验收标准**：备份可完整恢复仓库
 - **产出物**：备份包
+
+### S61 复核派单闭环——后端与接口（v0.6 backlog：BUG-003/IT009）
+- **状态**：in_progress
+- **目标**：告警产生后自动派最近机器狗复核，回执回填告警 review；补齐 IT009 复核接口
+- **内容**：① DeviceDoc 增 `location`（GeoJSON）+ 2dsphere 索引，心跳携带坐标刷新位置；② AlarmConsumer 新告警（非 DEVICE_OFFLINE）触发就近派单——nearSphere 查最近 ONLINE 空闲机器狗 → 创建 POINT_REVIEW 任务（TaskDoc 增 alarmId 关联）；③ 任务 DONE 回执 → 生成红外复核图入 HDFS + 按仿真结论规则写告警 review（结论/图/复核设备/时间）；④ POST /api/alarms/{alarmId}/review 手动复核接口（IT009：结论+备注，更新 status/review）
+- **验收标准**：① 新告警自动产生 POINT_REVIEW 任务且指派给地理最近的空闲机器狗（TC021 语义）；② 任务 DONE 后告警 status/review 更新且复核图可下载；③ IT009 合法入参 200+字段更新、非法结论 400；④ 历史 10k 告警不触发批量派单
+- **产出物**：backend 代码变更（heartbeat/device/task/alarm 模块）
+- **依据**：设计报告 4.4.3 / 5.2.4(6) O-6 就近派单 / FR-4.9；BUG-003 回归
+
+### S62 复核闭环——仿真心跳坐标 + 前端证据链展示 + 回归测试（v0.6 backlog：TC032）
+- **状态**：pending
+- **目标**：仿真心跳携带坐标（供 2dsphere 派单）；前端告警详情展示复核图与结论；S50 遗留用例回归并回填报告
+- **内容**：① simulator 心跳携带 track 坐标；② web 告警详情证据链展示（高空原图 + 复核图 + 结论，TC032）；③ accept-v06.ps1 验收脚本；回归 TC021/TC027/IT009/TC032；④ 报告表 6-2/6-5/6-7 与 BUG-003 登记回归结论更新、STATE 同步
+- **验收标准**：TC021/IT009/TC032 通过（TC027 视 S63 结果）；报告与 STATE 口径一致
+- **产出物**：simulator/web 代码变更、accept-v06.ps1、报告回填
+
+### S63 ES 中文分词 ik 插件（v0.6 backlog：BUG-004/TC027）
+- **状态**：pending
+- **目标**：安装 ik 分词插件并回归 TC027；网络不可达则按 P-11 预案如实记档
+- **内容**：经容器网络下载 analysis-ik 8.13 对应版本 → `elasticsearch-plugin install` → 重启 ES → 检索映射 description 采用 ik_smart → TC027 回归
+- **验收标准**：ik 安装成功且中文分词检索命中（TC027 通过）；若下载不可行，如实记档（BUG-004 关闭为环境受限）并在报告更新
+- **产出物**：ES 插件安装记录、报告/STATE 同步
