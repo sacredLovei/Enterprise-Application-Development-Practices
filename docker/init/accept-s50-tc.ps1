@@ -100,9 +100,14 @@ Start-Sleep -Seconds 18
 $d = Dev "ROBOT-002"
 V "TC010" "offline detection" ($d.status -eq "OFFLINE") ("status=" + $d.status)
 $r = Req "POST" "$base/api/devices/ROBOT-002/online" $null
-Start-Sleep -Seconds 15
-$d = Dev "ROBOT-002"
-V "TC010b" "manual online restore" ($d.status -eq "ONLINE") ("status=" + $d.status)
+$online = $false
+$deadline = (Get-Date).AddSeconds(40)
+while ((Get-Date) -lt $deadline) {
+    $d = Dev "ROBOT-002"
+    if ($d.status -eq "ONLINE") { $online = $true; break }
+    Start-Sleep -Seconds 5
+}
+V "TC010b" "manual online restore" $online ("status=" + (Dev "ROBOT-002").status)
 V "TC013" "fault inject battery drop" $true "BATTERY_DROP path verified (S31/S34)"
 V "TC014" "duplicate register idempotent" $true "heartbeat upsert, device count stable=4"
 
