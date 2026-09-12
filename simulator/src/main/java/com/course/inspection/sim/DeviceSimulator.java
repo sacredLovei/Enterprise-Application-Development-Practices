@@ -37,16 +37,21 @@ public abstract class DeviceSimulator {
     private volatile boolean batteryLowFired = false;
     private volatile long rechargeDeadline = 0;
 
-    private final AtomicBoolean heartbeatEnabled = new AtomicBoolean(true);
+    private final AtomicBoolean commEnabled = new AtomicBoolean(true);
 
     protected DeviceSimulator(KafkaTemplate<String, String> kafka) {
         this.kafka = kafka;
     }
 
+    /** 通信是否正常（COMM_OFFLINE 注入后为 false，心跳与遥测全部停发）。 */
+    protected boolean isCommUp() {
+        return commEnabled.get();
+    }
+
     /** 心跳：5 秒一次（FR-1.2）；COMM_OFFLINE 注入后停止。 */
     @Scheduled(fixedRate = 5_000)
     public final void heartbeat() {
-        if (!heartbeatEnabled.get()) {
+        if (!commEnabled.get()) {
             return;
         }
         tickBattery();
@@ -81,8 +86,12 @@ public abstract class DeviceSimulator {
     public void injectFault(String type) {
         switch (type) {
             case "COMM_OFFLINE" -> {
-                heartbeatEnabled.set(false);
-                log.info("故障注入 COMM_OFFLINE：心跳已停止 deviceId={}", deviceId);
+                commEnabled.set(false);
+                log.info("故障注入 COMM_OFFLINE：心跳与遥测全部停止 deviceId={}", deviceId);
+            }
+            case "COMM_RESTORE" -> {
+                commEnabled.set(true);
+                log.info("通信恢复 COMM_RESTORE deviceId={}", deviceId);
             }
             case "BATTERY_DROP" -> {
                 battery = Math.min(battery, 10);

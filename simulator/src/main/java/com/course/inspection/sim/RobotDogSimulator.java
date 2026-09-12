@@ -22,9 +22,12 @@ public class RobotDogSimulator extends DeviceSimulator {
         super(kafka);
     }
 
-    /** 遥测：2 秒一次（FR-1.3）。地面行进速度 1.2 m/s。 */
+    /** 遥测：2 秒一次（FR-1.3）。地面行进速度 1.2 m/s。通信中断时停发（S40 修复）。 */
     @Scheduled(fixedRate = 2_000)
     public void telemetry() {
+        if (!isCommUp()) {
+            return;
+        }
         double[] pos = advance(1.2, 2);
         long now = System.currentTimeMillis();
         if (now < overheatUntil) {
