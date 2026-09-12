@@ -1,5 +1,7 @@
 package com.course.inspection.storage;
 
+import org.springframework.stereotype.Component;
+
 import java.time.Instant;
 import java.time.LocalDate;
 import java.time.ZoneId;
