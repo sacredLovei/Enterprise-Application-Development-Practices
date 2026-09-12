@@ -142,16 +142,28 @@ public abstract class DeviceSimulator {
                 return Long.compare(a.ts(), b.ts());
             });
 
-    /** 空闲则从队首取优先级最高的任务执行。 */
-    private synchronized void maybeStartNext() {
-        if (currentTaskId != null) {
-            return;
+    /** 汇聚窗口标记：空闲设备收到指令后延迟 3 秒开工，让"同时下发"的指令先按优先级排好队。 */
+    private volatile boolean startScheduled = false;
+
+    /** 空闲则经 3 秒汇聚窗口后，从队首取优先级最高的任务执行。 */
+    private void maybeStartNext() {
+        synchronized (this) {
+            if (currentTaskId != null || startScheduled) {
+                return;
+            }
+            startScheduled = true;
         }
-        TaskCommandMsg cmd = taskQueue.poll();
-        if (cmd == null) {
-            return;
-        }
-        startTask(cmd);
+        EXECUTOR.schedule(() -> {
+            startScheduled = false;
+            synchronized (this) {
+                if (currentTaskId == null) {
+                    TaskCommandMsg next = taskQueue.poll();
+                    if (next != null) {
+                        startTask(next);
+                    }
+                }
+            }
+        }, 3, java.util.concurrent.TimeUnit.SECONDS);
     }
 
     private void startTask(TaskCommandMsg cmd) {
