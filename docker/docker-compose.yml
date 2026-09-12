@@ -138,6 +138,7 @@ services:
         hard: -1
     volumes:
       - es-data:/usr/share/elasticsearch/data
+      - ./es-plugins:/usr/share/elasticsearch/plugins   # S63：ik 插件持久化（analysis-ik，重建容器不丢）
     healthcheck:
       test: ["CMD-SHELL", "curl -fs http://localhost:9200/_cluster/health || exit 1"]
       interval: 20s

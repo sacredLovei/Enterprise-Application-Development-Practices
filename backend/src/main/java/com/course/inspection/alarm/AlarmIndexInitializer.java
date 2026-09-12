@@ -12,14 +12,15 @@ import java.io.StringReader;
 /**
  * 启动时幂等创建 ES 索引（设计报告 5.2.5(1)）。
  * mapping 口径见 STATE 注册表与设计报告 4.5.2：dynamic=strict、geo_point、
- * keyword 精确字段、description 为 text（本环境未装 ik 插件，中文按 standard 分词降级）。
+ * keyword 精确字段、description 为 text（S63 起 analyzer=ik_smart，中文分词检索；索引升版 v2）。
  */
 @Component
 public class AlarmIndexInitializer implements ApplicationRunner {
 
     private static final Logger log = LoggerFactory.getLogger(AlarmIndexInitializer.class);
 
-    public static final String INDEX = "inspection_alarm_v1";
+    /** S63：v2 索引启用 ik_smart 中文分词（v1 保留作回滚基线，数据经 _reindex 迁移）。 */
+    public static final String INDEX = "inspection_alarm_v2";
 
     private static final String MAPPING_JSON = """
             {
@@ -37,7 +38,7 @@ public class AlarmIndexInitializer implements ApplicationRunner {
                   "alarmType":    { "type": "keyword" },
                   "level":        { "type": "keyword" },
                   "status":       { "type": "keyword" },
-                  "description":  { "type": "text" },
+                  "description":  { "type": "text", "analyzer": "ik_smart" },
                   "location":     { "type": "geo_point" },
                   "occurredTime": { "type": "date" },
                   "snapshotPath": { "type": "keyword", "index": false }

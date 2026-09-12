@@ -105,6 +105,17 @@ public class TaskService {
         DeviceDoc picked = robots.stream().filter(r -> !busy.contains(r.getDeviceId()))
                 .findFirst().orElse(robots.get(0));
 
+        // D-22 节流：选中机器人待办复核任务 ≥ 2 时跳过自动派单（告警留待人工复核 IT009），
+        // 防止告警高峰把机器狗队列打满导致复核无限积压
+        long pendingReviews = mongo.count(Query.query(Criteria.where("deviceId").is(picked.getDeviceId())
+                        .and("taskType").is("POINT_REVIEW")
+                        .and("status").in("DISPATCHED", "RUNNING")), TaskDoc.class);
+        if (pendingReviews >= 2) {
+            log.warn("复核节流：robot={} 待办复核 {} 个，跳过自动派单 alarmId={}（转人工复核 IT009）",
+                    picked.getDeviceId(), pendingReviews, alarmId);
+            return null;
+        }
+
         TaskDoc task = createInternal("POINT_REVIEW", picked.getDeviceId(), 1,
                 "复核告警 " + alarmId, lng, lat, alarmId);
         log.info("复核派单 alarmId={} -> robot={} taskId={} 就近顺序={}",

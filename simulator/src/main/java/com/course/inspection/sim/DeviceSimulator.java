@@ -85,6 +85,9 @@ public abstract class DeviceSimulator {
                 if (poweredOff) {
                     poweredOff = false;
                     log.info("充电完成，设备重新上线 deviceId={}", deviceId);
+                    // S63 修复：断电中止后回充完成，继续执行队列中排队的任务
+                    // （原实现恢复后无人触发 maybeStartNext，排队任务永久停留在 DISPATCHED）
+                    maybeStartNext();
                 } else {
                     log.info("回充完成 deviceId={} battery=100", deviceId);
                 }

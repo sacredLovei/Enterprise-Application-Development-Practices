@@ -54,10 +54,19 @@ while ((Get-Date) -lt $deadline) {
 }
 
 # --- pre-step: wait robots idle (queue drained: no DISPATCHED/RUNNING robot tasks) ---
+# orphan cleanup: tasks stuck DISPATCHED > 5 min can never start (sim in-memory queue lost on restart) -> cancel
 $deadline = (Get-Date).AddMinutes(5)
 while ((Get-Date) -lt $deadline) {
     $list = (Req "GET" "$base/api/tasks?page=0&size=50" $null).body | ConvertFrom-Json
     $busy = $list.records | Where-Object { ($_.deviceId -match "ROBOT") -and ($_.status -eq "DISPATCHED" -or $_.status -eq "RUNNING") }
+    $orphans = $busy | Where-Object {
+        $age = [DateTimeOffset]::Parse($_.createTime).ToUnixTimeSeconds()
+        ([DateTimeOffset]::UtcNow.ToUnixTimeSeconds() - $age) -gt 300
+    }
+    foreach ($o in $orphans) {
+        Req "POST" "$base/api/tasks/$($o.taskId)/cancel" $null | Out-Null
+        Write-Output ("pre-step: cancel orphan task " + $o.taskId)
+    }
     if ($busy.Count -eq 0) { break }
     Write-Output ("pre-step: robots busy=" + $busy.Count + " waiting queue drain")
     Start-Sleep -Seconds 10
@@ -144,5 +153,17 @@ V "V-5" "IT009 manual review" $ok5 ("code=" + $r.code + " status=" + $(if($a5){$
 $a6 = Alarm $aid1
 $ok6 = ($a6 -ne $null -and $a6.snapshotPath -ne $null -and $a6.review -ne $null -and $a6.review.imagePath -ne $null)
 V "V-6" "TC032 detail evidence chain API" $ok6 ("snapshot=" + $(if($a6){$a6.snapshotPath}else{"?"}) + " reviewImage=" + $(if($a6 -and $a6.review){$a6.review.imagePath}else{"?"}))
+
+# --- V-7: TC027 Chinese ik search (S63: v2 index, ik_smart; keywords exist in data) ---
+function CSearch([string]$kw) {
+    $body = '{"keyword":"' + $kw + '","from":"now-24h","to":"now","page":0,"size":5}'
+    try {
+        $r = Invoke-WebRequest -Uri "$base/api/search/alarms" -Method POST -ContentType "application/json; charset=utf-8" -Body ([System.Text.Encoding]::UTF8.GetBytes($body)) -UseBasicParsing -TimeoutSec 20
+        return [long](( $r.Content | ConvertFrom-Json).total)
+    } catch { return -1 }
+}
+$tPerson = CSearch (-join [char[]](0x4EBA, 0x5458))                      # 人员 (ASCII-safe, risk #16)
+$tIr = CSearch (-join [char[]](0x7EA2, 0x5916, 0x6E29, 0x5EA6))          # 红外温度
+V "V-7" "TC027 chinese ik search" ($tPerson -gt 0 -and $tIr -gt 0) ("keyword-person total=" + $tPerson + " keyword-ir total=" + $tIr + " (ik_smart, v2 index)")
 
 Write-Output "===== V0.6 SUMMARY: PASS=$pass FAIL=$fail ====="

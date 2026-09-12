@@ -23,3 +23,6 @@ Thumbs.db
 # ---- 压测产物（体积大，仅本地留存；汇总数据回填报告/STATE） ----
 test/jmeter/*.jtl
 test/jmeter/report-*/
+
+# ---- ES 插件二进制（ik，由 install-ik.ps1 安装，不入库） ----
+docker/es-plugins/

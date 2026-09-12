@@ -11,10 +11,10 @@
 | 项 | 值 |
 |---|---|
 | 项目 | 无人机-机器狗空地协同巡检集成平台（选题 1 园区安防，课程：企业应用开发实践） |
-| 当前步骤 | **S63 ES 中文分词 ik 插件**（in_progress，v0.6 backlog 最后一步：BUG-004/TC027 回归） |
+| 当前步骤 | **v0.6 backlog 全部完成**（S61/S62/S63 done；验收 8/8） |
 | 最近完成 | S50 全量测试（含 4 项缺陷修复：BUG-001/005/006/007 回归通过）+ 10k 告警数据注入 + 报告回填 |
 | 当前版本 | 里程碑 **v0.5**（2026-09-12 用户确认打标：S50 全量测试通过）；历史 v0.4（联调完成）/ v0.3 / v0.2 / v0.1 |
-| 进行中事项 | **S63 ik 插件（in_progress）**；待办：设计报告 5.4 节截图补拍、前端证据链 UI 用户核验、S60 异地备份候选 |
+| 进行中事项 | 无（待办：设计报告 5.4 节截图补拍、前端证据链 UI 用户核验、S60 异地备份候选；v0.6 tag 待用户确认） |
 | 工作树状态 | 干净（随每次提交保持） |
 
 ## 2. 版本表
@@ -74,6 +74,7 @@
 | 2026-09-12 | 5202ff0 | **用户确认打 v0.5 里程碑 tag**（S50 全量测试通过）。用户决定：BUG-003（复核派单闭环，含 IT009）/ BUG-004（ik 分词）排入 v0.6 实现；IT001 设计差异永久记档。PLAN 登记新步骤 S61（复核后端）/S62（仿真+前端+回归）/S63（ik） | AI |
 | 2026-09-12 | d5ba022 | **S61 完成**（v0.6 第一步）：复核派单后端——DeviceDoc.location 2dsphere 索引、心跳携带坐标、AlarmConsumer 可复核类型触发 nearSphere 就近派单（空闲优先，D-21）、POINT_REVIEW 任务关联 alarmId、DONE 回执生成红外复核图并回填 review、IT009 手动复核接口。验收：IT009 200/400、location_2dsphere 索引建立。排错 1 例：NearQuery.num(int) 已废 → limit(long)（Spring Data Mongo 4.x API） | AI |
 | 2026-09-12 | 本步 | **S62 完成**（v0.6 第二步）：仿真心跳携带 track 坐标；前端告警详情证据链面板（原图+复核图+结论并列）；accept-v06 验收 **7/7 PASS**（TC021 就近派单双验证、复核回填、复核图下载 5,848 字节、IT009、TC032 API）。排错 2 例：① 机器狗 deviceType 口径为 ROBOT_DOG，派单过滤误写 ROBOT 致无候选（已修）；② 验收脚本竞态——任务 DONE 后 completeReview 的 HDFS 上传未完成即取告警，改轮询 review 出现。报告 TC021/IT009/TC032 转绿、表 6-7 功能 33/34 接口 14/15、BUG-003 登记回归通过、文档升版 v0.6 | AI |
+| 2026-09-12 | 本步 | **S63 完成**（v0.6 最后一步）：① ik 插件安装（官方发布源 4.4MB zip，与 ES 8.13.0 版本匹配；GitHub 全通道 404 排错实录入风险 #35）；插件 bind 挂载持久化 + install-ik.ps1 可复现；② 索引升版 inspection_alarm_v2（description=ik_smart）+ _reindex 迁移 10,716 条（v1 保留回滚基线）；③ ik_smart 分词验证（园区/围墙/入侵/人员独立成词）与中文检索实测（人员 300 条、红外温度 5 条）；④ 发现并修复队列积压双缺陷：复核节流 D-22（待办≥2 跳过派单）+ 仿真告警频率 15%→5%（告警流入与复核吞吐匹配）+ 断电回充后队列续跑（风险 #36）；⑤ **v0.6 验收官方终跑 8/8 PASS**，TC027 转绿，功能测试 34/34；报告升版 v0.7，BUG-004 登记回归通过，**S50 登记的两项遗留全部清零** | AI |
 
 ## 4. 决策记录（永不删除，只可被新决策取代）
 
@@ -99,6 +100,7 @@
 | D-19 | S50 压测执行口径：PT003/PT004 压测时临时注释 nginx `limit_req`（压测对象是后端/网关而非限流器），测后恢复并由 PT006 单独验证限流；PT001/PT002 用批量注入+排水计数替代长时间打流；PT007 稳定性 2h 压缩为 10 分钟采样 | 分离"后端能力"与"限流器行为"两个被测对象，避免限流 503 污染性能数据；压缩时长控制课程节奏，结论强度不降低（计数与 LAG 证据等价） | 有效 |
 | D-20 | 缺陷登记口径：注册端点缺失（IT001）与影像元数据主题未接入（BUG-008）登记为**设计差异**而非缺陷；复核派单闭环（BUG-003）与 ik 分词（BUG-004）登记为**范围/环境遗留**，均不阻塞验收，计划 v0.6 | 与 D-9 一致：如实记录差异与范围，不粉饰为通过、也不夸大为止步缺陷 | 有效 |
 | D-21 | S61 复核派单策略（v0.6，BUG-003 回归）：**可复核类型** PERIMETER_BREACH/INTRUSION/FIRE_SMOKE/DEVICE_OVERHEAT（BATTERY_LOW/DEVICE_OFFLINE 属设备状态事件不派现场复核）触发就近派单——2dsphere `nearSphere` 查最近 4 台在线机器狗（deviceType=ROBOT_DOG），空闲（无 DISPATCHED/RUNNING 任务）优先、全忙派最近（设备优先级队列兜底）；任务关联 `TaskDoc.alarmId`；DONE 回执 → 生成红外复核图（`dog_infrared` 目录）→ 告警 status/review 回填。**复核结论规则为仿真口径**：alarmId 哈希 70% CONFIRMED / 30% FALSE_ALARM（真实系统应由识别模型输出）；历史 10k 告警不回放派单；手动复核 IT009 覆盖人工干预路径 | 与设计 O-6/TC021/IT009 对齐；结论规则显式标注仿真口径，不伪装成真实识别 | 有效 |
+| D-22 | S63 复核吞吐匹配策略：① 派单节流——选中机器人待办复核任务 ≥ 2 时跳过自动派单（告警留待人工复核 IT009）；② 仿真告警频率调低——UAV patrolScan 15%/30s → 5%/30s（告警流入约 0.6 → 0.2 条/分钟），匹配 2 台机器狗复核吞吐（每单 1~2 分钟）。背景：实测告警高峰下复核队列持续积压、任务永久停在 DISPATCHED | 让自动复核闭环在真实告警速率下可持续，而非只在测试注入下可演示 | 有效 |
 
 ## 5. 术语与口径注册表（全项目唯一权威口径，改口径必须先改本表）
 
@@ -109,7 +111,7 @@
 | Kafka 主题 | `uav.telemetry`(3 分区)、`robot.telemetry`(2)、`device.heartbeat`(3)、`inspection.alarm`(3)、`inspection.image.meta`(2)、`task.command`(2，下行)、`task.log`(2)、`inspection.dlq` |
 | 消费组 | `biz-storage-consumer`、`biz-alarm-consumer`、`biz-task-consumer`（S32 新增，task.log 回执消费）、`sim-cmd-<deviceId>`（S32 重构：每设备独立指令消费组，见风险 #27） |
 | MongoDB 集合 | `device`、`device_status`、`task`、`alarm`、`task_log`（实测清单，2026-09-12）；`image_meta` 集合未创建——影像元数据消息未接入（BUG-008 设计差异）；TTL：device_status 30 天、task_log 90 天 |
-| ES 索引 | `inspection_alarm_v1`；`dynamic: strict`；`location` 为 geo_point（**顺序 [经度,纬度]**）；中文分词 **ik 插件未安装（BUG-004，网络受限）**，按 P-11 预案降级为短语级匹配 |
+| ES 索引 | **`inspection_alarm_v2`**（S63 起现行；`inspection_alarm_v1` 保留作回滚基线）；`dynamic: strict`；`location` 为 geo_point（**顺序 [经度,纬度]**）；**description=ik_smart 中文分词（S63 安装 analysis-ik 8.13.0，插件经 docker/es-plugins bind 挂载持久化）** |
 | HDFS 路径 | `/inspection/{imageType}/{yyyy}/{MM}/{dd}/{deviceId}/{uuid}.{ext}`；imageType ∈ {uav_patrol, dog_infrared, alarm_snapshot} |
 | 编号段 | 图：3-x/4-x/5-x（图 3-1~图 5-16）；表：4-x/5-x/6-x；用例 TC001~TC034、IT001~IT015、PT001~PT007；缺陷 BUG-xxx；决策 D-n；计划步骤 Sxx |
 | 节奏指标 | 心跳 5 s；遥测 2 s；离线阈值 15 s（3 个心跳周期，自然失联判定）；**手动上下线 5 s 内生效（指令驱动，S50 用户要求提速）**；遥测端到端 P95 < 1.5 s；检索 P95 < 500 ms；并发 ≥ 50 msg/s；网关 ≥ 200 QPS |
@@ -153,6 +155,8 @@
 32. **ES hits.total 默认截断 10,000（已踩坑，已修复）**：数据量超过 10k 后 search/stats 返回的 total 静默截断为 10,000（TC026 在 10k 注入后暴露：total=10000 而分桶合计 10,229）。**结论**：分页/统计接口显式 `trackTotalHits(true)`（BUG-006）。
 33. **并发取消竞态（已踩坑，已修复）**：取消受理后待回执才置 CANCELLED，窗口期内二次取消被重复受理（TC022 实测两次 200）。**结论**：取消受理即同步置 CANCELLED 作为唯一受理标记，回执按幂等处理（BUG-007）。
 34. **Spring Data Mongo 自动建索引未开启（已踩坑，已修复）**：`@Indexed`（TTL）与复合索引从未落地——`device_status` 只有 `_id_` 索引，`/api/devices` 每次请求做集合扫描+内存排序（PT004 实测 888.8ms 的根因，BUG-005；设计内 O-5 未落地）。**结论**：`spring.data.mongodb.auto-index-creation: true` + `@CompoundIndex {deviceId:1, ts:-1}`；教训：注解写了 ≠ 索引存在，上线前必须用 getIndexes 核验。
+35. **ES ik 插件安装与持久化（S63 已解决）**：GitHub 直链全部 404（medcl 仓库已迁移、infinilabs 的 release 资产仅源码包、API 限流）→ 官方发布源 `release.infinilabs.com/analysis-ik/stable/elasticsearch-analysis-ik-8.13.0.zip` 可用；插件必须与 ES 版本完全一致（8.13.4 装不进 8.13.0，报"built for 8.13.4"）。**结论**：插件目录经 compose bind 挂载 `./es-plugins` 持久化（重建容器不丢）；`docker/init/install-ik.ps1` 可复现安装；索引升版 v2（ik_smart）+ `_reindex` 迁移（v1 保留作回滚基线）。
+36. **仿真断电回充后任务队列不续（S63 已踩坑，已修复）**：设备电量归零中止当前任务后，回充完成无人触发 `maybeStartNext()`，排队任务永久停在 DISPATCHED；另仿真重启会丢失内存任务队列，产生孤儿任务（DB 侧永远 DISPATCHED）。**结论**：① 回充完成（poweredOff→false）后补调 `maybeStartNext()`；② accept-v06 预置步骤自动取消 >5 分钟的 DISPATCHED 孤儿任务（自愈）；③ 真实场景队列持久化不在本课程范围，如实记录。
 
 ## 7. 下一步计划
 

@@ -196,8 +196,9 @@
 - **产出物**：simulator/web/backend 代码变更、accept-v06.ps1、报告回填
 
 ### S63 ES 中文分词 ik 插件（v0.6 backlog：BUG-004/TC027）
-- **状态**：in_progress
+- **状态**：done
 - **目标**：安装 ik 分词插件并回归 TC027；网络不可达则按 P-11 预案如实记档
 - **内容**：经容器网络下载 analysis-ik 8.13 对应版本 → `elasticsearch-plugin install` → 重启 ES → 检索映射 description 采用 ik_smart → TC027 回归
 - **验收标准**：ik 安装成功且中文分词检索命中（TC027 通过）；若下载不可行，如实记档（BUG-004 关闭为环境受限）并在报告更新
-- **产出物**：ES 插件安装记录、报告/STATE 同步
+- **验收结论**（2026-09-12）：**全部达到**。① 插件安装成功——GitHub 直链/API 全部不可用（medcl 仓库已迁移、infinilabs release 仅源码包、API 限流，实录入风险 #35），转官方发布源 `release.infinilabs.com` 下载 4.4MB zip；版本必须精确匹配 ES（8.13.4 装不进 8.13.0，报版本错）；插件经 `docker/es-plugins` bind 挂载持久化，`docker/init/install-ik.ps1` 可复现。② 索引升版 `inspection_alarm_v2`（description=ik_smart），`_reindex` 迁移 10,716 条（v1 保留回滚基线）。③ `ik_smart` 分词验证（园区/围墙/入侵/人员独立成词）+ 中文检索实测（"人员"300 条、"红外温度"5 条，V-7 PASS）。④ 顺带修复队列积压双缺陷（D-22 派单节流 + 仿真告警频率 15%→5%、断电回充后队列续跑，风险 #36）。**v0.6 验收官方终跑 8/8 PASS**，TC027 转绿，功能测试 34/34，报告升版 v0.7
+- **产出物**：install-ik.ps1、es-reindex-v1-v2.json、ik-analyze.json、compose es-plugins 挂载、报告/STATE 同步
