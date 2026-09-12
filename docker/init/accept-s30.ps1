@@ -43,16 +43,17 @@ $uav2 = (docker exec mongodb mongosh --quiet --eval "db.getSiblingDB('inspection
 Verdict "4. offline detection (UAV-002)" ($uav2 -eq "OFFLINE") ("status={0}" -f $uav2)
 
 # --- 5. idempotent replay ---
-$mBefore = (docker exec mongodb mongosh --quiet --eval "db.getSiblingDB('inspection').alarm.countDocuments({})" 2>&1 | Select-Object -Last 1).Trim()
+# Judge by counting docs OF THAT alarmId only (global counts are polluted by natural alarm traffic)
 $one = (docker exec mongodb mongosh --quiet --eval "db.getSiblingDB('inspection').alarm.findOne({},{_id:1})._id" 2>&1 | Select-Object -Last 1).Trim()
+$cBefore = (docker exec mongodb mongosh --quiet --eval "db.getSiblingDB('inspection').alarm.countDocuments({_id:'$one'})" 2>&1 | Select-Object -Last 1).Trim()
 $payload = '{"alarmId":"' + $one + '","deviceId":"UAV-001","deviceType":"UAV","alarmType":"PERIMETER_BREACH","level":"CRITICAL","description":"replay","lng":116.397,"lat":39.909,"occurredTime":1789173400000}'
 1..2 | ForEach-Object {
     $payload | docker exec -i kafka /opt/kafka/bin/kafka-console-producer.sh --bootstrap-server localhost:9092 --topic inspection.alarm 2>&1 | Out-Null
     Start-Sleep -Seconds 4
 }
 Start-Sleep -Seconds 8
-$mAfter = (docker exec mongodb mongosh --quiet --eval "db.getSiblingDB('inspection').alarm.countDocuments({})" 2>&1 | Select-Object -Last 1).Trim()
-Verdict "5. idempotent replay" ([int]$mAfter -eq [int]$mBefore) ("count {0} -> {1}" -f $mBefore, $mAfter)
+$cAfter = (docker exec mongodb mongosh --quiet --eval "db.getSiblingDB('inspection').alarm.countDocuments({_id:'$one'})" 2>&1 | Select-Object -Last 1).Trim()
+Verdict "5. idempotent replay" ([int]$cBefore -ge 1 -and [int]$cAfter -eq [int]$cBefore) ("docs for {0}: {1} -> {2}" -f $one, $cBefore, $cAfter)
 
 # --- 6. dead letter queue ---
 "this-is-not-json" | docker exec -i kafka /opt/kafka/bin/kafka-console-producer.sh --bootstrap-server localhost:9092 --topic inspection.alarm 2>&1 | Out-Null
