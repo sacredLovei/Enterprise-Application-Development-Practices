@@ -40,8 +40,11 @@ public class TaskService {
         this.kafka = kafka;
     }
 
-    public record CreateRequest(String taskType, String deviceId, int priority, String remark,
-                                Double targetLng, Double targetLat) {
+    public record CreateRequest(
+            @jakarta.validation.constraints.NotBlank(message = "taskType 不能为空") String taskType,
+            @jakarta.validation.constraints.NotBlank(message = "deviceId 不能为空") String deviceId,
+            int priority, String remark,
+            Double targetLng, Double targetLat) {
     }
 
     /** 创建并下发任务。设备离线/不存在时拒绝（S40 用户反馈：离线设备不应可派单）。 */

@@ -22,7 +22,8 @@ public class TaskController {
     }
 
     @PostMapping
-    public TaskDoc create(@RequestBody TaskService.CreateRequest req) {
+    @org.springframework.web.bind.annotation.ResponseStatus(HttpStatus.CREATED)
+    public TaskDoc create(@jakarta.validation.Valid @RequestBody TaskService.CreateRequest req) {
         return service.create(req);
     }
 

@@ -9,6 +9,7 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.server.ResponseStatusException;
 
@@ -29,9 +30,13 @@ public class DeviceController {
     }
 
     @GetMapping
-    public List<DeviceVo> list() {
-        // 台账 + 最近遥测位置（S40 地图展示）
+    public List<DeviceVo> list(
+            @RequestParam(required = false) String status,
+            @RequestParam(required = false) String deviceType) {
+        // 台账 + 最近遥测位置（S40 地图展示）；S50 补：支持状态/类型筛选（契约 IT002）
         return store.list().stream()
+                .filter(d -> status == null || status.isBlank() || status.equals(d.getStatus()))
+                .filter(d -> deviceType == null || deviceType.isBlank() || deviceType.equals(d.getDeviceType()))
                 .map(d -> DeviceVo.from(d, store.lastStatus(d.getDeviceId())))
                 .toList();
     }
