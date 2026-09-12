@@ -103,17 +103,18 @@ for ($i = 0; $i -lt 10; $i++) {
 V "TC028" "load balancing" (($c1 -gt 0) -and ($c2 -gt 0)) ("backend-1=$c1 backend-2=$c2")
 
 # --- offline & power group (S34) ---
+# S50 提速：手动下线指令驱动 5s 置 OFFLINE；上线仿真立即补发心跳（1s 级恢复）
 $r = Req "POST" "$base/api/devices/ROBOT-002/offline" $null
-Start-Sleep -Seconds 18
+Start-Sleep -Seconds 8
 $d = Dev "ROBOT-002"
 V "TC010" "offline detection" ($d.status -eq "OFFLINE") ("status=" + $d.status)
 $r = Req "POST" "$base/api/devices/ROBOT-002/online" $null
 $online = $false
-$deadline = (Get-Date).AddSeconds(40)
+$deadline = (Get-Date).AddSeconds(12)
 while ((Get-Date) -lt $deadline) {
     $d = Dev "ROBOT-002"
     if ($d.status -eq "ONLINE") { $online = $true; break }
-    Start-Sleep -Seconds 5
+    Start-Sleep -Seconds 1
 }
 V "TC010b" "manual online restore" $online ("status=" + (Dev "ROBOT-002").status)
 V "TC013" "fault inject battery drop" $true "BATTERY_DROP path verified (S31/S34)"
