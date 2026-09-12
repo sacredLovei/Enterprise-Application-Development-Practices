@@ -34,6 +34,10 @@ public class DeviceStore {
                 .set("lastHeartbeat", Instant.ofEpochMilli(m.ts()))
                 .setOnInsert("deviceId", m.deviceId())
                 .setOnInsert("registerTime", Instant.ofEpochMilli(m.ts()));
+        // S61：心跳携带位置时刷新台账 location（2dsphere 就近派单数据源）
+        if (m.lng() != null && m.lat() != null) {
+            update.set("location", new org.springframework.data.mongodb.core.geo.GeoJsonPoint(m.lng(), m.lat()));
+        }
         mongo.upsert(query, update, DeviceDoc.class);
     }
 

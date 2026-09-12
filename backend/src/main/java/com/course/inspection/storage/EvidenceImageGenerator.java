@@ -57,4 +57,31 @@ public class EvidenceImageGenerator {
         }
         return s.length() <= max ? s : s.substring(0, max) + "...";
     }
+
+    /** S61：机器狗红外复核图（暗红 IR 风格 + 结论水印），与告警证据图同构、走同一 HDFS 归档链路。 */
+    public Evidence generateReview(String alarmId, String conclusion, String reviewerDeviceId) {
+        try {
+            BufferedImage img = new BufferedImage(640, 360, BufferedImage.TYPE_INT_RGB);
+            Graphics2D g = img.createGraphics();
+            g.setColor(new Color(30, 8, 8));
+            g.fillRect(0, 0, 640, 360);
+            g.setColor(new Color(255, 90, 60));
+            g.setFont(new Font(Font.SANS_SERIF, Font.BOLD, 28));
+            g.drawString("ROBOT DOG IR REVIEW", 30, 60);
+            g.setFont(new Font(Font.SANS_SERIF, Font.PLAIN, 20));
+            g.drawString("alarmId: " + alarmId, 30, 120);
+            g.drawString("reviewer: " + reviewerDeviceId, 30, 155);
+            g.drawString("conclusion: " + conclusion, 30, 190);
+            g.drawString("thermal: 36.5 C (simulated)", 30, 230);
+            g.dispose();
+            ByteArrayOutputStream out = new ByteArrayOutputStream();
+            ImageIO.write(img, "png", out);
+            return new Evidence(out.toByteArray(), "png");
+        } catch (Throwable e) {
+            log.warn("AWT 不可用，复核图降级为文本: {}", e.getMessage());
+            String text = "IR REVIEW\n" + "alarmId=" + alarmId + "\nreviewer=" + reviewerDeviceId
+                    + "\nconclusion=" + conclusion + "\n";
+            return new Evidence(text.getBytes(StandardCharsets.UTF_8), "txt");
+        }
+    }
 }

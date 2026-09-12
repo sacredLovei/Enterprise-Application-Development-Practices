@@ -30,14 +30,17 @@ public class AlarmConsumer {
     private final HdfsClient hdfs;
     private final PathBuilder paths;
     private final EvidenceImageGenerator evidence;
+    private final com.course.inspection.task.TaskService taskService;
 
     public AlarmConsumer(AlarmStore store, AlarmSearchService searchService,
-                         HdfsClient hdfs, PathBuilder paths, EvidenceImageGenerator evidence) {
+                         HdfsClient hdfs, PathBuilder paths, EvidenceImageGenerator evidence,
+                         com.course.inspection.task.TaskService taskService) {
         this.store = store;
         this.searchService = searchService;
         this.hdfs = hdfs;
         this.paths = paths;
         this.evidence = evidence;
+        this.taskService = taskService;
     }
 
     @KafkaListener(topics = TopicConst.INSPECTION_ALARM,
@@ -87,6 +90,16 @@ public class AlarmConsumer {
                 searchService.index(AlarmEsDoc.from(doc));
             } catch (Exception e) {
                 log.error("ES 写入失败，等待对账补偿 alarmId={}", msg.alarmId(), e);
+            }
+
+            // 4) S61 复核派单：新告警（DEVICE_OFFLINE 除外）触发就近机器狗复核；
+            //    派单失败不影响告警落库（仅日志）。历史 10k 告警不重放，不会批量派单。
+            if (!"DEVICE_OFFLINE".equals(msg.alarmType())) {
+                try {
+                    taskService.dispatchReview(msg.alarmId(), msg.lng(), msg.lat());
+                } catch (Exception e) {
+                    log.warn("复核派单失败（不影响告警落库） alarmId={}: {}", msg.alarmId(), e.getMessage());
+                }
             }
 
             log.info("告警三写完成 alarmId={} type={} snapshot={}",

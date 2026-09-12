@@ -28,6 +28,56 @@ public class AlarmDoc {
     private Instant occurredTime;
     private String snapshotPath;
     private String status;    // PENDING / CONFIRMED / FALSE_ALARM / RESOLVED
+    private Review review;    // S61：机器狗复核结论（复核派单闭环回填）
+
+    /** 复核子文档（S61）：复核设备、结论、备注、红外复核图路径、复核时间。 */
+    public static class Review {
+        private String reviewerDeviceId;
+        private String conclusion;   // CONFIRMED / FALSE_ALARM
+        private String note;
+        private String imagePath;
+        private Instant reviewedAt;
+
+        public String getReviewerDeviceId() {
+            return reviewerDeviceId;
+        }
+
+        public void setReviewerDeviceId(String reviewerDeviceId) {
+            this.reviewerDeviceId = reviewerDeviceId;
+        }
+
+        public String getConclusion() {
+            return conclusion;
+        }
+
+        public void setConclusion(String conclusion) {
+            this.conclusion = conclusion;
+        }
+
+        public String getNote() {
+            return note;
+        }
+
+        public void setNote(String note) {
+            this.note = note;
+        }
+
+        public String getImagePath() {
+            return imagePath;
+        }
+
+        public void setImagePath(String imagePath) {
+            this.imagePath = imagePath;
+        }
+
+        public Instant getReviewedAt() {
+            return reviewedAt;
+        }
+
+        public void setReviewedAt(Instant reviewedAt) {
+            this.reviewedAt = reviewedAt;
+        }
+    }
 
     public String getAlarmId() {
         return alarmId;
@@ -115,5 +165,13 @@ public class AlarmDoc {
 
     public void setStatus(String status) {
         this.status = status;
+    }
+
+    public Review getReview() {
+        return review;
+    }
+
+    public void setReview(Review review) {
+        this.review = review;
     }
 }

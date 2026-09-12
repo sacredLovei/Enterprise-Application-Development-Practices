@@ -179,15 +179,16 @@
 - **产出物**：备份包
 
 ### S61 复核派单闭环——后端与接口（v0.6 backlog：BUG-003/IT009）
-- **状态**：in_progress
+- **状态**：done（验收 ②③④ 已过；① 就近派单 E2E 依赖 S62 仿真心跳坐标，S62 一并验证）
 - **目标**：告警产生后自动派最近机器狗复核，回执回填告警 review；补齐 IT009 复核接口
 - **内容**：① DeviceDoc 增 `location`（GeoJSON）+ 2dsphere 索引，心跳携带坐标刷新位置；② AlarmConsumer 新告警（非 DEVICE_OFFLINE）触发就近派单——nearSphere 查最近 ONLINE 空闲机器狗 → 创建 POINT_REVIEW 任务（TaskDoc 增 alarmId 关联）；③ 任务 DONE 回执 → 生成红外复核图入 HDFS + 按仿真结论规则写告警 review（结论/图/复核设备/时间）；④ POST /api/alarms/{alarmId}/review 手动复核接口（IT009：结论+备注，更新 status/review）
 - **验收标准**：① 新告警自动产生 POINT_REVIEW 任务且指派给地理最近的空闲机器狗（TC021 语义）；② 任务 DONE 后告警 status/review 更新且复核图可下载；③ IT009 合法入参 200+字段更新、非法结论 400；④ 历史 10k 告警不触发批量派单
-- **产出物**：backend 代码变更（heartbeat/device/task/alarm 模块）
-- **依据**：设计报告 4.4.3 / 5.2.4(6) O-6 就近派单 / FR-4.9；BUG-003 回归
+- **验收结论**（2026-09-12）：②③④ 已验证——IT009 实测：合法结论 200（status=CONFIRMED、review 子文档完整）、非法结论 400；2dsphere 索引 `location_2dsphere` 已建立；历史告警不回放（仅新消息触发）。① 代码就绪（nearSphere 4 候选 + 空闲优先），E2E 随 S62 仿真坐标部署后验证
+- **产出物**：backend 代码变更（heartbeat/device/task/alarm 模块，8 个文件）
+- **依据**：设计报告 4.4.3 / 5.2.4(6) O-6 就近派单 / FR-4.9；BUG-003 回归；决策 D-21
 
 ### S62 复核闭环——仿真心跳坐标 + 前端证据链展示 + 回归测试（v0.6 backlog：TC032）
-- **状态**：pending
+- **状态**：in_progress
 - **目标**：仿真心跳携带坐标（供 2dsphere 派单）；前端告警详情展示复核图与结论；S50 遗留用例回归并回填报告
 - **内容**：① simulator 心跳携带 track 坐标；② web 告警详情证据链展示（高空原图 + 复核图 + 结论，TC032）；③ accept-v06.ps1 验收脚本；回归 TC021/TC027/IT009/TC032；④ 报告表 6-2/6-5/6-7 与 BUG-003 登记回归结论更新、STATE 同步
 - **验收标准**：TC021/IT009/TC032 通过（TC027 视 S63 结果）；报告与 STATE 口径一致

@@ -1,6 +1,9 @@
 package com.course.inspection.device;
 
 import org.springframework.data.annotation.Id;
+import org.springframework.data.mongodb.core.geo.GeoJsonPoint;
+import org.springframework.data.mongodb.core.index.GeoSpatialIndexType;
+import org.springframework.data.mongodb.core.index.GeoSpatialIndexed;
 import org.springframework.data.mongodb.core.mapping.Document;
 
 import java.time.Instant;
@@ -18,6 +21,10 @@ public class DeviceDoc {
     private String currentTaskId;
     private Instant registerTime;
     private Instant lastHeartbeat;
+
+    /** S61：最近位置（GeoJSON），2dsphere 索引支撑就近派单（设计 O-6 / TC021）。 */
+    @GeoSpatialIndexed(name = "location_2dsphere", type = GeoSpatialIndexType.GEO_2DSPHERE)
+    private GeoJsonPoint location;
 
     public String getDeviceId() {
         return deviceId;
@@ -73,5 +80,13 @@ public class DeviceDoc {
 
     public void setLastHeartbeat(Instant lastHeartbeat) {
         this.lastHeartbeat = lastHeartbeat;
+    }
+
+    public GeoJsonPoint getLocation() {
+        return location;
+    }
+
+    public void setLocation(GeoJsonPoint location) {
+        this.location = location;
     }
 }

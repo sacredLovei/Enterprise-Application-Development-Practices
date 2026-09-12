@@ -19,6 +19,7 @@ public class TaskDoc {
     private String remark;
     private Double targetLng;    // S33：POINT_REVIEW / AREA_COVER 目标坐标（前端地图展示任务目标点）
     private Double targetLat;
+    private String alarmId;      // S61：复核派单任务关联的告警编号（普通任务为 null）
     private Instant createTime;
     private Instant dispatchTime;
     private Instant finishTime;
@@ -85,6 +86,14 @@ public class TaskDoc {
 
     public void setTargetLat(Double targetLat) {
         this.targetLat = targetLat;
+    }
+
+    public String getAlarmId() {
+        return alarmId;
+    }
+
+    public void setAlarmId(String alarmId) {
+        this.alarmId = alarmId;
     }
 
     public Instant getCreateTime() {

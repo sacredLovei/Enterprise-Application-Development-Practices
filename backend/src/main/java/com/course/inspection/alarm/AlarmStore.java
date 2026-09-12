@@ -40,4 +40,22 @@ public class AlarmStore {
     public long count() {
         return mongo.count(new Query(), AlarmDoc.class);
     }
+
+    public AlarmDoc findById(String alarmId) {
+        return mongo.findById(alarmId, AlarmDoc.class);
+    }
+
+    /** S61：复核结论回填（自动派单回执 / IT009 手动复核共用）。 */
+    public void applyReview(String alarmId, String reviewerDeviceId, String conclusion,
+                            String note, String imagePath, java.time.Instant reviewedAt) {
+        Query query = Query.query(Criteria.where("alarmId").is(alarmId));
+        Update update = new Update()
+                .set("status", conclusion)
+                .set("review.reviewerDeviceId", reviewerDeviceId)
+                .set("review.conclusion", conclusion)
+                .set("review.note", note)
+                .set("review.imagePath", imagePath)
+                .set("review.reviewedAt", reviewedAt);
+        mongo.updateFirst(query, update, AlarmDoc.class);
+    }
 }
