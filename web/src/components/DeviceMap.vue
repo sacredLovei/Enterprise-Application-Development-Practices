@@ -38,6 +38,7 @@ function render() {
     if (!loc) return
     const icon = d.deviceType === 'UAV' ? UAV_ICON : DOG_ICON
     L.marker([loc.lat, loc.lng], { icon })
+      .bindTooltip(d.deviceId, { permanent: true, direction: 'right', offset: [8, 0], className: 'device-label' })
       .bindPopup(`<b>${d.deviceId}</b><br/>类型：${d.deviceType}<br/>状态：${d.status}<br/>电量：${d.battery}%`)
       .addTo(deviceLayer)
   })
@@ -59,4 +60,16 @@ function render() {
 
 <style scoped>
 .map { height: 520px; width: 100%; border-radius: 10px; z-index: 1; }
+/* 常驻设备标签：白底圆角，随图标移动 */
+:deep(.device-label) {
+  background: rgba(255, 255, 255, 0.92);
+  border: 1px solid #c9d4df;
+  border-radius: 6px;
+  padding: 1px 6px;
+  font-size: 12px;
+  font-weight: 600;
+  color: #24303c;
+  box-shadow: 0 1px 3px rgba(20, 33, 46, 0.2);
+}
+:deep(.device-label::before) { display: none; }
 </style>
