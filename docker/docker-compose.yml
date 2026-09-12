@@ -235,6 +235,7 @@ services:
       SIM_DEVICE_ID: UAV-001
       SIM_DEVICE_TYPE: UAV
       SIM_CONSUMER_GROUP: sim-uav
+      SIM_COMMAND_GROUP: sim-cmd-UAV-001
       KAFKA_SERVERS: kafka:9092
     depends_on:
       kafka:
@@ -254,6 +255,7 @@ services:
       SIM_DEVICE_ID: UAV-002
       SIM_DEVICE_TYPE: UAV
       SIM_CONSUMER_GROUP: sim-uav
+      SIM_COMMAND_GROUP: sim-cmd-UAV-002
       KAFKA_SERVERS: kafka:9092
     depends_on:
       kafka:
@@ -273,6 +275,7 @@ services:
       SIM_DEVICE_ID: ROBOT-001
       SIM_DEVICE_TYPE: ROBOT_DOG
       SIM_CONSUMER_GROUP: sim-robot
+      SIM_COMMAND_GROUP: sim-cmd-ROBOT-001
       KAFKA_SERVERS: kafka:9092
     depends_on:
       kafka:
@@ -292,6 +295,7 @@ services:
       SIM_DEVICE_ID: ROBOT-002
       SIM_DEVICE_TYPE: ROBOT_DOG
       SIM_CONSUMER_GROUP: sim-robot
+      SIM_COMMAND_GROUP: sim-cmd-ROBOT-002
       KAFKA_SERVERS: kafka:9092
     depends_on:
       kafka:

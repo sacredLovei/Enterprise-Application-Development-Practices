@@ -34,12 +34,16 @@ public class CommandConsumer {
         this.scheduler = scheduler;
     }
 
-    @KafkaListener(topics = "task.command", groupId = "${sim.consumer-group:sim-uav}")
+    /**
+     * 每设备独立消费组（S32 修复，风险 #27）：组内独占全部分区、按 deviceId 过滤，
+     * 避免"指令经 key 哈希落错分区 → 被错误设备丢弃 → 目标设备永远收不到"。
+     */
+    @KafkaListener(topics = "task.command", groupId = "${sim.command-group:sim-cmd-default}")
     public void onCommand(ConsumerRecord<String, String> record) {
         try {
             TaskCommandMsg cmd = om.readValue(record.value(), TaskCommandMsg.class);
             if (!deviceId.equals(cmd.deviceId())) {
-                return;   // 非本机指令，直接忽略（其他分区/实例会处理）
+                return;   // 非本机指令，忽略
             }
             log.info("收到任务指令 taskId={} type={}", cmd.taskId(), cmd.taskType());
             receipt(cmd.taskId(), "COMMAND_RECEIVED");
