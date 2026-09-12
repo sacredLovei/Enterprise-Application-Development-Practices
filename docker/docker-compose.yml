@@ -139,6 +139,7 @@ services:
     volumes:
       - es-data:/usr/share/elasticsearch/data
       - ./es-plugins:/usr/share/elasticsearch/plugins   # S63：ik 插件持久化（analysis-ik，重建容器不丢）
+      - ./es-plugins/analysis-ik/config:/usr/share/elasticsearch/config/analysis-ik   # S63：ik 词典持久化（ES8 插件配置位于 config/，风险 #37）
     healthcheck:
       test: ["CMD-SHELL", "curl -fs http://localhost:9200/_cluster/health || exit 1"]
       interval: 20s

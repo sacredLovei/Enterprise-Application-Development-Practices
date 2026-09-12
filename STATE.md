@@ -75,6 +75,7 @@
 | 2026-09-12 | d5ba022 | **S61 完成**（v0.6 第一步）：复核派单后端——DeviceDoc.location 2dsphere 索引、心跳携带坐标、AlarmConsumer 可复核类型触发 nearSphere 就近派单（空闲优先，D-21）、POINT_REVIEW 任务关联 alarmId、DONE 回执生成红外复核图并回填 review、IT009 手动复核接口。验收：IT009 200/400、location_2dsphere 索引建立。排错 1 例：NearQuery.num(int) 已废 → limit(long)（Spring Data Mongo 4.x API） | AI |
 | 2026-09-12 | 本步 | **S62 完成**（v0.6 第二步）：仿真心跳携带 track 坐标；前端告警详情证据链面板（原图+复核图+结论并列）；accept-v06 验收 **7/7 PASS**（TC021 就近派单双验证、复核回填、复核图下载 5,848 字节、IT009、TC032 API）。排错 2 例：① 机器狗 deviceType 口径为 ROBOT_DOG，派单过滤误写 ROBOT 致无候选（已修）；② 验收脚本竞态——任务 DONE 后 completeReview 的 HDFS 上传未完成即取告警，改轮询 review 出现。报告 TC021/IT009/TC032 转绿、表 6-7 功能 33/34 接口 14/15、BUG-003 登记回归通过、文档升版 v0.6 | AI |
 | 2026-09-12 | 本步 | **S63 完成**（v0.6 最后一步）：① ik 插件安装（官方发布源 4.4MB zip，与 ES 8.13.0 版本匹配；GitHub 全通道 404 排错实录入风险 #35）；插件 bind 挂载持久化 + install-ik.ps1 可复现；② 索引升版 inspection_alarm_v2（description=ik_smart）+ _reindex 迁移 10,716 条（v1 保留回滚基线）；③ ik_smart 分词验证（园区/围墙/入侵/人员独立成词）与中文检索实测（人员 300 条、红外温度 5 条）；④ 发现并修复队列积压双缺陷：复核节流 D-22（待办≥2 跳过派单）+ 仿真告警频率 15%→5%（告警流入与复核吞吐匹配）+ 断电回充后队列续跑（风险 #36）；⑤ **v0.6 验收官方终跑 8/8 PASS**，TC027 转绿，功能测试 34/34；报告升版 v0.7，BUG-004 登记回归通过，**S50 登记的两项遗留全部清零** | AI |
+| 2026-09-12 | 本步 | **S63 修复回归（用户报告"统计看板没有图"）**：stats 接口 500 排查 → 根因是 v2 索引被 `_reindex` 以**动态映射自动创建**（后端初始化器在 ES 未就绪时放弃创建且不重试，见风险 #37）——alarmType 变 text 致聚合 fielddata 报错、location 变 float 致地理检索失效。修复：初始化器重试 24×5s + 索引升版 **inspection_alarm_v3**（严格映射）+ v2→v3 迁移 10,796 条；期间又暴露 ik 词典目录丢失（ES8 插件配置位于 config/ 而非 plugins/）致英文文本分词 NPE，补挂载 `es-plugins/analysis-ik/config → config/analysis-ik` 后恢复。验证：stats 200（by_type=6/trend=25）、地理检索 8,541 条、中文检索 304 条；**v0.6 验收在 v3 上终跑 8/8 PASS**；v2 删除，v1 保留回滚基线 | AI |
 
 ## 4. 决策记录（永不删除，只可被新决策取代）
 
@@ -111,7 +112,7 @@
 | Kafka 主题 | `uav.telemetry`(3 分区)、`robot.telemetry`(2)、`device.heartbeat`(3)、`inspection.alarm`(3)、`inspection.image.meta`(2)、`task.command`(2，下行)、`task.log`(2)、`inspection.dlq` |
 | 消费组 | `biz-storage-consumer`、`biz-alarm-consumer`、`biz-task-consumer`（S32 新增，task.log 回执消费）、`sim-cmd-<deviceId>`（S32 重构：每设备独立指令消费组，见风险 #27） |
 | MongoDB 集合 | `device`、`device_status`、`task`、`alarm`、`task_log`（实测清单，2026-09-12）；`image_meta` 集合未创建——影像元数据消息未接入（BUG-008 设计差异）；TTL：device_status 30 天、task_log 90 天 |
-| ES 索引 | **`inspection_alarm_v2`**（S63 起现行；`inspection_alarm_v1` 保留作回滚基线）；`dynamic: strict`；`location` 为 geo_point（**顺序 [经度,纬度]**）；**description=ik_smart 中文分词（S63 安装 analysis-ik 8.13.0，插件经 docker/es-plugins bind 挂载持久化）** |
+| ES 索引 | **`inspection_alarm_v3`**（现行，S63 起）：`dynamic: strict`；`location` geo_point（**顺序 [经度,纬度]**）；`description=ik_smart`（analysis-ik 8.13.0，插件+词典经 `docker/es-plugins` bind 挂载持久化）；`inspection_alarm_v1` 保留作回滚基线；`inspection_alarm_v2` 为映射损坏的中间产物（_reindex 动态映射误建，风险 #37），仅留档 |
 | HDFS 路径 | `/inspection/{imageType}/{yyyy}/{MM}/{dd}/{deviceId}/{uuid}.{ext}`；imageType ∈ {uav_patrol, dog_infrared, alarm_snapshot} |
 | 编号段 | 图：3-x/4-x/5-x（图 3-1~图 5-16）；表：4-x/5-x/6-x；用例 TC001~TC034、IT001~IT015、PT001~PT007；缺陷 BUG-xxx；决策 D-n；计划步骤 Sxx |
 | 节奏指标 | 心跳 5 s；遥测 2 s；离线阈值 15 s（3 个心跳周期，自然失联判定）；**手动上下线 5 s 内生效（指令驱动，S50 用户要求提速）**；遥测端到端 P95 < 1.5 s；检索 P95 < 500 ms；并发 ≥ 50 msg/s；网关 ≥ 200 QPS |
@@ -157,6 +158,7 @@
 34. **Spring Data Mongo 自动建索引未开启（已踩坑，已修复）**：`@Indexed`（TTL）与复合索引从未落地——`device_status` 只有 `_id_` 索引，`/api/devices` 每次请求做集合扫描+内存排序（PT004 实测 888.8ms 的根因，BUG-005；设计内 O-5 未落地）。**结论**：`spring.data.mongodb.auto-index-creation: true` + `@CompoundIndex {deviceId:1, ts:-1}`；教训：注解写了 ≠ 索引存在，上线前必须用 getIndexes 核验。
 35. **ES ik 插件安装与持久化（S63 已解决）**：GitHub 直链全部 404（medcl 仓库已迁移、infinilabs 的 release 资产仅源码包、API 限流）→ 官方发布源 `release.infinilabs.com/analysis-ik/stable/elasticsearch-analysis-ik-8.13.0.zip` 可用；插件必须与 ES 版本完全一致（8.13.4 装不进 8.13.0，报"built for 8.13.4"）。**结论**：插件目录经 compose bind 挂载 `./es-plugins` 持久化（重建容器不丢）；`docker/init/install-ik.ps1` 可复现安装；索引升版 v2（ik_smart）+ `_reindex` 迁移（v1 保留作回滚基线）。
 36. **仿真断电回充后任务队列不续（S63 已踩坑，已修复）**：设备电量归零中止当前任务后，回充完成无人触发 `maybeStartNext()`，排队任务永久停在 DISPATCHED；另仿真重启会丢失内存任务队列，产生孤儿任务（DB 侧永远 DISPATCHED）。**结论**：① 回充完成（poweredOff→false）后补调 `maybeStartNext()`；② accept-v06 预置步骤自动取消 >5 分钟的 DISPATCHED 孤儿任务（自愈）；③ 真实场景队列持久化不在本课程范围，如实记录。
+37. **ES 索引升版连环坑（S63 已踩坑，已修复）**：① `_reindex` 的目标索引缺失时会以**动态映射自动创建**（字符串全变 text+keyword、location 变 float）——后端初始化器因 ES 未就绪只尝试一次即放弃，v2 被 reindex 抢先建出错误映射，直接后果：stats 聚合 500（text 字段 fielddata 禁用）、地理检索失效（**用户报告"统计看板没有图"的根因**）；② ik 词典配置位于 ES 的 `config/` 目录而非 `plugins/`，仅持久化 plugins 目录导致容器重建后词典丢失——分词器对英文文本抛 `_StopWords is null` NPE（此前 V-7 通过是因为 v2 动态映射走的 standard 分词器，掩盖了该缺陷）。**结论**：① 初始化器改为重试 24 次×5s 再放弃；② 词典目录追加 bind 挂载 `es-plugins/analysis-ik/config → config/analysis-ik`；③ 索引升版 v3（严格映射），reindex 前先建映射；④ 重建后端后必须重启 nginx（风险 #31）。修复验证：stats 200（by_type=6/trend=25）、地理检索 8,541 条、中文检索 304 条（真 ik_smart）。
 
 ## 7. 下一步计划
 

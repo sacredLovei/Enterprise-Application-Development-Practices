@@ -154,7 +154,7 @@ $a6 = Alarm $aid1
 $ok6 = ($a6 -ne $null -and $a6.snapshotPath -ne $null -and $a6.review -ne $null -and $a6.review.imagePath -ne $null)
 V "V-6" "TC032 detail evidence chain API" $ok6 ("snapshot=" + $(if($a6){$a6.snapshotPath}else{"?"}) + " reviewImage=" + $(if($a6 -and $a6.review){$a6.review.imagePath}else{"?"}))
 
-# --- V-7: TC027 Chinese ik search (S63: v2 index, ik_smart; keywords exist in data) ---
+# --- V-7: TC027 Chinese ik search (S63: v3 index, ik_smart; keywords exist in data) ---
 function CSearch([string]$kw) {
     $body = '{"keyword":"' + $kw + '","from":"now-24h","to":"now","page":0,"size":5}'
     try {
@@ -164,6 +164,6 @@ function CSearch([string]$kw) {
 }
 $tPerson = CSearch (-join [char[]](0x4EBA, 0x5458))                      # 人员 (ASCII-safe, risk #16)
 $tIr = CSearch (-join [char[]](0x7EA2, 0x5916, 0x6E29, 0x5EA6))          # 红外温度
-V "V-7" "TC027 chinese ik search" ($tPerson -gt 0 -and $tIr -gt 0) ("keyword-person total=" + $tPerson + " keyword-ir total=" + $tIr + " (ik_smart, v2 index)")
+V "V-7" "TC027 chinese ik search" ($tPerson -gt 0 -and $tIr -gt 0) ("keyword-person total=" + $tPerson + " keyword-ir total=" + $tIr + " (ik_smart, v3 index)")
 
 Write-Output "===== V0.6 SUMMARY: PASS=$pass FAIL=$fail ====="

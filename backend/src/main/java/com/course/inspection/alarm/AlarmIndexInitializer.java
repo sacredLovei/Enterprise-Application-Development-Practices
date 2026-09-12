@@ -19,8 +19,8 @@ public class AlarmIndexInitializer implements ApplicationRunner {
 
     private static final Logger log = LoggerFactory.getLogger(AlarmIndexInitializer.class);
 
-    /** S63：v2 索引启用 ik_smart 中文分词（v1 保留作回滚基线，数据经 _reindex 迁移）。 */
-    public static final String INDEX = "inspection_alarm_v2";
+    /** S63：v3 索引启用 ik_smart 中文分词（v1/v2 保留作回滚基线；v2 为映射损坏的中间产物，见风险 #37）。 */
+    public static final String INDEX = "inspection_alarm_v3";
 
     private static final String MAPPING_JSON = """
             {
@@ -55,16 +55,29 @@ public class AlarmIndexInitializer implements ApplicationRunner {
 
     @Override
     public void run(ApplicationArguments args) {
-        try {
-            boolean exists = client.indices().exists(e -> e.index(INDEX)).value();
-            if (exists) {
-                log.info("ES 索引已存在，跳过创建: {}", INDEX);
+        // S63 修复（风险 #37）：ES 可能晚于后端就绪，重试 2 分钟再放弃——否则索引永远不被创建，
+        // 后续 _reindex 会以动态映射自动建出字段类型错误的索引
+        for (int attempt = 1; attempt <= 24; attempt++) {
+            try {
+                boolean exists = client.indices().exists(e -> e.index(INDEX)).value();
+                if (exists) {
+                    log.info("ES 索引已存在，跳过创建: {}", INDEX);
+                    return;
+                }
+                client.indices().create(c -> c.index(INDEX).withJson(new StringReader(MAPPING_JSON)));
+                log.info("ES 索引创建成功: {}", INDEX);
                 return;
+            } catch (Exception e) {
+                log.warn("ES 索引初始化第 {}/24 次失败（服务不可达时后端仍可启动，告警仅写 Mongo）: {}",
+                        attempt, e.getMessage());
+                try {
+                    Thread.sleep(5_000);
+                } catch (InterruptedException ie) {
+                    Thread.currentThread().interrupt();
+                    return;
+                }
             }
-            client.indices().create(c -> c.index(INDEX).withJson(new StringReader(MAPPING_JSON)));
-            log.info("ES 索引创建成功: {}", INDEX);
-        } catch (Exception e) {
-            log.error("ES 索引初始化失败（服务不可达时后端仍可启动，告警仅写 Mongo）", e);
         }
+        log.error("ES 索引初始化重试耗尽，索引 {} 未创建——需人工执行 mapping 创建（见 docker/init/）", INDEX);
     }
 }
