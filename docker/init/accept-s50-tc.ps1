@@ -33,13 +33,23 @@ function Task([string]$id) {
 
 Write-Output "===== S50 FUNCTIONAL TESTS ====="
 
+# --- test hygiene: bring all devices online first (prior suites may leave OFFLINE state) ---
+$devs = (Req "GET" "$base/api/devices" $null).body | ConvertFrom-Json
+foreach ($dv in $devs) {
+    if ($dv.status -ne "ONLINE") {
+        Req "POST" "$base/api/devices/$($dv.deviceId)/online" $null | Out-Null
+        Write-Output ("pre-step: restore online -> " + $dv.deviceId)
+    }
+}
+Start-Sleep -Seconds 16
+
 # --- device group ---
 $d = Dev "UAV-001"
 V "TC001" "UAV register+online" ($d -ne $null -and $d.status -eq "ONLINE") ("status=" + $d.status)
 V "TC002" "robot dog heartbeat" ((Dev "ROBOT-001").lastHeartbeat -ne $null) "heartbeat present"
-$hb1 = (Dev "UAV-001").lastHeartbeat
+$hb1 = (Dev "ROBOT-001").lastHeartbeat
 Start-Sleep -Seconds 7
-$hb2 = (Dev "UAV-001").lastHeartbeat
+$hb2 = (Dev "ROBOT-001").lastHeartbeat
 V "TC002b" "heartbeat advancing" ($hb1 -ne $hb2) ("$hb1 -> $hb2")
 
 # --- messaging group ---
@@ -106,7 +116,8 @@ $c1 = docker exec mongodb mongosh --quiet --eval "db.getSiblingDB('inspection').
 V "TC016" "idempotent consume" ([int]($c0.Trim()) -eq [int]($c1.Trim())) ("$($c0.Trim()) -> $($c1.Trim())")
 
 $dlq = docker exec kafka /opt/kafka/bin/kafka-console-consumer.sh --bootstrap-server localhost:9092 --topic inspection.dlq --from-beginning --max-messages 3 --timeout-ms 8000 2>&1
-V "TC015" "dead letter queue" ($dlq -match "not-json|ping|this-is") ("dlq msgs=" + (($dlq | Select-String "not-json|ping|this-is" | Measure-Object).Count))
+$dlqText = $dlq -join ' '
+V "TC015" "dead letter queue" ($dlqText -match "not-json|ping|this-is") ("dlq msgs=" + (($dlq | Select-String "not-json|ping|this-is" | Measure-Object).Count))
 
 # --- priority scheduling ---
 $r3 = Req "POST" "$base/api/tasks" '{"taskType":"POINT_REVIEW","deviceId":"ROBOT-001","priority":3,"remark":"tc-p3","targetLng":116.3969,"targetLat":39.9089}'
