@@ -125,7 +125,7 @@ public class AlarmSearchService {
         }
     }
 
-    /** 统计聚合（FR-4.7）：告警类型分布 + 等级分布 + 按小时趋势。 */
+    /** 统计聚合（FR-4.7）：告警类型分布 + 等级分布 + 按小时趋势。桶手动提取（Aggregation._get() 序列化不可靠）。 */
     public Map<String, Object> stats() {
         try {
             SearchResponse<Void> resp = client.search(s -> s
@@ -141,7 +141,33 @@ public class AlarmSearchService {
                     Void.class);
 
             Map<String, Object> result = new java.util.LinkedHashMap<>();
-            resp.aggregations().forEach((name, agg) -> result.put(name, agg._get()));
+            var byType = resp.aggregations().get("by_type");
+            if (byType != null && byType.isSterms()) {
+                List<Map<String, Object>> buckets = byType.sterms().buckets().array().stream()
+                        .map(b -> Map.<String, Object>of(
+                                "key", b.key().stringValue(),
+                                "count", b.docCount()))
+                        .toList();
+                result.put("by_type", buckets);
+            }
+            var byLevel = resp.aggregations().get("by_level");
+            if (byLevel != null && byLevel.isSterms()) {
+                List<Map<String, Object>> buckets = byLevel.sterms().buckets().array().stream()
+                        .map(b -> Map.<String, Object>of(
+                                "key", b.key().stringValue(),
+                                "count", b.docCount()))
+                        .toList();
+                result.put("by_level", buckets);
+            }
+            var trend = resp.aggregations().get("trend");
+            if (trend != null && trend.isDateHistogram()) {
+                List<Map<String, Object>> buckets = trend.dateHistogram().buckets().array().stream()
+                        .map(b -> Map.<String, Object>of(
+                                "time", b.keyAsString(),
+                                "count", b.docCount()))
+                        .toList();
+                result.put("trend", buckets);
+            }
             result.put("total_24h", resp.hits().total() == null ? 0 : resp.hits().total().value());
             return result;
         } catch (IOException e) {

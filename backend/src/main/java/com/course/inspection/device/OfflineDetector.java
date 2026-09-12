@@ -46,10 +46,15 @@ public class OfflineDetector {
         List<DeviceDoc> offline = mongo.find(query, DeviceDoc.class);
 
         for (DeviceDoc d : offline) {
-            mongo.updateFirst(
-                    Query.query(Criteria.where("deviceId").is(d.getDeviceId())),
+            // 条件更新原子生效：仅"本次真的把 ONLINE 改成 OFFLINE"的实例才发告警，
+            // 避免双后端实例定时器并发造成重复 DEVICE_OFFLINE（S30 排错实录）
+            var result = mongo.updateFirst(
+                    Query.query(Criteria.where("deviceId").is(d.getDeviceId()).and("status").is("ONLINE")),
                     new Update().set("status", "OFFLINE").set("currentTaskId", null),
                     DeviceDoc.class);
+            if (result.getModifiedCount() == 0) {
+                continue;
+            }
 
             // 取设备最后上报位置作为告警坐标（供地理检索；无遥测时回退 0,0）
             DeviceStatusDoc last = mongo.findOne(

@@ -11,8 +11,8 @@
 | 项 | 值 |
 |---|---|
 | 项目 | 无人机-机器狗空地协同巡检集成平台（选题 1 园区安防，课程：企业应用开发实践） |
-| 当前步骤 | **S30 后端全量**（in_progress：告警三写链路/指令下行/检索统计/离线检测/死信） |
-| 最近完成 | S31 仿真全量（验收全过，提交 2677c17） |
+| 当前步骤 | 无进行中步骤；**S30 已收尾**，下一步 S40（前端可视化，待用户确认启动） |
+| 最近完成 | S30 后端全量（告警三写/指令/检索统计/离线/死信，验收全过，tag v0.4） |
 | 进行中事项 | 无 |
 | 当前版本 | 里程碑 v0.3（最小链路闭环）；v0.2（六组件环境）；v0.1（设计方案） |
 | 工作树状态 | 干净（随每次提交保持） |
@@ -118,7 +118,10 @@
 17. **沙箱禁写 ~/.m2（已踩坑，已修复）**：Maven 默认本地仓库 `C:\Users\黎Li\.m2\repository` 位于工作区外，沙箱拒绝写入（`AccessDeniedException`）。**结论**：`.mvn/maven-settings-proxy.xml` 中 `<localRepository>` 重定向到工作区 `tools\m2repo`（已 gitignore），所有构建走 `-s .mvn/maven-settings-proxy.xml`，无需升级授权。
 18. **BuildKit 不走 Docker Desktop 代理（已踩坑，已修复）**：`docker build` 拉基础镜像时直连 auth.docker.io 超时（本机 DNS 污染 + 无直连），而 `docker pull`（引擎级）走配置的代理正常。**结论**：构建前先 `docker pull eclipse-temurin:21-jre-alpine` 让基础镜像落本地，`docker build` 即离线完成；此模式已写入 S21 部署流程。
 19. **nginx bind 挂载配置不热重载（已踩坑，已修复）**：`nginx/conf.d` 为 bind 挂载，仅改配置文件内容不会让 nginx 重新加载（`compose up` 也不因挂载文件内容变化而重建容器）→ 新加的 `/api/` 路由 404。**结论**：改 nginx 配置后必须 `docker compose restart nginx`（或 `nginx -s reload`）。
-20. **S21 已知项（非缺陷，S30/S31 处理）**：① 仿真电量已降至 0（S21 无充电逻辑，S31 补返航/充电）；② S20 验收残留的两条非法 `ping` 消息在 device.heartbeat 分区 0/2 解析失败且未提交 offset（手动 ack 设计使然），S30 死信机制接管。
+20. **S21 已知项（非缺陷，S30/S31 处理）**：① 仿真电量已降至 0（S21 无充电逻辑，S31 补返航/充电）——**S31 已解决（电量循环）**；② S20 验收残留的两条非法 `ping` 消息在 device.heartbeat 分区 0/2 解析失败且未提交 offset（手动 ack 设计使然）——**S30 死信机制已就绪，可人工触发接管**。
+21. **自定义 Kafka 容器工厂缺 ConsumerFactory（已踩坑，已修复）**：自定义 `ConcurrentKafkaListenerContainerFactory` bean 会令 Boot 自动装配退避，未显式注入 `ConsumerFactory` 时启动即崩（`'consumerFactory' cannot be null`）。**结论**：自定义工厂必须 `factory.setConsumerFactory(consumerFactory)`。
+22. **死信默认后缀坑（已踩坑，已修复）**：`DeadLetterPublishingRecoverer` 不指定 destinationResolver 时默认目标为 `<原主题>.DLT`，与口径主题 `inspection.dlq` 不符（表现为 dlq 空、消息去了 inspection.alarm.DLT）。**结论**：显式指定 `(cr,e) -> new TopicPartition(TopicConst.DLQ, cr.partition())`。
+23. **双实例定时器重复告警（已踩坑，已修复）**：离线检测 @Scheduled 在两后端实例各自运行，同一设备可能被两实例先后翻转并各发一条 DEVICE_OFFLINE。**结论**：条件更新（status ONLINE→OFFLINE 的 modifiedCount>0 才发告警）实现去重。
 
 ## 7. 下一步计划
 

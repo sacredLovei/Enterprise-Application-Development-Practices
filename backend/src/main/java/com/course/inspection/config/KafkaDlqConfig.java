@@ -7,6 +7,7 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.kafka.config.ConcurrentKafkaListenerContainerFactory;
+import org.springframework.kafka.core.ConsumerFactory;
 import org.springframework.kafka.core.DefaultKafkaProducerFactory;
 import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.kafka.core.ProducerFactory;
@@ -44,7 +45,10 @@ public class KafkaDlqConfig {
     @Bean
     public DefaultErrorHandler kafkaErrorHandler() {
         // 重试 3 次（间隔 2s），仍失败 → 转死信主题 inspection.dlq
-        var recoverer = new org.springframework.kafka.listener.DeadLetterPublishingRecoverer(dlqKafkaTemplate());
+        // 注意：不指定 destinationResolver 时默认目标是 "<原主题>.DLT"，必须显式指向口径主题
+        var recoverer = new org.springframework.kafka.listener.DeadLetterPublishingRecoverer(
+                dlqKafkaTemplate(),
+                (cr, e) -> new org.apache.kafka.common.TopicPartition(TopicConst.DLQ, cr.partition()));
         var handler = new DefaultErrorHandler(recoverer, new FixedBackOff(2_000L, 3));
         handler.addNotRetryableExceptions(IllegalArgumentException.class);
         return handler;
@@ -53,8 +57,11 @@ public class KafkaDlqConfig {
     /** 手动提交容器工厂：业务成功才提交 offset（设计报告 5.2.2(3)）。 */
     @Bean
     public ConcurrentKafkaListenerContainerFactory<String, String> manualAckFactory(
+            ConsumerFactory<String, String> consumerFactory,
             DefaultErrorHandler kafkaErrorHandler) {
         var factory = new ConcurrentKafkaListenerContainerFactory<String, String>();
+        // 必须显式注入 ConsumerFactory：自定义工厂会令 Boot 的自动装配退避（否则启动即崩 'consumerFactory' cannot be null）
+        factory.setConsumerFactory(consumerFactory);
         factory.setConcurrency(3);
         factory.getContainerProperties().setAckMode(ContainerProperties.AckMode.MANUAL_IMMEDIATE);
         factory.setCommonErrorHandler(kafkaErrorHandler);
