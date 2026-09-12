@@ -223,7 +223,7 @@ services:
   # ============ 设备仿真（2 无人机 + 2 机器狗，S31） ============
   # 宿主机端口为故障注入运维通道（POST /sim/fault），业务入口仍只有 Nginx 8080
   uav-sim-1:
-    image: inspection-simulator:0.2
+    image: inspection-simulator:0.3
     build:
       context: ../simulator
       dockerfile: Dockerfile
@@ -242,7 +242,7 @@ services:
     networks: [inspection-net]
 
   uav-sim-2:
-    image: inspection-simulator:0.2
+    image: inspection-simulator:0.3
     build:
       context: ../simulator
       dockerfile: Dockerfile
@@ -261,7 +261,7 @@ services:
     networks: [inspection-net]
 
   dog-sim-1:
-    image: inspection-simulator:0.2
+    image: inspection-simulator:0.3
     build:
       context: ../simulator
       dockerfile: Dockerfile
@@ -280,7 +280,7 @@ services:
     networks: [inspection-net]
 
   dog-sim-2:
-    image: inspection-simulator:0.2
+    image: inspection-simulator:0.3
     build:
       context: ../simulator
       dockerfile: Dockerfile
