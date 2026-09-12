@@ -1,0 +1,48 @@
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: "Segoe UI", "Microsoft YaHei", sans-serif; background: #f4f6f9; color: #24303c; }
+
+.shell { min-height: 100vh; }
+.topbar {
+  display: flex; align-items: center; gap: 24px;
+  background: #14212e; color: #fff; padding: 12px 24px;
+}
+.brand { font-size: 18px; font-weight: 700; white-space: nowrap; }
+.nav { display: flex; gap: 8px; flex: 1; flex-wrap: wrap; }
+.nav a {
+  color: #cfd8e3; text-decoration: none; padding: 6px 14px; border-radius: 6px; font-size: 14px;
+}
+.nav a.router-link-active { background: #2f6fed; color: #fff; }
+.meta { font-size: 12px; color: #9fb0c0; }
+.instance {
+  background: #0f2f1d; color: #57d38c; border: 1px solid #2b8a52;
+  padding: 3px 10px; border-radius: 10px;
+}
+.content { padding: 20px 24px; max-width: 1280px; margin: 0 auto; }
+.page-title { font-size: 20px; margin-bottom: 16px; }
+
+.card { background: #fff; border-radius: 10px; padding: 16px; box-shadow: 0 1px 4px rgba(20,33,46,.08); margin-bottom: 16px; }
+.card h3 { font-size: 15px; margin-bottom: 12px; }
+
+table.grid { width: 100%; border-collapse: collapse; font-size: 13px; }
+table.grid th, table.grid td { text-align: left; padding: 8px 10px; border-bottom: 1px solid #edf1f5; }
+table.grid th { color: #5c6b7a; font-weight: 600; background: #f8fafc; }
+
+.badge { padding: 2px 8px; border-radius: 8px; font-size: 12px; }
+.badge.online { background: #e3f7ec; color: #1a8a4a; }
+.badge.offline { background: #fdeaea; color: #c0392b; }
+.badge.warn { background: #fdf3e0; color: #b97a12; }
+.badge.critical { background: #fdeaea; color: #c0392b; }
+.badge.pending { background: #e8effd; color: #2f5fb3; }
+
+button {
+  background: #2f6fed; color: #fff; border: none; border-radius: 6px;
+  padding: 8px 16px; font-size: 14px; cursor: pointer;
+}
+button:hover { background: #2458c4; }
+button.ghost { background: #eef2f7; color: #34465a; }
+input, select {
+  padding: 7px 10px; border: 1px solid #d5dde6; border-radius: 6px; font-size: 13px;
+  background: #fff; color: #24303c;
+}
+.form-row { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; margin-bottom: 12px; }
+.hint { color: #7b8a99; font-size: 12px; margin-top: 6px; }

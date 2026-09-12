@@ -52,6 +52,14 @@ public class DeviceStore {
         return mongo.findAll(DeviceDoc.class);
     }
 
+    public DeviceStatusDoc lastStatus(String deviceId) {
+        return mongo.findOne(
+                Query.query(Criteria.where("deviceId").is(deviceId))
+                        .with(org.springframework.data.domain.Sort.by(
+                                org.springframework.data.domain.Sort.Direction.DESC, "ts")),
+                DeviceStatusDoc.class);
+    }
+
     public DeviceDoc get(String deviceId) {
         return mongo.findById(deviceId, DeviceDoc.class);
     }

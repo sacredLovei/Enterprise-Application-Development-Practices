@@ -21,8 +21,11 @@ public class DeviceController {
     }
 
     @GetMapping
-    public List<DeviceDoc> list() {
-        return store.list();
+    public List<DeviceVo> list() {
+        // 台账 + 最近遥测位置（S40 地图展示）
+        return store.list().stream()
+                .map(d -> DeviceVo.from(d, store.lastStatus(d.getDeviceId())))
+                .toList();
     }
 
     @GetMapping("/{deviceId}")

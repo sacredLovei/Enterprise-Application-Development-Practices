@@ -307,6 +307,7 @@ services:
       - "8080:80"                      # 唯一业务入口（设计报告 4.6.2 端口表）
     volumes:
       - ./nginx/conf.d:/etc/nginx/conf.d:ro
+      - ../web/dist:/usr/share/nginx/html:ro     # S40 前端构建产物（先 npm run build 再起服务）
     depends_on:
       kibana:
         condition: service_healthy
