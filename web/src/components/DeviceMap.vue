@@ -33,6 +33,20 @@ onMounted(() => {
 
 watch(() => [props.devices, props.alarms, props.tasks], render, { deep: true })
 
+const TYPE_LABEL = {
+  PERIMETER_PATROL: '周界巡逻',
+  AREA_COVER: '区域覆盖',
+  POINT_REVIEW: '定点复核',
+  RETURN_HOME: '返航'
+}
+
+/** 该设备当前活跃任务（执行中优先，其次排队），供悬浮面板展示。 */
+function activeTasks(deviceId) {
+  const list = (props.tasks || []).filter(t =>
+    t.deviceId === deviceId && ['DISPATCHED', 'RUNNING'].includes(t.status))
+  return list.sort((a, b) => (a.status === 'RUNNING' ? 0 : 1) - (b.status === 'RUNNING' ? 0 : 1))
+}
+
 function render() {
   if (!map) return
   deviceLayer.clearLayers()
@@ -44,9 +58,25 @@ function render() {
     const loc = d.lastLocation || (d.lng != null ? { lng: d.lng, lat: d.lat } : null)
     if (!loc) return
     const icon = d.deviceType === 'UAV' ? UAV_ICON : DOG_ICON
+
+    // 悬浮面板：设备信息 + 当前任务与备注（用户要求）
+    const acts = activeTasks(d.deviceId)
+    let taskHtml = ''
+    if (acts.length > 0) {
+      const cur = acts[0]
+      const label = TYPE_LABEL[cur.taskType] || cur.taskType
+      taskHtml = `<br/>━━━━━━━━━━<br/><b>任务：${label}</b>` +
+        `<br/>状态：${cur.status === 'RUNNING' ? '执行中' : '已下发待执行'}` +
+        `<br/>备注：${cur.remark || '—'}` +
+        `<br/><span style="font-size:11px;color:#7b8a99">${cur.taskId}</span>`
+      if (acts.length > 1) {
+        taskHtml += `<br/>另有 ${acts.length - 1} 个任务排队中`
+      }
+    }
+
     L.marker([loc.lat, loc.lng], { icon })
       .bindTooltip(d.deviceId, { permanent: true, direction: 'right', offset: [8, 0], className: 'device-label' })
-      .bindPopup(`<b>${d.deviceId}</b><br/>类型：${d.deviceType}<br/>状态：${d.status}<br/>电量：${d.battery}%`)
+      .bindPopup(`<b>${d.deviceId}</b><br/>类型：${d.deviceType}<br/>状态：${d.status}<br/>电量：${d.battery}%${taskHtml}`)
       .addTo(deviceLayer)
   })
 

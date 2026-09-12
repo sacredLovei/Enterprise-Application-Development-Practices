@@ -131,7 +131,7 @@ onUnmounted(() => { clearInterval(timer); clearInterval(deviceTimer) })
     <h3>任务列表（每 10 秒刷新，最新在前）</h3>
     <table class="grid">
       <thead>
-        <tr><th>任务编号</th><th>类型</th><th>执行设备</th><th>优先级</th><th>状态</th><th>创建时间</th><th>完成时间</th><th>操作</th></tr>
+        <tr><th>任务编号</th><th>类型</th><th>执行设备</th><th>优先级</th><th>状态</th><th>备注</th><th>创建时间</th><th>完成时间</th><th>操作</th></tr>
       </thead>
       <tbody>
         <tr v-for="t in result.records" :key="t.taskId">
@@ -140,6 +140,7 @@ onUnmounted(() => { clearInterval(timer); clearInterval(deviceTimer) })
           <td>{{ t.deviceId }}</td>
           <td>{{ t.priority }}</td>
           <td><span class="badge" :class="'st-' + (t.status || '').toLowerCase()">{{ t.status }}</span></td>
+          <td class="remark" :title="t.remark">{{ t.remark || '—' }}</td>
           <td>{{ formatTime(t.createTime) }}</td>
           <td>{{ t.status === 'DONE' || t.status === 'FAILED' || t.status === 'CANCELLED' ? formatTime(t.finishTime) : '—' }}</td>
           <td><button v-if="t.status === 'DISPATCHED' || t.status === 'RUNNING'" class="ghost" @click="cancel(t.taskId)">取消</button></td>
@@ -159,6 +160,7 @@ onUnmounted(() => { clearInterval(timer); clearInterval(deviceTimer) })
 .pager { display: flex; gap: 14px; align-items: center; justify-content: center; margin-top: 12px; font-size: 13px; color: #5c6b7a; }
 button:disabled { opacity: .4; cursor: not-allowed; }
 .mono { font-family: Consolas, monospace; font-size: 12px; }
+.remark { max-width: 140px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .badge.st-dispatched { background: #e8effd; color: #2f5fb3; }
 .badge.st-running { background: #fdf3e0; color: #b97a12; }
 .badge.st-done { background: #e3f7ec; color: #1a8a4a; }
