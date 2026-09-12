@@ -23,10 +23,12 @@ public class DeviceController {
 
     private final DeviceStore store;
     private final KafkaTemplate<String, String> kafka;
+    private final OfflineDetector detector;
 
-    public DeviceController(DeviceStore store, KafkaTemplate<String, String> kafka) {
+    public DeviceController(DeviceStore store, KafkaTemplate<String, String> kafka, OfflineDetector detector) {
         this.store = store;
         this.kafka = kafka;
+        this.detector = detector;
     }
 
     @GetMapping
@@ -53,17 +55,32 @@ public class DeviceController {
         return doc;
     }
 
-    /** 手动下线（S34）：控制指令经 Kafka 下发，仿真停发心跳/遥测，平台 15s 内判定 OFFLINE。 */
+    /**
+     * 手动下线（S34 + S50 提速）：控制指令经 Kafka 下发，仿真停发心跳/遥测；
+     * 平台 5s 后指令驱动置 OFFLINE（给指令传播与在途心跳排水留窗口），并产生 DEVICE_OFFLINE 告警。
+     * 自然失联（断电/异常）仍由 OfflineDetector 按 15s 阈值判定，互不干扰。
+     */
     @PostMapping("/{deviceId}/offline")
     public String offline(@PathVariable String deviceId) {
-        return control(deviceId, "COMM_OFFLINE");
+        String sent = control(deviceId, "COMM_OFFLINE");
+        OFFLINE_EXECUTOR.schedule(
+                () -> detector.markOffline(deviceId, "手动下线（指令驱动）"),
+                5, java.util.concurrent.TimeUnit.SECONDS);
+        return sent;
     }
 
-    /** 手动上线（S34）：仿真恢复上报，平台随心跳置回 ONLINE。 */
+    /** 手动上线（S34）：仿真收到 COMM_RESTORE 后立即补发心跳，平台随心跳 5s 内置回 ONLINE。 */
     @PostMapping("/{deviceId}/online")
     public String online(@PathVariable String deviceId) {
         return control(deviceId, "COMM_RESTORE");
     }
+
+    private static final java.util.concurrent.ScheduledExecutorService OFFLINE_EXECUTOR =
+            java.util.concurrent.Executors.newScheduledThreadPool(1, r -> {
+                Thread t = new Thread(r, "manual-offline");
+                t.setDaemon(true);
+                return t;
+            });
 
     private String control(String deviceId, String type) {
         DeviceDoc doc = store.get(deviceId);

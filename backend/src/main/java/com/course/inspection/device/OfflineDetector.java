@@ -46,39 +46,48 @@ public class OfflineDetector {
         List<DeviceDoc> offline = mongo.find(query, DeviceDoc.class);
 
         for (DeviceDoc d : offline) {
-            // 条件更新原子生效：仅"本次真的把 ONLINE 改成 OFFLINE"的实例才发告警，
-            // 避免双后端实例定时器并发造成重复 DEVICE_OFFLINE（S30 排错实录）
-            var result = mongo.updateFirst(
-                    Query.query(Criteria.where("deviceId").is(d.getDeviceId()).and("status").is("ONLINE")),
-                    new Update().set("status", "OFFLINE").set("currentTaskId", null),
-                    DeviceDoc.class);
-            if (result.getModifiedCount() == 0) {
-                continue;
-            }
-
-            // 取设备最后上报位置作为告警坐标（供地理检索；无遥测时回退 0,0）
-            DeviceStatusDoc last = mongo.findOne(
-                    Query.query(Criteria.where("deviceId").is(d.getDeviceId()))
-                            .with(org.springframework.data.domain.Sort.by(org.springframework.data.domain.Sort.Direction.DESC, "ts")),
-                    DeviceStatusDoc.class);
-            double lng = last == null ? 0.0 : last.getLng();
-            double lat = last == null ? 0.0 : last.getLat();
-
-            // DEVICE_OFFLINE 告警走统一告警链路
-            String alarmId = "ALM-" + UUID.randomUUID().toString().substring(0, 8);
-            String msg = Json.toJson(new java.util.HashMap<String, Object>() {{
-                put("alarmId", alarmId);
-                put("deviceId", d.getDeviceId());
-                put("deviceType", d.getDeviceType());
-                put("alarmType", "DEVICE_OFFLINE");
-                put("level", "WARN");
-                put("description", "设备心跳超时，判定离线");
-                put("lng", lng);
-                put("lat", lat);
-                put("occurredTime", System.currentTimeMillis());
-            }});
-            kafka.send(TopicConst.INSPECTION_ALARM, d.getDeviceId(), msg);
-            log.warn("设备心跳超时置为离线 deviceId={} lastHeartbeat={}", d.getDeviceId(), d.getLastHeartbeat());
+            markOffline(d.getDeviceId(), "设备心跳超时，判定离线");
         }
+    }
+
+    /**
+     * 置 OFFLINE + 产生 DEVICE_OFFLINE 告警（幂等：仅 ONLINE→OFFLINE 的条件更新生效者发告警）。
+     * 自然失联由 detect() 按 15s 阈值调用；手动下线由 DeviceController 指令驱动 5s 后调用（S50 用户要求提速）。
+     */
+    public boolean markOffline(String deviceId, String description) {
+        var result = mongo.updateFirst(
+                Query.query(Criteria.where("deviceId").is(deviceId).and("status").is("ONLINE")),
+                new Update().set("status", "OFFLINE").set("currentTaskId", null),
+                DeviceDoc.class);
+        if (result.getModifiedCount() == 0) {
+            return false;
+        }
+
+        DeviceDoc d = mongo.findById(deviceId, DeviceDoc.class);
+
+        // 取设备最后上报位置作为告警坐标（供地理检索；无遥测时回退 0,0）
+        DeviceStatusDoc last = mongo.findOne(
+                Query.query(Criteria.where("deviceId").is(deviceId))
+                        .with(org.springframework.data.domain.Sort.by(org.springframework.data.domain.Sort.Direction.DESC, "ts")),
+                DeviceStatusDoc.class);
+        double lng = last == null ? 0.0 : last.getLng();
+        double lat = last == null ? 0.0 : last.getLat();
+
+        // DEVICE_OFFLINE 告警走统一告警链路
+        String alarmId = "ALM-" + UUID.randomUUID().toString().substring(0, 8);
+        String msg = Json.toJson(new java.util.HashMap<String, Object>() {{
+            put("alarmId", alarmId);
+            put("deviceId", d.getDeviceId());
+            put("deviceType", d.getDeviceType());
+            put("alarmType", "DEVICE_OFFLINE");
+            put("level", "WARN");
+            put("description", description);
+            put("lng", lng);
+            put("lat", lat);
+            put("occurredTime", System.currentTimeMillis());
+        }});
+        kafka.send(TopicConst.INSPECTION_ALARM, d.getDeviceId(), msg);
+        log.warn("设备置为离线 deviceId={} reason={}", d.getDeviceId(), description);
+        return true;
     }
 }

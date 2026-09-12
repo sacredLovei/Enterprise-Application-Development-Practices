@@ -56,8 +56,13 @@ public abstract class DeviceSimulator {
             return;
         }
         tickBattery();
+        sendHeartbeatNow();
+    }
+
+    /** 立即发一条心跳（S50 提速：COMM_RESTORE 后不等下个周期，平台 5s 内恢复 ONLINE）。 */
+    private void sendHeartbeatNow() {
         if (poweredOff) {
-            return;   // 断电：不发心跳，仅内部维护充电计时
+            return;   // 断电：不发心跳（充电完成由周期心跳恢复）
         }
         HeartbeatMsg msg = new HeartbeatMsg(deviceId, deviceType, battery, null, System.currentTimeMillis());
         send("device.heartbeat", msg);
@@ -114,7 +119,8 @@ public abstract class DeviceSimulator {
             }
             case "COMM_RESTORE" -> {
                 commEnabled.set(true);
-                log.info("通信恢复 COMM_RESTORE deviceId={}", deviceId);
+                sendHeartbeatNow();   // S50 提速：恢复后立即补发心跳，平台 5s 内置回 ONLINE
+                log.info("通信恢复 COMM_RESTORE deviceId={} 已立即补发心跳", deviceId);
             }
             case "BATTERY_DROP" -> {
                 battery = Math.min(battery, 10);
