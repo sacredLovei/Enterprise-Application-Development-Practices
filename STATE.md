@@ -11,8 +11,8 @@
 | 项 | 值 |
 |---|---|
 | 项目 | 无人机-机器狗空地协同巡检集成平台（选题 1 园区安防，课程：企业应用开发实践） |
-| 当前步骤 | **S32 任务状态闭环**（in_progress：task.log 消费 → 状态流转 + 日志归档）；S40 前端待一并收尾 |
-| 最近完成 | S30 后端全量（tag v0.4）；S31 仿真全量 |
+| 当前步骤 | 无进行中步骤；**S32/S40 已收尾**，下一步 S50（测试执行与报告回填，待用户确认启动） |
+| 最近完成 | S32 任务状态闭环（含指令路由缺陷修复）；S40 前端可视化（tag v0.5，7 项强制功能全部落地） |
 | 进行中事项 | 无 |
 | 当前版本 | 里程碑 v0.3（最小链路闭环）；v0.2（六组件环境）；v0.1（设计方案） |
 | 工作树状态 | 干净（随每次提交保持） |
@@ -87,7 +87,7 @@
 | 组件版本 | Hadoop HDFS 3.3.6；MongoDB 6.0（副本集 rs0）；Kafka **4.0.0（官方镜像 apache/kafka，纯 KRaft，ZooKeeper 已移除）**；Elasticsearch/Kibana 8.13.0；Nginx 1.25-alpine；Spring Boot 3.2 + JDK 21（本机 `tools/jdk-21`，源自 DevEco Studio JBR 21.0.6，含 javac；17+ 均可）；Vue 3.4 |
 | 端口 | 唯一入口 Nginx **8080**；后端实例 8081/8082；NameNode 9870(WebUI)/8020(RPC)；DataNode 9864；MongoDB 27017；Kafka 内 9092 / 控制器 9093 / 外 9094；ES 9200；Kibana 5601；**仿真故障注入通道 8089~8092（uav-sim-1/2、dog-sim-1/2 的 /sim/fault，仅运维测试用，非业务入口）** |
 | Kafka 主题 | `uav.telemetry`(3 分区)、`robot.telemetry`(2)、`device.heartbeat`(3)、`inspection.alarm`(3)、`inspection.image.meta`(2)、`task.command`(2，下行)、`task.log`(2)、`inspection.dlq` |
-| 消费组 | `biz-storage-consumer`、`biz-alarm-consumer`、`biz-task-consumer`（S32 新增，task.log 回执消费）、`sim-uav`、`sim-robot` |
+| 消费组 | `biz-storage-consumer`、`biz-alarm-consumer`、`biz-task-consumer`（S32 新增，task.log 回执消费）、`sim-cmd-<deviceId>`（S32 重构：每设备独立指令消费组，见风险 #27） |
 | MongoDB 集合 | `device`、`device_status`、`task`、`alarm`、`image_meta`、`task_log`；TTL：device_status 30 天、task_log 90 天 |
 | ES 索引 | `inspection_alarm_v1`；`dynamic: strict`；`location` 为 geo_point（**顺序 [经度,纬度]**）；中文分词 `ik_smart`（降级 `standard`） |
 | HDFS 路径 | `/inspection/{imageType}/{yyyy}/{MM}/{dd}/{deviceId}/{uuid}.{ext}`；imageType ∈ {uav_patrol, dog_infrared, alarm_snapshot} |
@@ -125,6 +125,7 @@
 24. **npm 缓存目录沙箱禁写（已踩坑，已修复，与 #17 同源）**：npm 默认缓存 `C:\Users\黎Li\AppData\Local\npm-cache` 位于工作区外，沙箱拒绝写入。**结论**：`web/.npmrc` 中 `cache=` 重定向到工作区 `tools\npm-cache`（已 gitignore）。
 25. **沙箱禁执行工作区二进制（已踩坑，已规避）**：esbuild 安装脚本需在工作区 spawn 刚解包的二进制，受限令牌拒绝（EPERM -4048）。**结论**：`npm install`/`npm run build` 需经升级授权（danger-full-access）执行；构建产物 `dist/` 不入库。
 26. **PowerShell 文本替换破坏 YAML（已踩坑，已修复）**：`(Get-Content -Raw) -replace ... | Set-Content -Encoding UTF8` 重写 compose 文件会引入 BOM/编码变化，docker compose 报 go-yaml 解析错误。**结论**：compose/YAML 等结构文件的修改一律用 edit 工具；已恢复并改用 edit 完成镜像版本升级。
+27. **指令分区路由缺陷（真架构坑，已踩坑，已修复）**：`task.command` 按 key 哈希分区 + 同类型设备共享消费组 + 按 deviceId 过滤 → 指令落错分区即被错误设备丢弃，目标设备永远收不到（表现：部分任务永远 DISPATCHED）。**结论**：每设备独立消费组 `sim-cmd-<deviceId>`（组内独占全部分区、过滤即达），指令必达目标设备。设计报告 5.2.1 代码片段已同步。
 
 ## 7. 下一步计划
 
