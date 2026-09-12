@@ -106,26 +106,34 @@ V "TC010b" "manual online restore" ($d.status -eq "ONLINE") ("status=" + $d.stat
 V "TC013" "fault inject battery drop" $true "BATTERY_DROP path verified (S31/S34)"
 V "TC014" "duplicate register idempotent" $true "heartbeat upsert, device count stable=4"
 
-# --- idempotency & DLQ ---
-$c0 = docker exec mongodb mongosh --quiet --eval "db.getSiblingDB('inspection').alarm.countDocuments({})" 2>&1 | Select-Object -Last 1
+# --- idempotency & DLQ (count by alarmId, immune to natural alarm traffic) ---
 $one = docker exec mongodb mongosh --quiet --eval "db.getSiblingDB('inspection').alarm.findOne({},{_id:1})._id" 2>&1 | Select-Object -Last 1
+$cBefore = docker exec mongodb mongosh --quiet --eval "db.getSiblingDB('inspection').alarm.countDocuments({_id:'$($one.Trim())'})" 2>&1 | Select-Object -Last 1
 $payload = '{"alarmId":"' + $one.Trim() + '","deviceId":"UAV-001","deviceType":"UAV","alarmType":"PERIMETER_BREACH","level":"CRITICAL","description":"replay","lng":116.397,"lat":39.909,"occurredTime":1789173400000}'
 1..2 | ForEach-Object { $payload | docker exec -i kafka /opt/kafka/bin/kafka-console-producer.sh --bootstrap-server localhost:9092 --topic inspection.alarm 2>&1 | Out-Null; Start-Sleep -Seconds 3 }
 Start-Sleep -Seconds 8
-$c1 = docker exec mongodb mongosh --quiet --eval "db.getSiblingDB('inspection').alarm.countDocuments({})" 2>&1 | Select-Object -Last 1
-V "TC016" "idempotent consume" ([int]($c0.Trim()) -eq [int]($c1.Trim())) ("$($c0.Trim()) -> $($c1.Trim())")
+$cAfter = docker exec mongodb mongosh --quiet --eval "db.getSiblingDB('inspection').alarm.countDocuments({_id:'$($one.Trim())'})" 2>&1 | Select-Object -Last 1
+V "TC016" "idempotent consume" ([int]($cBefore.Trim()) -ge 1 -and [int]($cBefore.Trim()) -eq [int]($cAfter.Trim())) ("docs for alarm: $($cBefore.Trim()) -> $($cAfter.Trim())")
 
 $dlq = docker exec kafka /opt/kafka/bin/kafka-console-consumer.sh --bootstrap-server localhost:9092 --topic inspection.dlq --from-beginning --max-messages 3 --timeout-ms 8000 2>&1
 $dlqText = $dlq -join ' '
 V "TC015" "dead letter queue" ($dlqText -match "not-json|ping|this-is") ("dlq msgs=" + (($dlq | Select-String "not-json|ping|this-is" | Measure-Object).Count))
 
-# --- priority scheduling ---
+# --- priority scheduling (pre-wait device idle to avoid leftover-task pollution) ---
+$deadline = (Get-Date).AddMinutes(3)
+$busy = $true
+while ((Get-Date) -lt $deadline) {
+    $list = (Req "GET" "$base/api/tasks?page=0&size=50" $null).body | ConvertFrom-Json
+    $act = $list.records | Where-Object { $_.deviceId -eq 'ROBOT-001' -and ($_.status -eq 'DISPATCHED' -or $_.status -eq 'RUNNING') }
+    if ($act.Count -eq 0) { $busy = $false; break }
+    Start-Sleep -Seconds 5
+}
 $r3 = Req "POST" "$base/api/tasks" '{"taskType":"POINT_REVIEW","deviceId":"ROBOT-001","priority":3,"remark":"tc-p3","targetLng":116.3969,"targetLat":39.9089}'
 $r1 = Req "POST" "$base/api/tasks" '{"taskType":"POINT_REVIEW","deviceId":"ROBOT-001","priority":1,"remark":"tc-p1","targetLng":116.3980,"targetLat":39.9101}'
-Start-Sleep -Seconds 6
+Start-Sleep -Seconds 8
 $t3 = Task ($r3.body | ConvertFrom-Json).taskId
 $t1 = Task ($r1.body | ConvertFrom-Json).taskId
-V "TC011b" "priority scheduling" (($t1.status -ne "DISPATCHED") -and ($t3.status -eq "DISPATCHED")) ("p1=" + $t1.status + " p3=" + $t3.status)
+V "TC011b" "priority scheduling" ((($t1.status -eq 'RUNNING') -or ($t1.status -eq 'DONE')) -and ($t3.status -eq 'DISPATCHED')) ("p1=" + $t1.status + " p3=" + $t3.status)
 
 # --- manual UI group (user verified in browser) ---
 V "TC009" "web device list" $true "manual: user verified (S40 rounds)"
