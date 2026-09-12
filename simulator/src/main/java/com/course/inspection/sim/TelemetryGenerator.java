@@ -18,8 +18,8 @@ public class TelemetryGenerator {
     );
 
     private final Random random = new Random();
-    private int waypointIndex = 0;
-    private double progress = 0.0;
+    private int waypointIndex = random.nextInt(4);
+    private double progress = random.nextDouble();
     private double lng;
     private double lat;
 

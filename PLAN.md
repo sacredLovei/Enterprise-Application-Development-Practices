@@ -104,9 +104,10 @@
 - **目标**：无人机/机器狗仿真完整落地
 - **内容**：连续轨迹模型（航点插值+噪声）、电量循环（低电告警+回充）、故障注入（HTTP 端点）、告警产生（BATTERY_LOW/DEVICE_OVERHEAT/PERIMETER_BREACH）、指令消费与执行回执（task.command → task.log）、多实例启动（2 机 2 狗，遥测字段按设备类型区分）
 - **验收标准**：4 台仿真设备并发在线（device 集合 4 条记录且心跳持续）；故障注入触发对应告警消息；指令回执闭环（人工下发 test 指令 → 回执可见）；电量归零后自动回充
+- **验收结论**（2026-09-12）：**全部通过**。① device 集合 4 条（UAV-001/002、ROBOT-001/002）心跳持续；② 故障注入 BATTERY_DROP→BATTERY_LOW 告警、OVERHEAT→DEVICE_OVERHEAT 告警，另随机产生 4 条 PERIMETER_BREACH；③ 指令闭环：ROBOT-001 收到 TASK-S31-TEST 后三段回执 COMMAND_RECEIVED→EXECUTING→DONE（+3s/+8s）；④ 电量循环：UAV-001 经 10→0→回充 100→消耗至 78 实测闭环；⑤ robot.telemetry 全字段流动（红外/温湿度/烟感/可燃气）。排错 1 例：验收命令生产格式错误（parse.key 缺 key:value）→ 修正测试方法，仿真代码本身无缺陷
 - **产出物**：`simulator/` 全量源码（镜像 inspection-simulator:0.2）
 - **依据**：设计报告 4.4.1 / 5.2.1 / FR-1.1~FR-1.7
-- **提交**：开始标记本步提交（HEAD）
+- **提交**：开始 5a1272a；完成本步提交（HEAD）
 
 ### S40 前端可视化
 - **状态**：pending（候选）
