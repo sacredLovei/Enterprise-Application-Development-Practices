@@ -85,7 +85,7 @@
 | 类别 | 口径 |
 |---|---|
 | 组件版本 | Hadoop HDFS 3.3.6；MongoDB 6.0（副本集 rs0）；Kafka **4.0.0（官方镜像 apache/kafka，纯 KRaft，ZooKeeper 已移除）**；Elasticsearch/Kibana 8.13.0；Nginx 1.25-alpine；Spring Boot 3.2 + JDK 21（本机 `tools/jdk-21`，源自 DevEco Studio JBR 21.0.6，含 javac；17+ 均可）；Vue 3.4 |
-| 端口 | 唯一入口 Nginx **8080**；后端实例 8081/8082；NameNode 9870(WebUI)/8020(RPC)；DataNode 9864；MongoDB 27017；Kafka 内 9092 / 控制器 9093 / 外 9094；ES 9200；Kibana 5601 |
+| 端口 | 唯一入口 Nginx **8080**；后端实例 8081/8082；NameNode 9870(WebUI)/8020(RPC)；DataNode 9864；MongoDB 27017；Kafka 内 9092 / 控制器 9093 / 外 9094；ES 9200；Kibana 5601；**仿真故障注入通道 8089~8092（uav-sim-1/2、dog-sim-1/2 的 /sim/fault，仅运维测试用，非业务入口）** |
 | Kafka 主题 | `uav.telemetry`(3 分区)、`robot.telemetry`(2)、`device.heartbeat`(3)、`inspection.alarm`(3)、`inspection.image.meta`(2)、`task.command`(2，下行)、`task.log`(2)、`inspection.dlq` |
 | 消费组 | `biz-storage-consumer`、`biz-alarm-consumer`、`biz-stats-consumer`、`sim-uav`、`sim-robot` |
 | MongoDB 集合 | `device`、`device_status`、`task`、`alarm`、`image_meta`、`task_log`；TTL：device_status 30 天、task_log 90 天 |

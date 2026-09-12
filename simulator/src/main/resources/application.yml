@@ -1,3 +1,6 @@
+server:
+  port: ${SERVER_PORT:8080}
+
 spring:
   application:
     name: inspection-simulator
@@ -11,9 +14,16 @@ spring:
       properties:
         enable.idempotence: true
         max.in.flight.requests.per.connection: 1
+    consumer:
+      group-id: ${SIM_CONSUMER_GROUP:sim-uav}
+      auto-offset-reset: earliest
+      key-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+      value-deserializer: org.apache.kafka.common.serialization.StringDeserializer
 
 sim:
   device-id: ${SIM_DEVICE_ID:UAV-001}
+  device-type: ${SIM_DEVICE_TYPE:UAV}
+  consumer-group: ${SIM_CONSUMER_GROUP:sim-uav}
 
 logging:
   level:

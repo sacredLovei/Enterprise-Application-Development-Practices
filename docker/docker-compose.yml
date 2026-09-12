@@ -220,16 +220,78 @@ services:
       start_period: 40s
     networks: [inspection-net]
 
-  # ============ 设备仿真（无人机，生产者） ============
-  uav-sim:
-    image: inspection-simulator:0.1
+  # ============ 设备仿真（2 无人机 + 2 机器狗，S31） ============
+  # 宿主机端口为故障注入运维通道（POST /sim/fault），业务入口仍只有 Nginx 8080
+  uav-sim-1:
+    image: inspection-simulator:0.2
     build:
       context: ../simulator
       dockerfile: Dockerfile
-    container_name: uav-sim
-    hostname: uav-sim
+    container_name: uav-sim-1
+    hostname: uav-sim-1
+    ports:
+      - "8089:8080"
     environment:
       SIM_DEVICE_ID: UAV-001
+      SIM_DEVICE_TYPE: UAV
+      SIM_CONSUMER_GROUP: sim-uav
+      KAFKA_SERVERS: kafka:9092
+    depends_on:
+      kafka:
+        condition: service_healthy
+    networks: [inspection-net]
+
+  uav-sim-2:
+    image: inspection-simulator:0.2
+    build:
+      context: ../simulator
+      dockerfile: Dockerfile
+    container_name: uav-sim-2
+    hostname: uav-sim-2
+    ports:
+      - "8090:8080"
+    environment:
+      SIM_DEVICE_ID: UAV-002
+      SIM_DEVICE_TYPE: UAV
+      SIM_CONSUMER_GROUP: sim-uav
+      KAFKA_SERVERS: kafka:9092
+    depends_on:
+      kafka:
+        condition: service_healthy
+    networks: [inspection-net]
+
+  dog-sim-1:
+    image: inspection-simulator:0.2
+    build:
+      context: ../simulator
+      dockerfile: Dockerfile
+    container_name: dog-sim-1
+    hostname: dog-sim-1
+    ports:
+      - "8091:8080"
+    environment:
+      SIM_DEVICE_ID: ROBOT-001
+      SIM_DEVICE_TYPE: ROBOT_DOG
+      SIM_CONSUMER_GROUP: sim-robot
+      KAFKA_SERVERS: kafka:9092
+    depends_on:
+      kafka:
+        condition: service_healthy
+    networks: [inspection-net]
+
+  dog-sim-2:
+    image: inspection-simulator:0.2
+    build:
+      context: ../simulator
+      dockerfile: Dockerfile
+    container_name: dog-sim-2
+    hostname: dog-sim-2
+    ports:
+      - "8092:8080"
+    environment:
+      SIM_DEVICE_ID: ROBOT-002
+      SIM_DEVICE_TYPE: ROBOT_DOG
+      SIM_CONSUMER_GROUP: sim-robot
       KAFKA_SERVERS: kafka:9092
     depends_on:
       kafka:
