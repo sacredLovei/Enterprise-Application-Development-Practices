@@ -169,7 +169,7 @@
   - 报告第 6 章全部据实回填（文档升版 v0.5）；STATE 补记时间线、风险 #31~#34、决策 D-19/D-20。
 - **产出物**：accept-s50-tc.ps1 / accept-s50-tc2.ps1 / accept-s50-it.ps1 / accept-s50-pt.ps1、gen-alarm-data.ps1、jtl-stats.ps1、search-plan.jmx / gateway-plan.jmx、报告第 6 章回填
 - **工具**：accept-s30/s33 脚本复用扩展；JMeter 5.6.3（本机 Downloads 下）非 GUI 压测
-- **里程碑 tag**：**待用户确认**（v0.5 打标前提已满足：S50 全部用例执行完毕且性能/接口/功能结果均达标；按用户 2026-09-12 要求，未经确认不打）
+- **里程碑 tag**：**已打 v0.5**（2026-09-12 用户确认：S50 全部用例执行完毕且达标；tag 落在本步骤最终提交）
 
 ### S60 异地备份（可选）
 - **状态**：pending（候选）
