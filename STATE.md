@@ -124,6 +124,7 @@
 23. **双实例定时器重复告警（已踩坑，已修复）**：离线检测 @Scheduled 在两后端实例各自运行，同一设备可能被两实例先后翻转并各发一条 DEVICE_OFFLINE。**结论**：条件更新（status ONLINE→OFFLINE 的 modifiedCount>0 才发告警）实现去重。
 24. **npm 缓存目录沙箱禁写（已踩坑，已修复，与 #17 同源）**：npm 默认缓存 `C:\Users\黎Li\AppData\Local\npm-cache` 位于工作区外，沙箱拒绝写入。**结论**：`web/.npmrc` 中 `cache=` 重定向到工作区 `tools\npm-cache`（已 gitignore）。
 25. **沙箱禁执行工作区二进制（已踩坑，已规避）**：esbuild 安装脚本需在工作区 spawn 刚解包的二进制，受限令牌拒绝（EPERM -4048）。**结论**：`npm install`/`npm run build` 需经升级授权（danger-full-access）执行；构建产物 `dist/` 不入库。
+26. **PowerShell 文本替换破坏 YAML（已踩坑，已修复）**：`(Get-Content -Raw) -replace ... | Set-Content -Encoding UTF8` 重写 compose 文件会引入 BOM/编码变化，docker compose 报 go-yaml 解析错误。**结论**：compose/YAML 等结构文件的修改一律用 edit 工具；已恢复并改用 edit 完成镜像版本升级。
 
 ## 7. 下一步计划
 
