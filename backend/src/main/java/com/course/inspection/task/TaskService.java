@@ -43,8 +43,16 @@ public class TaskService {
     public record CreateRequest(String taskType, String deviceId, int priority, String remark) {
     }
 
-    /** 创建并下发任务。 */
+    /** 创建并下发任务。设备离线/不存在时拒绝（S40 用户反馈：离线设备不应可派单）。 */
     public TaskDoc create(CreateRequest req) {
+        var device = mongo.findById(req.deviceId(),
+                com.course.inspection.device.DeviceDoc.class);
+        if (device == null || !"ONLINE".equals(device.getStatus())) {
+            throw new org.springframework.web.server.ResponseStatusException(
+                    org.springframework.http.HttpStatus.CONFLICT,
+                    "设备离线或不存在，请先检查/维修/重启设备: " + req.deviceId());
+        }
+
         Instant now = Instant.now();
         String taskId = "TASK-" + SEQ.format(now.atZone(ZoneId.of("Asia/Shanghai")))
                 + String.format("%03d", seq.incrementAndGet() % 1000);

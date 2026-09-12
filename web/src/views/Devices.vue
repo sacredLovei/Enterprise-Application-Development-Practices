@@ -4,11 +4,13 @@ import request from '../api/request'
 
 const devices = ref([])
 const filter = ref({ status: '', deviceType: '' })
+const lastUpdated = ref('')
 let timer
 
 async function load() {
   try {
     devices.value = await request.get('/devices')
+    lastUpdated.value = new Date().toLocaleTimeString('zh-CN', { hour12: false })
   } catch (e) {
     console.error(e)
   }
@@ -39,6 +41,7 @@ onUnmounted(() => clearInterval(timer))
         <option value="ROBOT_DOG">机器狗</option>
       </select>
       <button class="ghost" @click="load">手动刷新</button>
+      <span class="hint">上次刷新：{{ lastUpdated || '—' }}（自动每 5 秒）</span>
     </div>
     <table class="grid">
       <thead>

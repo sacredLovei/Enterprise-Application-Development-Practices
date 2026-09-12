@@ -38,3 +38,8 @@ management:
     web:
       exposure:
         include: health
+
+# 业务异常信息透出给前端（如"设备离线"提示；课程仿真环境可接受）
+server:
+  error:
+    include-message: always
