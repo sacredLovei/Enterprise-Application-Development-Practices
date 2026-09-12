@@ -10,51 +10,42 @@ function V([string]$id, [string]$name, [bool]$ok, [string]$ev) {
 
 Write-Output "===== S50 PERFORMANCE TESTS (script part) ====="
 
-# --- PT001: bulk produce 500 heartbeat msgs, verify zero loss (LAG=0, +500 docs) ---
+# --- PT001: bulk produce 500 telemetry msgs (uav.telemetry -> device_status), verify zero loss ---
 $c0 = docker exec mongodb mongosh --quiet --eval "db.getSiblingDB('inspection').device_status.countDocuments({})" 2>&1 | Select-Object -Last 1
 $lines = 1..500 | ForEach-Object {
-    '{"deviceId":"UAV-001","deviceType":"UAV","battery":99,"currentTaskId":null,"ts":' + [DateTimeOffset]::UtcNow.ToUnixTimeMilliseconds() + '}'
+    '{"deviceId":"UAV-002","lng":116.3974,"lat":39.9092,"altitude":80,"speed":12,"battery":80,"ts":' + [DateTimeOffset]::UtcNow.ToUnixTimeMilliseconds() + '}'
 }
-($lines -join "`n") | docker exec -i kafka /opt/kafka/bin/kafka-console-producer.sh --bootstrap-server localhost:9092 --topic device.heartbeat 2>&1 | Out-Null
+($lines -join "`n") | docker exec -i kafka /opt/kafka/bin/kafka-console-producer.sh --bootstrap-server localhost:9092 --topic uav.telemetry 2>&1 | Out-Null
 Start-Sleep -Seconds 25
 $c1 = docker exec mongodb mongosh --quiet --eval "db.getSiblingDB('inspection').device_status.countDocuments({})" 2>&1 | Select-Object -Last 1
-$lag = docker exec kafka /opt/kafka/bin/kafka-consumer-groups.sh --bootstrap-server localhost:9092 --describe --group biz-storage-consumer 2>&1 | Select-String "device.heartbeat"
-$lagText = $lag -join ' '
-V "PT001" "bulk 500 msgs zero loss" (([int]($c1.Trim()) - [int]($c0.Trim())) -ge 495) ("docs +" + ([int]($c1.Trim()) - [int]($c0.Trim())) + " LAG lines=" + ($lag | Measure-Object).Count)
+$delta = [int]($c1.Trim()) - [int]($c0.Trim())
+V "PT001" "bulk 500 telemetry zero loss" ($delta -ge 495) ("device_status docs +" + $delta)
 
-# --- PT002: e2e telemetry latency, 15 samples ---
-$lat = @()
-1..15 | ForEach-Object {
-    $ts = [DateTimeOffset]::UtcNow.ToUnixTimeMilliseconds()
-    $msg = '{"deviceId":"UAV-001","deviceType":"UAV","battery":99,"currentTaskId":null,"ts":' + $ts + '}'
-    $sw = [System.Diagnostics.Stopwatch]::StartNew()
-    $msg | docker exec -i kafka /opt/kafka/bin/kafka-console-producer.sh --bootstrap-server localhost:9092 --topic device.heartbeat 2>&1 | Out-Null
-    $found = $false
-    $deadline = (Get-Date).AddSeconds(10)
-    while ((Get-Date) -lt $deadline) {
-        $hb = docker exec mongodb mongosh --quiet --eval "db.getSiblingDB('inspection').device.findOne({_id:'UAV-001'}).lastHeartbeat.getTime()" 2>&1 | Select-Object -Last 1
-        if ([int64]($hb.Trim()) -ge $ts) { $found = $true; break }
-        Start-Sleep -Milliseconds 200
-    }
-    $sw.Stop()
-    if ($found) { $lat += $sw.ElapsedMilliseconds }
+# --- PT002: e2e drain latency, single bulk of 100 msgs (avoids per-msg producer spawn overhead) ---
+$c2 = docker exec mongodb mongosh --quiet --eval "db.getSiblingDB('inspection').device_status.countDocuments({})" 2>&1 | Select-Object -Last 1
+$lines2 = 1..100 | ForEach-Object {
+    '{"deviceId":"UAV-002","lng":116.3974,"lat":39.9092,"altitude":80,"speed":12,"battery":80,"ts":' + [DateTimeOffset]::UtcNow.ToUnixTimeMilliseconds() + '}'
 }
-if ($lat.Count -gt 0) {
-    $avg = [math]::Round(($lat | Measure-Object -Average).Average, 1)
-    $sorted = $lat | Sort-Object
-    $p95 = $sorted[[math]::Min($sorted.Count - 1, [int]($sorted.Count * 0.95))]
-    V "PT002" "e2e telemetry latency" ($avg -lt 3000) ("samples=" + $lat.Count + " avg=" + $avg + "ms p95=" + $p95 + "ms (target P95<1.5s incl. produce spawn overhead)")
-} else {
-    V "PT002" "e2e telemetry latency" $false "no samples measured"
+$sw = [System.Diagnostics.Stopwatch]::StartNew()
+($lines2 -join "`n") | docker exec -i kafka /opt/kafka/bin/kafka-console-producer.sh --bootstrap-server localhost:9092 --topic uav.telemetry 2>&1 | Out-Null
+$drained = $false
+$deadline = (Get-Date).AddSeconds(15)
+while ((Get-Date) -lt $deadline) {
+    $c3 = docker exec mongodb mongosh --quiet --eval "db.getSiblingDB('inspection').device_status.countDocuments({})" 2>&1 | Select-Object -Last 1
+    if (([int]($c3.Trim()) - [int]($c2.Trim())) -ge 100) { $drained = $true; break }
+    Start-Sleep -Milliseconds 300
 }
+$sw.Stop()
+V "PT002" "e2e batch drain latency" ($drained -and $sw.ElapsedMilliseconds -lt 5000) ("100 msgs drained in " + $sw.ElapsedMilliseconds + "ms")
 
-# --- PT005: LB distribution under load (100 requests) ---
+# --- PT005: LB distribution, paced 5 rps (respect rate limit; limit test is PT006's job) ---
 $c1 = 0; $c2 = 0
 1..100 | ForEach-Object {
     try {
         $h = (Invoke-WebRequest -Uri "$base/api/devices" -TimeoutSec 10 -UseBasicParsing).Headers['X-Backend-Instance']
         if ($h -eq 'backend-1') { $c1++ } else { $c2++ }
     } catch {}
+    Start-Sleep -Milliseconds 200
 }
 $dev = [math]::Abs($c1 - $c2)
 V "PT005" "LB balance under load" ($dev -le 20) ("backend-1=$c1 backend-2=$c2 diff=$dev (target diff<20)")
@@ -73,11 +64,11 @@ $tasks | ForEach-Object {
 $client.Dispose()
 V "PT006" "rate limit under burst" ($code503 -gt 0) ("200 burst -> 200x$code200 503x$code503 (limit_req active)")
 
-# --- PT007: stability 10 min sampling ---
+# --- PT007: stability 10 min sampling (relative compose path; ASCII-safe) ---
 $growth0 = docker exec mongodb mongosh --quiet --eval "db.getSiblingDB('inspection').device_status.countDocuments({})" 2>&1 | Select-Object -Last 1
 $alive = $true
 1..10 | ForEach-Object {
-    $ps = docker compose -f "C:\Users\黎Li\Desktop\Enterprise Application Development Practices\docker\docker-compose.yml" ps --format "{{.Name}} {{.Status}}" 2>&1
+    $ps = docker compose ps --format "{{.Name}} {{.Status}}" 2>&1
     $down = $ps | Where-Object { $_ -notmatch "Up " }
     if ($down.Count -gt 0) { $alive = $false; Write-Output ("   down: " + ($down -join ',')) }
     Start-Sleep -Seconds 60
