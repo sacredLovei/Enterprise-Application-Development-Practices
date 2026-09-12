@@ -109,6 +109,9 @@ public class AlarmSearchService {
             SearchResponse<AlarmEsDoc> resp = client.search(s -> s
                             .index(AlarmIndexInitializer.INDEX)
                             .query(bool)
+                            // S50 定位：ES 默认 hits.total 截断于 10,000（TC026 在 10k 规模实测暴露），
+                            // 分页总数必须精确，显式开启 track_total_hits
+                            .trackTotalHits(t -> t.enabled(true))
                             .sort(so -> so.field(f -> f.field("occurredTime").order(SortOrder.Desc)))
                             .from(q.page() * q.size())
                             .size(q.size()),
@@ -131,6 +134,8 @@ public class AlarmSearchService {
             SearchResponse<Void> resp = client.search(s -> s
                             .index(AlarmIndexInitializer.INDEX)
                             .size(0)
+                            // 同 search：统计总数不受 10,000 截断（S50 TC026 定位）
+                            .trackTotalHits(t -> t.enabled(true))
                             .query(q -> q.range(r -> r.field("occurredTime")
                                     .gte(JsonData.of("now-24h")).lte(JsonData.of("now"))))
                             .aggregations("by_type", a -> a.terms(t -> t.field("alarmType").size(10)))
