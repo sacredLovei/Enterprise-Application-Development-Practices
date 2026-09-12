@@ -146,17 +146,17 @@ public abstract class DeviceSimulator {
      * 排队中的任务不产生回执——后端保持 DISPATCHED，直到真正开始执行才 RECEIVED/RUNNING。
      */
     public void onCommand(TaskCommandMsg cmd) {
-        if (!commEnabled.get()) {
-            log.warn("指令被拒（通信中断） deviceId={} taskId={}", deviceId, cmd.taskId());
-            return;
-        }
-        // 控制指令（S34 手动上下线，复用故障注入机制）
+        // 控制指令必须最先处理：COMM_RESTORE 要能到达通信中断的设备（否则永远无法上线，S34 排错）
         if ("COMM_OFFLINE".equals(cmd.taskType())) {
             injectFault("COMM_OFFLINE");
             return;
         }
         if ("COMM_RESTORE".equals(cmd.taskType())) {
             injectFault("COMM_RESTORE");
+            return;
+        }
+        if (!commEnabled.get()) {
+            log.warn("指令被拒（通信中断） deviceId={} taskId={}", deviceId, cmd.taskId());
             return;
         }
         if ("CANCEL_TASK".equals(cmd.taskType())) {
