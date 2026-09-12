@@ -149,11 +149,16 @@ public class TaskService {
             log.info("设备离线，直接取消任务 taskId={}", taskId);
             return true;
         }
-        // 下发取消指令：设备中止执行（或在队列中移除）并回执 CANCELLED，随后返航
+        // 下发取消指令：设备中止执行（或在队列中移除）并回执 CANCELLED，随后返航。
+        // 同时同步置 CANCELLED 作为受理标记（TC022）：并发二次取消因状态已 CANCELLED 被拒；
+        // 设备回执 CANCELLED 时状态已终态，transit 无操作不产生非法流转。
         TaskCommandMsg cmd = new TaskCommandMsg(taskId, "CANCEL_TASK", task.getDeviceId(),
                 1, System.currentTimeMillis(), null, null);
         kafka.send(TopicConst.TASK_COMMAND, task.getDeviceId(), Json.toJson(cmd));
-        log.info("取消指令已下发 taskId={} deviceId={}", taskId, task.getDeviceId());
+        mongo.updateFirst(Query.query(Criteria.where("taskId").is(taskId)),
+                new Update().set("status", "CANCELLED").set("finishTime", Instant.now()),
+                TaskDoc.class);
+        log.info("取消指令已下发并同步置 CANCELLED taskId={} deviceId={}", taskId, task.getDeviceId());
         return true;
     }
 }
