@@ -1,6 +1,7 @@
 <script setup>
 import { ref, onMounted, onUnmounted } from 'vue'
 import request from '../api/request'
+import { formatTime } from '../utils/time'
 
 const devices = ref([])
 const filter = ref({ status: '', deviceType: '' })
@@ -53,8 +54,8 @@ onUnmounted(() => clearInterval(timer))
           <td>{{ d.deviceType === 'UAV' ? '无人机' : '机器狗' }}</td>
           <td><span class="badge" :class="d.status === 'ONLINE' ? 'online' : 'offline'">{{ d.status }}</span></td>
           <td>{{ d.battery }}%</td>
-          <td>{{ (d.registerTime || '').replace('T', ' ').slice(0, 19) }}</td>
-          <td>{{ (d.lastHeartbeat || '').replace('T', ' ').slice(0, 19) }}</td>
+          <td>{{ formatTime(d.registerTime) }}</td>
+          <td>{{ formatTime(d.lastHeartbeat) }}</td>
         </tr>
       </tbody>
     </table>

@@ -17,6 +17,8 @@ public class TaskDoc {
     private int priority;
     private String status;       // CREATED / DISPATCHED / RUNNING / DONE / FAILED / CANCELLED
     private String remark;
+    private Double targetLng;    // S33：POINT_REVIEW / AREA_COVER 目标坐标（前端地图展示任务目标点）
+    private Double targetLat;
     private Instant createTime;
     private Instant dispatchTime;
     private Instant finishTime;
@@ -67,6 +69,22 @@ public class TaskDoc {
 
     public void setRemark(String remark) {
         this.remark = remark;
+    }
+
+    public Double getTargetLng() {
+        return targetLng;
+    }
+
+    public void setTargetLng(Double targetLng) {
+        this.targetLng = targetLng;
+    }
+
+    public Double getTargetLat() {
+        return targetLat;
+    }
+
+    public void setTargetLat(Double targetLat) {
+        this.targetLat = targetLat;
     }
 
     public Instant getCreateTime() {

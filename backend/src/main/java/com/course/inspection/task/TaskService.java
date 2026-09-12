@@ -66,6 +66,8 @@ public class TaskService {
         doc.setPriority(req.priority());
         doc.setStatus("DISPATCHED");
         doc.setRemark(req.remark());
+        doc.setTargetLng(req.targetLng());
+        doc.setTargetLat(req.targetLat());
         doc.setCreateTime(now);
         doc.setDispatchTime(now);
         mongo.insert(doc);
@@ -77,8 +79,19 @@ public class TaskService {
         return doc;
     }
 
-    public List<TaskDoc> list() {
-        return mongo.findAll(TaskDoc.class);
+    /** 分页结果（S40 修正：任务列表分页 + 最新在前）。 */
+    public record TaskPage(long total, List<TaskDoc> records) {
+    }
+
+    /** 任务列表：按创建时间倒序分页（最新的排最前）。 */
+    public TaskPage list(int page, int size) {
+        Query query = new Query()
+                .with(org.springframework.data.domain.Sort.by(
+                        org.springframework.data.domain.Sort.Direction.DESC, "createTime"))
+                .skip((long) page * size)
+                .limit(size);
+        long total = mongo.count(new Query(), TaskDoc.class);
+        return new TaskPage(total, mongo.find(query, TaskDoc.class));
     }
 
     /**

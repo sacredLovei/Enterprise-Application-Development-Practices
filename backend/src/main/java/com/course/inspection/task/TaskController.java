@@ -6,10 +6,9 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.server.ResponseStatusException;
-
-import java.util.List;
 
 /** 任务接口（设计报告 4.4.3 契约）。 */
 @RestController
@@ -28,8 +27,10 @@ public class TaskController {
     }
 
     @GetMapping
-    public List<TaskDoc> list() {
-        return service.list();
+    public TaskService.TaskPage list(
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "15") int size) {
+        return service.list(page, size);
     }
 
     @PostMapping("/{taskId}/cancel")

@@ -5,6 +5,7 @@ import DeviceMap from '../components/DeviceMap.vue'
 
 const devices = ref([])
 const alarms = ref([])
+const tasks = ref([])
 const summary = ref({})
 let timer
 
@@ -13,6 +14,8 @@ async function load() {
     devices.value = await request.get('/devices')
     const r = await request.post('/search/alarms', { from: 'now-1h', to: 'now', page: 0, size: 50 })
     alarms.value = r.records || []
+    const tp = await request.get('/tasks', { params: { page: 0, size: 50 } })
+    tasks.value = tp.records || []
     const online = devices.value.filter(d => d.status === 'ONLINE').length
     const critical = alarms.value.filter(a => a.level === 'CRITICAL').length
     summary.value = { total: devices.value.length, online, alarmCount: alarms.value.length, critical }
@@ -37,8 +40,8 @@ onUnmounted(() => clearInterval(timer))
   </div>
   <div class="card">
     <h3>园区设备与告警分布（每 3 秒刷新）</h3>
-    <DeviceMap :devices="devices" :alarms="alarms" />
-    <div class="hint">蓝色 ✈ 无人机 / 绿色 🐕 机器狗 / 红色 ! 告警点。底图为 OpenStreetMap。</div>
+    <DeviceMap :devices="devices" :alarms="alarms" :tasks="tasks" />
+    <div class="hint">蓝色 ✈ 无人机 / 绿色 🐕 机器狗 / 红色 ! 告警点 / 🎯 任务目标点。底图为 OpenStreetMap。</div>
   </div>
 </template>
 

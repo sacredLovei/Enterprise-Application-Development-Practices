@@ -1,6 +1,7 @@
 <script setup>
 import { ref, onMounted, onUnmounted } from 'vue'
 import request from '../api/request'
+import { formatTime } from '../utils/time'
 
 const form = ref({ alarmType: '', level: '', deviceId: '', keyword: '', from: 'now-24h', to: 'now' })
 const devices = ref([])
@@ -100,7 +101,7 @@ onUnmounted(() => { clearInterval(timer); clearTimeout(debounceTimer); clearInte
           <td><span class="badge" :class="a.level === 'CRITICAL' ? 'critical' : 'warn'">{{ a.level }}</span></td>
           <td>{{ a.deviceId }}</td>
           <td>{{ a.description }}</td>
-          <td>{{ (a.occurredTime || '').replace('T', ' ').slice(0, 19) }}</td>
+          <td>{{ formatTime(a.occurredTime) }}</td>
           <td>{{ a.snapshotPath ? 'HDFS ✓' : '—' }}</td>
         </tr>
       </tbody>
