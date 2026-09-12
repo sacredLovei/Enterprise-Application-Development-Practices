@@ -171,7 +171,7 @@ services:
 
   # ============ 业务服务后端（无状态双实例，演示负载均衡） ============
   backend-1:
-    image: inspection-backend:0.1
+    image: inspection-backend:0.2
     build:
       context: ../backend
       dockerfile: Dockerfile
@@ -196,7 +196,7 @@ services:
     networks: [inspection-net]
 
   backend-2:
-    image: inspection-backend:0.1
+    image: inspection-backend:0.2
     build:
       context: ../backend
       dockerfile: Dockerfile
