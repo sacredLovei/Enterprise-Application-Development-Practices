@@ -117,12 +117,44 @@ public abstract class DeviceSimulator {
     private volatile String currentTaskType;
     private volatile boolean taskDoneSent = false;
 
-    /** 接收指令：回执 RECEIVED → 启动真实行为 → 3 秒后回执 EXECUTING（出发）。 */
+    /**
+     * 接收指令（S33 修复：优先级任务队列，风险 #30）。
+     * 指令一律入队（按优先级降序、同优先级按下发先后）；设备空闲时立即取队首执行。
+     * 排队中的任务不产生回执——后端保持 DISPATCHED，直到真正开始执行才 RECEIVED/RUNNING。
+     */
     public void onCommand(TaskCommandMsg cmd) {
-        if (!commEnabled.get() || currentTaskId != null) {
-            log.warn("指令被拒（通信中断或已有任务在身） deviceId={} taskId={}", deviceId, cmd.taskId());
+        if (!commEnabled.get()) {
+            log.warn("指令被拒（通信中断） deviceId={} taskId={}", deviceId, cmd.taskId());
             return;
         }
+        taskQueue.offer(cmd);
+        log.info("指令入队 deviceId={} taskId={} priority={} 队列长度={}",
+                deviceId, cmd.taskId(), cmd.priority(), taskQueue.size());
+        maybeStartNext();
+    }
+
+    private final java.util.concurrent.PriorityBlockingQueue<TaskCommandMsg> taskQueue =
+            new java.util.concurrent.PriorityBlockingQueue<>(16, (a, b) -> {
+                int p = Integer.compare(a.priority(), b.priority());
+                if (p != 0) {
+                    return p;    // 数字小 = 优先级高，排前
+                }
+                return Long.compare(a.ts(), b.ts());
+            });
+
+    /** 空闲则从队首取优先级最高的任务执行。 */
+    private synchronized void maybeStartNext() {
+        if (currentTaskId != null) {
+            return;
+        }
+        TaskCommandMsg cmd = taskQueue.poll();
+        if (cmd == null) {
+            return;
+        }
+        startTask(cmd);
+    }
+
+    private void startTask(TaskCommandMsg cmd) {
         currentTaskId = cmd.taskId();
         currentTaskType = cmd.taskType();
         taskDoneSent = false;
@@ -136,7 +168,8 @@ public abstract class DeviceSimulator {
         }
         receipt(cmd.taskId(), "COMMAND_RECEIVED");
         EXECUTOR.schedule(() -> receipt(cmd.taskId(), "EXECUTING"), 3, java.util.concurrent.TimeUnit.SECONDS);
-        log.info("任务开始执行 deviceId={} taskId={} type={}", deviceId, cmd.taskId(), cmd.taskType());
+        log.info("任务开始执行 deviceId={} taskId={} type={} priority={}",
+                deviceId, cmd.taskId(), cmd.taskType(), cmd.priority());
     }
 
     private static final java.util.concurrent.ScheduledExecutorService EXECUTOR =
@@ -146,7 +179,7 @@ public abstract class DeviceSimulator {
                 return t;
             });
 
-    /** 每遥测 tick 检查任务是否完成，完成即回执 DONE 并恢复默认巡逻。 */
+    /** 每遥测 tick 检查任务是否完成，完成即回执 DONE 并取下一个优先级最高的任务。 */
     protected void checkTaskCompletion() {
         if (currentTaskId == null || taskDoneSent) {
             return;
@@ -164,6 +197,7 @@ public abstract class DeviceSimulator {
             currentTaskId = null;
             currentTaskType = null;
             track.startPatrolLoop();   // 恢复默认巡逻
+            maybeStartNext();          // 立即取队列中优先级最高的下一个任务
         }
     }
 
