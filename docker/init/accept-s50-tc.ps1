@@ -33,7 +33,7 @@ function Task([string]$id) {
 
 Write-Output "===== S50 FUNCTIONAL TESTS ====="
 
-# --- test hygiene: bring all devices online first (prior suites may leave OFFLINE state) ---
+# --- test hygiene: bring all devices online first (poll until ONLINE; power cycle may be mid-recharge) ---
 $devs = (Req "GET" "$base/api/devices" $null).body | ConvertFrom-Json
 foreach ($dv in $devs) {
     if ($dv.status -ne "ONLINE") {
@@ -41,7 +41,12 @@ foreach ($dv in $devs) {
         Write-Output ("pre-step: restore online -> " + $dv.deviceId)
     }
 }
-Start-Sleep -Seconds 16
+$onlineDeadline = (Get-Date).AddSeconds(90)
+while ((Get-Date) -lt $onlineDeadline) {
+    $still = ((Req "GET" "$base/api/devices" $null).body | ConvertFrom-Json) | Where-Object { $_.status -ne "ONLINE" }
+    if ($still.Count -eq 0) { break }
+    Start-Sleep -Seconds 5
+}
 
 # --- device group ---
 $d = Dev "UAV-001"
@@ -57,8 +62,11 @@ $uavStatus = docker exec mongodb mongosh --quiet --eval "db.getSiblingDB('inspec
 V "TC003" "UAV telemetry produce+consume" ([int]($uavStatus.Trim()) -gt 0) ("device_status docs=" + $uavStatus.Trim())
 V "TC011" "same-device msg order (keyed)" $true "producer key=deviceId, LAG=0 verified earlier"
 
-# --- task behavior group ---
-$r = Req "POST" "$base/api/tasks" '{"taskType":"RETURN_HOME","deviceId":"UAV-001","priority":1,"remark":"TC004","targetLng":null,"targetLat":null}'
+# --- task behavior group (pick device with healthiest battery to avoid power-cycle interference) ---
+$devList = (Req "GET" "$base/api/devices" $null).body | ConvertFrom-Json
+$best = ($devList | Where-Object { $_.status -eq "ONLINE" } | Sort-Object -Property battery -Descending | Select-Object -First 1)
+$taskDevice = $best.deviceId
+$r = Req "POST" "$base/api/tasks" ('{"taskType":"RETURN_HOME","deviceId":"' + $taskDevice + '","priority":1,"remark":"TC004","targetLng":null,"targetLat":null}')
 $tid = ($r.body | ConvertFrom-Json).taskId
 $done = $false
 $deadline = (Get-Date).AddMinutes(2)
@@ -67,7 +75,7 @@ while ((Get-Date) -lt $deadline) {
     if ($t -and $t.status -eq "DONE") { $done = $true; break }
     Start-Sleep -Seconds 5
 }
-V "TC004" "command dispatch+execute(return home)" $done ("task=$tid DONE=" + $done)
+V "TC004" "command dispatch+execute(return home)" $done ("task=$tid on $taskDevice DONE=" + $done)
 V "TC033" "task transitions to DONE" $done "receipt-driven (S32)"
 
 # --- storage group ---
