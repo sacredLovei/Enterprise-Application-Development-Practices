@@ -11,9 +11,9 @@ const props = defineProps({
 const mapEl = ref(null)
 let map, deviceLayer, alarmLayer
 
-const UAV_ICON = L.divIcon({ className: '', html: '<div style="background:#2f6fed;color:#fff;border-radius:50%;width:18px;height:18px;line-height:18px;text-align:center;font-size:11px">✈</div>' })
-const DOG_ICON = L.divIcon({ className: '', html: '<div style="background:#1a8a4a;color:#fff;border-radius:50%;width:18px;height:18px;line-height:18px;text-align:center;font-size:11px">🐕</div>' })
-const ALARM_ICON = L.divIcon({ className: '', html: '<div style="background:#c0392b;color:#fff;border-radius:50%;width:16px;height:16px;line-height:16px;text-align:center;font-size:10px">!</div>' })
+const UAV_ICON = L.divIcon({ className: '', iconSize: [34, 34], html: '<div style="background:#2f6fed;color:#fff;border-radius:50%;width:34px;height:34px;line-height:34px;text-align:center;font-size:20px;box-shadow:0 1px 4px rgba(0,0,0,.35)">✈</div>' })
+const DOG_ICON = L.divIcon({ className: '', iconSize: [34, 34], html: '<div style="background:#1a8a4a;color:#fff;border-radius:50%;width:34px;height:34px;line-height:34px;text-align:center;font-size:20px;box-shadow:0 1px 4px rgba(0,0,0,.35)">🐕</div>' })
+const ALARM_ICON = L.divIcon({ className: '', iconSize: [26, 26], html: '<div style="background:#c0392b;color:#fff;border-radius:50%;width:26px;height:26px;line-height:26px;text-align:center;font-size:16px;font-weight:700;box-shadow:0 1px 4px rgba(0,0,0,.4)">!</div>' })
 
 onMounted(() => {
   map = L.map(mapEl.value).setView([39.9092, 116.3974], 16)
