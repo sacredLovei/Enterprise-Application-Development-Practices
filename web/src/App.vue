@@ -15,7 +15,7 @@ setInterval(() => {
   <div class="shell">
     <!-- 左侧导航：毛玻璃白 + 灰色分隔线 -->
     <aside class="sidebar">
-      <div class="brand">🚁 空地协同<br />巡检平台</div>
+      <div class="brand">🚁 空地协同巡检平台</div>
       <nav class="nav">
         <RouterLink to="/overview">🗺️ 地图总览</RouterLink>
         <RouterLink to="/devices">📟 设备台账</RouterLink>

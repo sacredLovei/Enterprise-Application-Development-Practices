@@ -23,19 +23,20 @@ body {
   padding: 22px 14px 16px;
 }
 .brand {
-  font-size: 18px;
+  font-size: 16px;
   font-weight: 700;
-  line-height: 1.4;
-  padding: 0 8px 18px;
+  line-height: 1.3;
+  white-space: nowrap;                 /* 品牌文字单行显示 */
+  padding: 0 6px 18px;
   border-bottom: 1px solid #e5eaf0;
   margin-bottom: 10px;
 }
-.nav { display: flex; flex-direction: column; gap: 2px; }
+.nav { display: flex; flex-direction: column; gap: 4px; }
 .nav a {
   color: #5c6b7a;
   text-decoration: none;
-  font-size: 14px;
-  padding: 11px 12px;
+  font-size: 16px;                     /* 字更大 */
+  padding: 15px 14px;                  /* 导航项更高 */
   border-radius: 8px;
   border-bottom: 1px solid rgba(229, 234, 240, 0.6);   /* 灰色分隔线 */
   transition: background .15s, color .15s;
