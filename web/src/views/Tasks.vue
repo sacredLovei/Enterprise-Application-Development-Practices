@@ -1,12 +1,16 @@
 <script setup>
-import { ref, onMounted, onUnmounted } from 'vue'
+import { ref, computed, onMounted, onUnmounted } from 'vue'
 import request from '../api/request'
+import TargetPicker from '../components/TargetPicker.vue'
 
 const form = ref({ taskType: 'POINT_REVIEW', deviceId: '', priority: 2, remark: '' })
+const target = ref(null)   // { lng, lat } 地图点选
 const tasks = ref([])
 const devices = ref([])
 const msg = ref('')
 let timer, deviceTimer
+
+const needTarget = computed(() => ['POINT_REVIEW', 'AREA_COVER'].includes(form.value.taskType))
 
 async function load() {
   try {
@@ -28,10 +32,18 @@ async function loadDevices() {
   }
 }
 
+function onTaskTypeChange() {
+  target.value = null   // 切换任务类型清空已选目标
+}
+
 async function submit() {
   msg.value = ''
   if (!form.value.deviceId) {
     msg.value = '请选择执行设备'
+    return
+  }
+  if (needTarget.value && !target.value) {
+    msg.value = '请在地图上点选目标位置'
     return
   }
   try {
@@ -39,9 +51,12 @@ async function submit() {
       taskType: form.value.taskType,
       deviceId: form.value.deviceId,
       priority: Number(form.value.priority),
-      remark: form.value.remark
+      remark: form.value.remark,
+      targetLng: needTarget.value ? target.value.lng : null,
+      targetLat: needTarget.value ? target.value.lat : null
     })
     msg.value = `任务已下发：${t.taskId}`
+    target.value = null
     load()
   } catch (e) {
     msg.value = '下发失败：' + (e.response?.data?.message || e.message)
@@ -68,12 +83,12 @@ onUnmounted(() => { clearInterval(timer); clearInterval(deviceTimer) })
 
 <template>
   <div class="card">
-    <h3>下发巡检任务（指令经 Kafka → 设备执行回执）</h3>
+    <h3>下发巡检任务（指令经 Kafka → 设备真实执行回执）</h3>
     <div class="form-row">
-      <select v-model="form.taskType">
+      <select v-model="form.taskType" @change="onTaskTypeChange">
         <option value="PERIMETER_PATROL">周界巡逻</option>
-        <option value="AREA_COVER">区域覆盖</option>
-        <option value="POINT_REVIEW">定点复核</option>
+        <option value="AREA_COVER">区域覆盖（需选地点）</option>
+        <option value="POINT_REVIEW">定点复核（需选地点）</option>
         <option value="RETURN_HOME">返航</option>
       </select>
       <select v-model="form.deviceId" style="min-width:220px">
@@ -88,6 +103,10 @@ onUnmounted(() => { clearInterval(timer); clearInterval(deviceTimer) })
       </select>
       <input v-model="form.remark" placeholder="备注" style="width:180px" />
       <button @click="submit">下发任务</button>
+    </div>
+    <div v-if="needTarget" class="card">
+      <h3>目标位置（点击地图选点；机器狗将沿地面路网最短路径前往，无人机直线飞行）</h3>
+      <TargetPicker v-model="target" />
     </div>
     <div v-if="msg" class="hint">{{ msg }}</div>
   </div>

@@ -40,7 +40,8 @@ public class TaskService {
         this.kafka = kafka;
     }
 
-    public record CreateRequest(String taskType, String deviceId, int priority, String remark) {
+    public record CreateRequest(String taskType, String deviceId, int priority, String remark,
+                                Double targetLng, Double targetLat) {
     }
 
     /** 创建并下发任务。设备离线/不存在时拒绝（S40 用户反馈：离线设备不应可派单）。 */
@@ -69,7 +70,7 @@ public class TaskService {
         mongo.insert(doc);
 
         TaskCommandMsg cmd = new TaskCommandMsg(taskId, req.taskType(), req.deviceId(),
-                req.priority(), now.toEpochMilli());
+                req.priority(), now.toEpochMilli(), req.targetLng(), req.targetLat());
         kafka.send(TopicConst.TASK_COMMAND, req.deviceId(), Json.toJson(cmd));
         log.info("任务创建并下发 taskId={} deviceId={} type={}", taskId, req.deviceId(), req.taskType());
         return doc;

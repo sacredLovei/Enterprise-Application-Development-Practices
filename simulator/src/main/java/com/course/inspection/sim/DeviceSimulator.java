@@ -111,6 +111,74 @@ public abstract class DeviceSimulator {
         log.info("告警产生 {} {} {} deviceId={}", alarmType, level, description, deviceId);
     }
 
+    // ---------- S33 任务真实执行 ----------
+
+    private volatile String currentTaskId;
+    private volatile String currentTaskType;
+    private volatile boolean taskDoneSent = false;
+
+    /** 接收指令：回执 RECEIVED → 启动真实行为 → 3 秒后回执 EXECUTING（出发）。 */
+    public void onCommand(TaskCommandMsg cmd) {
+        if (!commEnabled.get() || currentTaskId != null) {
+            log.warn("指令被拒（通信中断或已有任务在身） deviceId={} taskId={}", deviceId, cmd.taskId());
+            return;
+        }
+        currentTaskId = cmd.taskId();
+        currentTaskType = cmd.taskType();
+        taskDoneSent = false;
+
+        switch (cmd.taskType()) {
+            case "POINT_REVIEW" -> beginReview(cmd);
+            case "AREA_COVER" -> beginSweep(cmd);
+            case "RETURN_HOME" -> beginHome();
+            case "PERIMETER_PATROL" -> track.startPatrolLoop();
+            default -> log.warn("未知任务类型: {}", cmd.taskType());
+        }
+        receipt(cmd.taskId(), "COMMAND_RECEIVED");
+        EXECUTOR.schedule(() -> receipt(cmd.taskId(), "EXECUTING"), 3, java.util.concurrent.TimeUnit.SECONDS);
+        log.info("任务开始执行 deviceId={} taskId={} type={}", deviceId, cmd.taskId(), cmd.taskType());
+    }
+
+    private static final java.util.concurrent.ScheduledExecutorService EXECUTOR =
+            java.util.concurrent.Executors.newScheduledThreadPool(2, r -> {
+                Thread t = new Thread(r, "sim-receipt");
+                t.setDaemon(true);
+                return t;
+            });
+
+    /** 每遥测 tick 检查任务是否完成，完成即回执 DONE 并恢复默认巡逻。 */
+    protected void checkTaskCompletion() {
+        if (currentTaskId == null || taskDoneSent) {
+            return;
+        }
+        boolean done = switch (currentTaskType) {
+            case "POINT_REVIEW", "RETURN_HOME" -> track.pointArrived();
+            case "AREA_COVER" -> track.sweepFinished();
+            case "PERIMETER_PATROL" -> track.patrolLoopDone();
+            default -> false;
+        };
+        if (done) {
+            receipt(currentTaskId, "DONE");
+            taskDoneSent = true;
+            log.info("任务完成 deviceId={} taskId={} type={}", deviceId, currentTaskId, currentTaskType);
+            currentTaskId = null;
+            currentTaskType = null;
+            track.startPatrolLoop();   // 恢复默认巡逻
+        }
+    }
+
+    private void receipt(String taskId, String action) {
+        TaskLogMsg msg = new TaskLogMsg(taskId, deviceId, action, System.currentTimeMillis());
+        send("task.log", msg);
+    }
+
+    // 子类实现任务行为
+    protected abstract void beginReview(TaskCommandMsg cmd);
+
+    protected abstract void beginSweep(TaskCommandMsg cmd);
+
+    protected abstract void beginHome();
+
     protected void send(String topic, Object payload) {
         try {
             kafka.send(topic, deviceId, om.writeValueAsString(payload));
