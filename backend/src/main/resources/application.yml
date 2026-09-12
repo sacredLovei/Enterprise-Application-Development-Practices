@@ -11,6 +11,11 @@ spring:
     mongodb:
       # 容器内默认 mongodb:27017；本机 IDE 调试时用 MONGODB_URI 覆盖为 localhost:27017
       uri: ${MONGODB_URI:mongodb://mongodb:27017/inspection}
+  elasticsearch:
+    # 容器内默认 elasticsearch:9200（安全已关闭）
+    uris: ${ES_URIS:http://elasticsearch:9200}
+    connection-timeout: 3s
+    socket-timeout: 30s
   kafka:
     # 容器内默认 kafka:9092（内部监听器）；本机 IDE 调试时用 localhost:9094（外部监听器，D-6）
     bootstrap-servers: ${KAFKA_SERVERS:kafka:9092}
