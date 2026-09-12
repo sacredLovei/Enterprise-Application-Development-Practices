@@ -14,6 +14,8 @@ spring:
     mongodb:
       # 容器内默认 mongodb:27017；本机 IDE 调试时用 MONGODB_URI 覆盖为 localhost:27017
       uri: ${MONGODB_URI:mongodb://mongodb:27017/inspection}
+      # S50 定位：此前未开启自动建索引，@Indexed(TTL) 与复合索引均未落地（PT004 实测劣化根因）
+      auto-index-creation: true
   elasticsearch:
     # 容器内默认 elasticsearch:9200（安全已关闭）
     uris: ${ES_URIS:http://elasticsearch:9200}

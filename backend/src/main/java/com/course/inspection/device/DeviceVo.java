@@ -66,13 +66,4 @@ public class DeviceVo {
     public Double getLat() {
         return lat;
     }
-
-    /** S50 优化：聚合查询路径填充坐标。 */
-    public void setLng(Double lng) {
-        this.lng = lng;
-    }
-
-    public void setLat(Double lat) {
-        this.lat = lat;
-    }
 }

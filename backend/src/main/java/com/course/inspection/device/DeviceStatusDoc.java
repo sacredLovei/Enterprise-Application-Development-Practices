@@ -1,6 +1,7 @@
 package com.course.inspection.device;
 
 import org.springframework.data.annotation.Id;
+import org.springframework.data.mongodb.core.index.CompoundIndex;
 import org.springframework.data.mongodb.core.index.Indexed;
 import org.springframework.data.mongodb.core.mapping.Document;
 
@@ -8,6 +9,7 @@ import java.time.Instant;
 
 /** 遥测时序（MongoDB `device_status` 集合，TTL 30 天，设计报告 4.5.1）。 */
 @Document("device_status")
+@CompoundIndex(name = "idx_device_status_device_ts", def = "{'deviceId': 1, 'ts': -1}")
 public class DeviceStatusDoc {
 
     @Id

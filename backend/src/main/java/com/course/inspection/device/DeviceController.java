@@ -33,20 +33,14 @@ public class DeviceController {
     public List<DeviceVo> list(
             @RequestParam(required = false) String status,
             @RequestParam(required = false) String deviceType) {
-        // 台账 + 最近遥测位置（S40 地图展示）；S50 优化：单次聚合查全量位置（消除 N+1）
-        java.util.Map<String, double[]> locs = store.lastLocationsAll();
+        // 台账 + 最近遥测位置（S40 地图展示）。
+        // S50 迭代实录：先尝试单次聚合替代 N+1，实测反而劣化（888ms→1229ms）；
+        // 根因是 device_status 无 deviceId 索引（自动建索引未开启，O-5 未落地），
+        // 修复为复合索引 {deviceId,ts} + lastStatus 索引单查。
         return store.list().stream()
                 .filter(d -> status == null || status.isBlank() || status.equals(d.getStatus()))
                 .filter(d -> deviceType == null || deviceType.isBlank() || deviceType.equals(d.getDeviceType()))
-                .map(d -> {
-                    double[] loc = locs.get(d.getDeviceId());
-                    DeviceVo vo = DeviceVo.from(d, null);
-                    if (loc != null) {
-                        vo.setLng(loc[0]);
-                        vo.setLat(loc[1]);
-                    }
-                    return vo;
-                })
+                .map(d -> DeviceVo.from(d, store.lastStatus(d.getDeviceId())))
                 .toList();
     }
 
