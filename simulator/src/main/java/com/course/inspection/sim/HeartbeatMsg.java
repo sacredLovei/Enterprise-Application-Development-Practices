@@ -6,6 +6,8 @@ public record HeartbeatMsg(
         String deviceType,
         int battery,
         String currentTaskId,
+        Double lng,      // S61/S62：心跳携带位置（平台台账 location 刷新，2dsphere 就近派单数据源）
+        Double lat,
         long ts
 ) {
 }

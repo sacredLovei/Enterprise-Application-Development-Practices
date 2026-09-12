@@ -55,6 +55,16 @@ public class AlarmSearchController {
         return service.stats();
     }
 
+    /** S61/S62：告警详情（Mongo 权威文档，含复核子文档——ES 副本不含 review，TC032 证据链展示用）。 */
+    @GetMapping("/api/alarms/{alarmId}")
+    public AlarmDoc detail(@PathVariable String alarmId) {
+        AlarmDoc alarm = store.findById(alarmId);
+        if (alarm == null) {
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "alarm not found: " + alarmId);
+        }
+        return alarm;
+    }
+
     /** S61/IT009 手动复核：结论 + 备注 → 更新告警 status 与 review 字段，ES 副本同步。 */
     public record ReviewRequest(String conclusion, String note) {
     }

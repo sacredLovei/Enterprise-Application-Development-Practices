@@ -41,4 +41,20 @@ public class FileController {
                 alarm.getSnapshotPath().substring(alarm.getSnapshotPath().lastIndexOf('/') + 1));
         return new ResponseEntity<>(data, headers, HttpStatus.OK);
     }
+
+    /** S61/S62：复核红外图下载（证据链第二环，TC032）。 */
+    @GetMapping("/{alarmId}/review")
+    public ResponseEntity<byte[]> reviewImage(@PathVariable String alarmId) {
+        AlarmDoc alarm = mongo.findOne(
+                Query.query(Criteria.where("alarmId").is(alarmId)), AlarmDoc.class);
+        if (alarm == null || alarm.getReview() == null || alarm.getReview().getImagePath() == null) {
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "review image not found: " + alarmId);
+        }
+        byte[] data = hdfs.download(alarm.getReview().getImagePath());
+        HttpHeaders headers = new HttpHeaders();
+        headers.setContentType(MediaType.APPLICATION_OCTET_STREAM);
+        headers.setContentDispositionFormData("attachment",
+                alarm.getReview().getImagePath().substring(alarm.getReview().getImagePath().lastIndexOf('/') + 1));
+        return new ResponseEntity<>(data, headers, HttpStatus.OK);
+    }
 }

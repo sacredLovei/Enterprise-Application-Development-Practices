@@ -25,6 +25,10 @@ public class AlarmConsumer {
 
     private static final Logger log = LoggerFactory.getLogger(AlarmConsumer.class);
 
+    /** S61/D-21 可复核类型：电量与离线告警属设备状态事件，不派机器狗现场复核。 */
+    private static final java.util.Set<String> REVIEWABLE_TYPES =
+            java.util.Set.of("PERIMETER_BREACH", "INTRUSION", "FIRE_SMOKE", "DEVICE_OVERHEAT");
+
     private final AlarmStore store;
     private final AlarmSearchService searchService;
     private final HdfsClient hdfs;
@@ -92,9 +96,9 @@ public class AlarmConsumer {
                 log.error("ES 写入失败，等待对账补偿 alarmId={}", msg.alarmId(), e);
             }
 
-            // 4) S61 复核派单：新告警（DEVICE_OFFLINE 除外）触发就近机器狗复核；
+            // 4) S61 复核派单：可复核类型（D-21）触发就近机器狗复核；
             //    派单失败不影响告警落库（仅日志）。历史 10k 告警不重放，不会批量派单。
-            if (!"DEVICE_OFFLINE".equals(msg.alarmType())) {
+            if (REVIEWABLE_TYPES.contains(msg.alarmType())) {
                 try {
                     taskService.dispatchReview(msg.alarmId(), msg.lng(), msg.lat());
                 } catch (Exception e) {

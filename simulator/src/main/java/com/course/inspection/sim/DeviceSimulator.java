@@ -64,7 +64,8 @@ public abstract class DeviceSimulator {
         if (poweredOff) {
             return;   // 断电：不发心跳（充电完成由周期心跳恢复）
         }
-        HeartbeatMsg msg = new HeartbeatMsg(deviceId, deviceType, battery, null, System.currentTimeMillis());
+        HeartbeatMsg msg = new HeartbeatMsg(deviceId, deviceType, battery, null,
+                track.currentLng(), track.currentLat(), System.currentTimeMillis());
         send("device.heartbeat", msg);
     }
 

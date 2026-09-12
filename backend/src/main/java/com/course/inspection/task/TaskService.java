@@ -86,7 +86,8 @@ public class TaskService {
     public TaskDoc dispatchReview(String alarmId, double lng, double lat) {
         NearQuery nq = NearQuery.near(new GeoJsonPoint(lng, lat))
                 .spherical(true)
-                .query(Query.query(Criteria.where("deviceType").is("ROBOT").and("status").is("ONLINE")))
+                // 口径：机器狗 deviceType = ROBOT_DOG（STATE 注册表，仿真配置 sim.device-type）
+                .query(Query.query(Criteria.where("deviceType").is("ROBOT_DOG").and("status").is("ONLINE")))
                 .limit(4);
         GeoResults<DeviceDoc> results = mongo.geoNear(nq, DeviceDoc.class);
         List<DeviceDoc> robots = results.getContent().stream()
