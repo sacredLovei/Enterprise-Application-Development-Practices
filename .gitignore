@@ -19,3 +19,7 @@ dist/
 *.log
 .DS_Store
 Thumbs.db
+
+# ---- 压测产物（体积大，仅本地留存；汇总数据回填报告/STATE） ----
+test/jmeter/*.jtl
+test/jmeter/report-*/

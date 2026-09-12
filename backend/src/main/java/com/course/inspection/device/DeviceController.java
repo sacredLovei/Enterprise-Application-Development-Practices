@@ -33,11 +33,20 @@ public class DeviceController {
     public List<DeviceVo> list(
             @RequestParam(required = false) String status,
             @RequestParam(required = false) String deviceType) {
-        // 台账 + 最近遥测位置（S40 地图展示）；S50 补：支持状态/类型筛选（契约 IT002）
+        // 台账 + 最近遥测位置（S40 地图展示）；S50 优化：单次聚合查全量位置（消除 N+1）
+        java.util.Map<String, double[]> locs = store.lastLocationsAll();
         return store.list().stream()
                 .filter(d -> status == null || status.isBlank() || status.equals(d.getStatus()))
                 .filter(d -> deviceType == null || deviceType.isBlank() || deviceType.equals(d.getDeviceType()))
-                .map(d -> DeviceVo.from(d, store.lastStatus(d.getDeviceId())))
+                .map(d -> {
+                    double[] loc = locs.get(d.getDeviceId());
+                    DeviceVo vo = DeviceVo.from(d, null);
+                    if (loc != null) {
+                        vo.setLng(loc[0]);
+                        vo.setLat(loc[1]);
+                    }
+                    return vo;
+                })
                 .toList();
     }
 
