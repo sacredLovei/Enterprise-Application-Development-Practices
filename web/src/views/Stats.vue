@@ -38,10 +38,25 @@ function renderTrend(buckets) {
   trend.setOption({
     title: { text: '告警按小时趋势', left: 'center', textStyle: { fontSize: 14 } },
     tooltip: { trigger: 'axis' },
-    xAxis: { type: 'category', data: buckets.map(b => b.time) },
+    xAxis: {
+      type: 'category',
+      data: buckets.map(b => axisTime(b.time)),
+      axisLabel: { fontSize: 11 }
+    },
     yAxis: { type: 'value' },
     series: [{ type: 'bar', data: buckets.map(b => b.count), itemStyle: { color: '#2f6fed' } }]
   })
+}
+
+/** 时间轴标签：ISO → "MM-dd HH:00" 北京时间（用户反馈：原样显示 ISO 太长） */
+function axisTime(iso) {
+  if (!iso) return '—'
+  const d = new Date(iso)
+  if (Number.isNaN(d.getTime())) return iso
+  const parts = d.toLocaleString('zh-CN', { hour12: false, timeZone: 'Asia/Shanghai' })
+  const m = parts.match(/(\d+)\/(\d+)\/(\d+) (\d+):\d+:\d+/)
+  if (m) return `${m[1]}-${m[2].padStart(2, '0')} ${m[4]}:00`
+  return parts.slice(5, 16)
 }
 
 onMounted(() => {

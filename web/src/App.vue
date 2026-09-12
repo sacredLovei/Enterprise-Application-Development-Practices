@@ -13,19 +13,23 @@ setInterval(() => {
 
 <template>
   <div class="shell">
-    <header class="topbar">
-      <div class="brand">🚁 空地协同巡检平台</div>
+    <!-- 左侧导航：毛玻璃白 + 灰色分隔线 -->
+    <aside class="sidebar">
+      <div class="brand">🚁 空地协同<br />巡检平台</div>
       <nav class="nav">
-        <RouterLink to="/overview">地图总览</RouterLink>
-        <RouterLink to="/devices">设备台账</RouterLink>
-        <RouterLink to="/tasks">任务管理</RouterLink>
-        <RouterLink to="/alarms">告警中心</RouterLink>
-        <RouterLink to="/stats">统计看板</RouterLink>
+        <RouterLink to="/overview">🗺️ 地图总览</RouterLink>
+        <RouterLink to="/devices">📟 设备台账</RouterLink>
+        <RouterLink to="/tasks">📋 任务管理</RouterLink>
+        <RouterLink to="/alarms">🚨 告警中心</RouterLink>
+        <RouterLink to="/stats">📊 统计看板</RouterLink>
       </nav>
-      <div class="meta">
-        <span v-if="backend" class="instance">后端实例：{{ backend }}</span>
+      <div class="side-footer">
+        <span v-if="backend" class="instance">后端：{{ backend }}</span>
+        <span class="ver">v0.4 · 空地协同</span>
       </div>
-    </header>
+    </aside>
+
+    <!-- 主内容区 -->
     <main class="content">
       <h2 class="page-title">{{ route.meta.title }}</h2>
       <RouterView />

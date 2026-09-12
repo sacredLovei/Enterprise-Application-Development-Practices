@@ -1,31 +1,96 @@
 * { box-sizing: border-box; margin: 0; padding: 0; }
-body { font-family: "Segoe UI", "Microsoft YaHei", sans-serif; background: #f4f6f9; color: #24303c; }
-
-.shell { min-height: 100vh; }
-.topbar {
-  display: flex; align-items: center; gap: 24px;
-  background: #14212e; color: #fff; padding: 12px 24px;
+body {
+  font-family: "Segoe UI", "Microsoft YaHei", sans-serif;
+  background: #eef1f6;
+  color: #24303c;
 }
-.brand { font-size: 18px; font-weight: 700; white-space: nowrap; }
-.nav { display: flex; gap: 8px; flex: 1; flex-wrap: wrap; }
+
+.shell { display: flex; min-height: 100vh; }
+
+/* ===== 左侧导航：毛玻璃白 + 灰色分隔线 ===== */
+.sidebar {
+  position: sticky;
+  top: 0;
+  height: 100vh;
+  width: 208px;
+  flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+  background: rgba(255, 255, 255, 0.72);
+  backdrop-filter: blur(18px);
+  -webkit-backdrop-filter: blur(18px);
+  border-right: 1px solid #e2e7ee;
+  padding: 22px 14px 16px;
+}
+.brand {
+  font-size: 18px;
+  font-weight: 700;
+  line-height: 1.4;
+  padding: 0 8px 18px;
+  border-bottom: 1px solid #e5eaf0;
+  margin-bottom: 10px;
+}
+.nav { display: flex; flex-direction: column; gap: 2px; }
 .nav a {
-  color: #cfd8e3; text-decoration: none; padding: 6px 14px; border-radius: 6px; font-size: 14px;
+  color: #5c6b7a;
+  text-decoration: none;
+  font-size: 14px;
+  padding: 11px 12px;
+  border-radius: 8px;
+  border-bottom: 1px solid rgba(229, 234, 240, 0.6);   /* 灰色分隔线 */
+  transition: background .15s, color .15s;
 }
-.nav a.router-link-active { background: #2f6fed; color: #fff; }
-.meta { font-size: 12px; color: #9fb0c0; }
+.nav a:hover { background: rgba(47, 111, 237, 0.07); color: #24303c; }
+.nav a.router-link-active {
+  background: rgba(47, 111, 237, 0.10);
+  color: #2f6fed;
+  font-weight: 600;
+  border-left: 3px solid #2f6fed;
+}
+.side-footer {
+  margin-top: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 12px 8px 0;
+  border-top: 1px solid #e5eaf0;
+  font-size: 12px;
+  color: #9aa7b5;
+}
 .instance {
-  background: #0f2f1d; color: #57d38c; border: 1px solid #2b8a52;
-  padding: 3px 10px; border-radius: 10px;
+  background: #eefaf2;
+  color: #1a8a4a;
+  border: 1px solid #cdeeda;
+  padding: 3px 10px;
+  border-radius: 10px;
+  align-self: flex-start;
 }
-.content { padding: 20px 24px; max-width: 1280px; margin: 0 auto; }
-.page-title { font-size: 20px; margin-bottom: 16px; }
 
-.card { background: #fff; border-radius: 10px; padding: 16px; box-shadow: 0 1px 4px rgba(20,33,46,.08); margin-bottom: 16px; }
+/* ===== 主内容区 ===== */
+.content { flex: 1; padding: 22px 26px; max-width: 1320px; min-width: 0; }
+.page-title {
+  font-size: 20px;
+  margin-bottom: 16px;
+  padding-bottom: 10px;
+  border-bottom: 1px solid #e2e7ee;   /* 灰色分隔线 */
+}
+
+.card {
+  background: rgba(255, 255, 255, 0.85);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  border: 1px solid #e8ecf1;
+  border-radius: 12px;
+  padding: 16px;
+  box-shadow: 0 1px 4px rgba(20, 33, 46, 0.05);
+  margin-bottom: 16px;
+}
 .card h3 { font-size: 15px; margin-bottom: 12px; }
 
 table.grid { width: 100%; border-collapse: collapse; font-size: 13px; }
 table.grid th, table.grid td { text-align: left; padding: 8px 10px; border-bottom: 1px solid #edf1f5; }
-table.grid th { color: #5c6b7a; font-weight: 600; background: #f8fafc; }
+table.grid th { color: #5c6b7a; font-weight: 600; background: rgba(248, 250, 252, 0.8); }
+table.grid tr:last-child td { border-bottom: none; }
 
 .badge { padding: 2px 8px; border-radius: 8px; font-size: 12px; }
 .badge.online { background: #e3f7ec; color: #1a8a4a; }
@@ -39,10 +104,15 @@ button {
   padding: 8px 16px; font-size: 14px; cursor: pointer;
 }
 button:hover { background: #2458c4; }
-button.ghost { background: #eef2f7; color: #34465a; }
+button.ghost {
+  background: rgba(238, 242, 247, 0.9);
+  color: #34465a;
+  border: 1px solid #dde4ec;
+}
+button.ghost:hover { background: #e2e9f1; }
 input, select {
   padding: 7px 10px; border: 1px solid #d5dde6; border-radius: 6px; font-size: 13px;
-  background: #fff; color: #24303c;
+  background: rgba(255, 255, 255, 0.9); color: #24303c;
 }
 .form-row { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; margin-bottom: 12px; }
 .hint { color: #7b8a99; font-size: 12px; margin-top: 6px; }
