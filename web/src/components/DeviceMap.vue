@@ -13,7 +13,9 @@ let map, deviceLayer, alarmLayer
 
 const UAV_ICON = L.divIcon({ className: '', iconSize: [34, 34], html: '<div style="background:#2f6fed;color:#fff;border-radius:50%;width:34px;height:34px;line-height:34px;text-align:center;font-size:20px;box-shadow:0 1px 4px rgba(0,0,0,.35)">✈</div>' })
 const DOG_ICON = L.divIcon({ className: '', iconSize: [34, 34], html: '<div style="background:#1a8a4a;color:#fff;border-radius:50%;width:34px;height:34px;line-height:34px;text-align:center;font-size:20px;box-shadow:0 1px 4px rgba(0,0,0,.35)">🐕</div>' })
-const ALARM_ICON = L.divIcon({ className: '', iconSize: [26, 26], html: '<div style="background:#c0392b;color:#fff;border-radius:50%;width:26px;height:26px;line-height:26px;text-align:center;font-size:16px;font-weight:700;box-shadow:0 1px 4px rgba(0,0,0,.4)">!</div>' })
+// 告警图标按等级区分：CRITICAL 红色大圆，WARN 橙色（等级口径见设计报告 4.5.1）
+const ALARM_CRITICAL_ICON = L.divIcon({ className: '', iconSize: [28, 28], html: '<div style="background:#c0392b;color:#fff;border-radius:50%;width:28px;height:28px;line-height:28px;text-align:center;font-size:17px;font-weight:700;box-shadow:0 0 0 3px rgba(192,57,43,.25),0 1px 4px rgba(0,0,0,.4)">!</div>' })
+const ALARM_WARN_ICON = L.divIcon({ className: '', iconSize: [24, 24], html: '<div style="background:#e67e22;color:#fff;border-radius:50%;width:24px;height:24px;line-height:24px;text-align:center;font-size:15px;font-weight:700;box-shadow:0 0 0 3px rgba(230,126,34,.2),0 1px 4px rgba(0,0,0,.35)">!</div>' })
 
 onMounted(() => {
   map = L.map(mapEl.value).setView([39.9092, 116.3974], 16)
@@ -47,7 +49,8 @@ function render() {
     const loc = Array.isArray(a.location) ? { lng: a.location[0], lat: a.location[1] }
       : (a.lng != null ? { lng: a.lng, lat: a.lat } : null)
     if (!loc || (loc.lng === 0 && loc.lat === 0)) return
-    L.marker([loc.lat, loc.lng], { icon: ALARM_ICON })
+    const icon = a.level === 'CRITICAL' ? ALARM_CRITICAL_ICON : ALARM_WARN_ICON
+    L.marker([loc.lat, loc.lng], { icon })
       .bindPopup(`<b>${a.alarmType}</b><br/>等级：${a.level}<br/>${a.description ?? ''}`)
       .addTo(alarmLayer)
   })

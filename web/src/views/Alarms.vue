@@ -3,55 +3,72 @@ import { ref, onMounted, onUnmounted } from 'vue'
 import request from '../api/request'
 
 const form = ref({ alarmType: '', level: '', deviceId: '', keyword: '', from: 'now-24h', to: 'now' })
+const page = ref(0)
+const size = 15
 const result = ref({ total: 0, records: [] })
-let timer
+let timer, debounceTimer
+let seq = 0   // 请求序号：丢弃过期响应，防止自动刷新与手动检索竞态覆盖新结果
 
 async function search() {
+  const my = ++seq
   try {
-    result.value = await request.post('/search/alarms', {
+    const data = await request.post('/search/alarms', {
       alarmType: form.value.alarmType || null,
       level: form.value.level || null,
       deviceId: form.value.deviceId || null,
       keyword: form.value.keyword || null,
       from: form.value.from,
       to: form.value.to,
-      page: 0,
-      size: 50
+      page: page.value,
+      size
     })
+    if (my === seq) result.value = data   // 仅应用最新请求的结果
   } catch (e) {
     console.error(e)
   }
 }
 
+// 输入防抖：停止输入 400ms 后自动检索（体验即时，不必每次点按钮）
+function onFilterInput() {
+  clearTimeout(debounceTimer)
+  debounceTimer = setTimeout(() => { page.value = 0; search() }, 400)
+}
+
+function goPage(p) {
+  page.value = Math.max(0, p)
+  search()
+}
+
+const totalPages = () => Math.max(1, Math.ceil(result.value.total / size))
+
 onMounted(() => {
   search()
-  // 结果按当前筛选条件每 5 秒自动刷新（筛选条件是用户设定的，不会被覆盖，设计报告 5.2.7）
-  timer = setInterval(search, 5000)
+  timer = setInterval(search, 5000)   // 自动刷新沿用当前筛选与页码
 })
-onUnmounted(() => clearInterval(timer))
+onUnmounted(() => { clearInterval(timer); clearTimeout(debounceTimer) })
 </script>
 
 <template>
   <div class="card">
     <h3>告警检索（MongoDB 权威 + Elasticsearch 检索副本）</h3>
     <div class="form-row">
-      <select v-model="form.alarmType">
+      <select v-model="form.alarmType" @change="onFilterInput">
         <option value="">全部类型</option>
         <option value="PERIMETER_BREACH">周界入侵</option>
         <option value="DEVICE_OVERHEAT">设备过热</option>
         <option value="BATTERY_LOW">电量不足</option>
         <option value="DEVICE_OFFLINE">设备离线</option>
       </select>
-      <select v-model="form.level">
+      <select v-model="form.level" @change="onFilterInput">
         <option value="">全部等级</option>
         <option value="CRITICAL">严重</option>
         <option value="WARN">警告</option>
       </select>
-      <input v-model="form.deviceId" placeholder="设备编号" style="width:140px" />
-      <input v-model="form.keyword" placeholder="关键词" style="width:140px" />
-      <button @click="search">检索</button>
+      <input v-model="form.deviceId" placeholder="设备编号" style="width:140px" @input="onFilterInput" />
+      <input v-model="form.keyword" placeholder="关键词" style="width:140px" @input="onFilterInput" />
+      <button @click="page = 0; search()">检索</button>
     </div>
-    <div class="hint">共 {{ result.total }} 条（时间范围 {{ form.from }} ~ {{ form.to }}，每 5 秒自动刷新）</div>
+    <div class="hint">共 {{ result.total }} 条（时间 {{ form.from }} ~ {{ form.to }}，每 5 秒自动刷新，筛选即输即查）</div>
   </div>
 
   <div class="card">
@@ -71,5 +88,15 @@ onUnmounted(() => clearInterval(timer))
         </tr>
       </tbody>
     </table>
+    <div class="pager">
+      <button class="ghost" :disabled="page <= 0" @click="goPage(page - 1)">上一页</button>
+      <span>第 {{ page + 1 }} / {{ totalPages() }} 页（每页 {{ size }} 条）</span>
+      <button class="ghost" :disabled="page + 1 >= totalPages()" @click="goPage(page + 1)">下一页</button>
+    </div>
   </div>
 </template>
+
+<style scoped>
+.pager { display: flex; gap: 14px; align-items: center; justify-content: center; margin-top: 12px; font-size: 13px; color: #5c6b7a; }
+button:disabled { opacity: .4; cursor: not-allowed; }
+</style>
