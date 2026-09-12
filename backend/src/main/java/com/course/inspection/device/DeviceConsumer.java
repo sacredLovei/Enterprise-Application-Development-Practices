@@ -27,7 +27,8 @@ public class DeviceConsumer {
         this.store = store;
     }
 
-    @KafkaListener(topics = "device.heartbeat", groupId = "biz-storage-consumer")
+    @KafkaListener(topics = "device.heartbeat", groupId = "biz-storage-consumer",
+            containerFactory = "manualAckFactory")
     public void onHeartbeat(ConsumerRecord<String, String> record, Acknowledgment ack) {
         try {
             HeartbeatMsg msg = Json.fromJson(record.value(), HeartbeatMsg.class);
@@ -41,7 +42,8 @@ public class DeviceConsumer {
         }
     }
 
-    @KafkaListener(topics = "uav.telemetry", groupId = "biz-storage-consumer")
+    @KafkaListener(topics = "uav.telemetry", groupId = "biz-storage-consumer",
+            containerFactory = "manualAckFactory")
     public void onTelemetry(ConsumerRecord<String, String> record, Acknowledgment ack) {
         try {
             UavTelemetryMsg msg = Json.fromJson(record.value(), UavTelemetryMsg.class);
@@ -54,7 +56,8 @@ public class DeviceConsumer {
     }
 
     /** 机器狗遥测（S40 补上：此前未消费导致地图无机器狗位置）。 */
-    @KafkaListener(topics = "robot.telemetry", groupId = "biz-storage-consumer")
+    @KafkaListener(topics = "robot.telemetry", groupId = "biz-storage-consumer",
+            containerFactory = "manualAckFactory")
     public void onRobotTelemetry(ConsumerRecord<String, String> record, Acknowledgment ack) {
         try {
             RobotTelemetryMsg msg = Json.fromJson(record.value(), RobotTelemetryMsg.class);

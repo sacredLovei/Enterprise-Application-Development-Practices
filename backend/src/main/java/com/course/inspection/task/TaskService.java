@@ -55,8 +55,9 @@ public class TaskService {
         }
 
         Instant now = Instant.now();
+        // 任务编号：时间戳 + UUID 后缀——双实例各自自增计数器会同秒撞号（风险 #28）
         String taskId = "TASK-" + SEQ.format(now.atZone(ZoneId.of("Asia/Shanghai")))
-                + String.format("%03d", seq.incrementAndGet() % 1000);
+                + "-" + java.util.UUID.randomUUID().toString().substring(0, 8);
 
         TaskDoc doc = new TaskDoc();
         doc.setTaskId(taskId);
