@@ -159,6 +159,7 @@
 35. **ES ik 插件安装与持久化（S63 已解决）**：GitHub 直链全部 404（medcl 仓库已迁移、infinilabs 的 release 资产仅源码包、API 限流）→ 官方发布源 `release.infinilabs.com/analysis-ik/stable/elasticsearch-analysis-ik-8.13.0.zip` 可用；插件必须与 ES 版本完全一致（8.13.4 装不进 8.13.0，报"built for 8.13.4"）。**结论**：插件目录经 compose bind 挂载 `./es-plugins` 持久化（重建容器不丢）；`docker/init/install-ik.ps1` 可复现安装；索引升版 v2（ik_smart）+ `_reindex` 迁移（v1 保留作回滚基线）。
 36. **仿真断电回充后任务队列不续（S63 已踩坑，已修复）**：设备电量归零中止当前任务后，回充完成无人触发 `maybeStartNext()`，排队任务永久停在 DISPATCHED；另仿真重启会丢失内存任务队列，产生孤儿任务（DB 侧永远 DISPATCHED）。**结论**：① 回充完成（poweredOff→false）后补调 `maybeStartNext()`；② accept-v06 预置步骤自动取消 >5 分钟的 DISPATCHED 孤儿任务（自愈）；③ 真实场景队列持久化不在本课程范围，如实记录。
 37. **ES 索引升版连环坑（S63 已踩坑，已修复）**：① `_reindex` 的目标索引缺失时会以**动态映射自动创建**（字符串全变 text+keyword、location 变 float）——后端初始化器因 ES 未就绪只尝试一次即放弃，v2 被 reindex 抢先建出错误映射，直接后果：stats 聚合 500（text 字段 fielddata 禁用）、地理检索失效（**用户报告"统计看板没有图"的根因**）；② ik 词典配置位于 ES 的 `config/` 目录而非 `plugins/`，仅持久化 plugins 目录导致容器重建后词典丢失——分词器对英文文本抛 `_StopWords is null` NPE（此前 V-7 通过是因为 v2 动态映射走的 standard 分词器，掩盖了该缺陷）。**结论**：① 初始化器改为重试 24 次×5s 再放弃；② 词典目录追加 bind 挂载 `es-plugins/analysis-ik/config → config/analysis-ik`；③ 索引升版 v3（严格映射），reindex 前先建映射；④ 重建后端后必须重启 nginx（风险 #31）。修复验证：stats 200（by_type=6/trend=25）、地理检索 8,541 条、中文检索 304 条（真 ik_smart）。
+38. **证据图中文占位方块（S63 已踩坑，已修复）**：用户报告告警证据图中中文描述显示为占位方块（英文描述正常）。排查：数据→API→前端全链路字节级验证均无损坏（Mongo/ES 零 U+FFFD、dist 全分块 UTF-8 有效）→ 定位到**后端镜像仅有 DejaVu 字体（无 CJK）**，AWT 用逻辑字体绘制中文描述时缺字形画成方块。**结论**：Dockerfile 补装 `font-noto-cjk`；实测新证据图描述行墨迹覆盖率 3.53%→7.2%（空心方块→真实笔画）。历史证据图仍为方块（不重生成，如实记录）；新告警正常。
 
 ## 7. 下一步计划
 
