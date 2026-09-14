@@ -53,6 +53,21 @@ function statusText(s) {
   return { PENDING: '待复核', CONFIRMED: '确认属实', FALSE_ALARM: '误报', RESOLVED: '已处置' }[s] || s
 }
 
+// S64 逻辑修复（用户反馈）：证据图来源标签按告警类型+设备类型动态生成——
+// 设备状态类告警（离线/电量）是平台判定或设备自报，不存在"无人机高空发现"；
+// 机器狗自报的事件（过热等）同样不是无人机发现
+function sourceLabel(a) {
+  if (a.alarmType === 'DEVICE_OFFLINE' || a.alarmType === 'BATTERY_LOW') return '① 事件记录图（设备状态）'
+  if (a.deviceType === 'UAV') return '① 高空发现原图（无人机）'
+  if (a.deviceType === 'ROBOT_DOG') return '① 设备自报事件图（机器狗）'
+  return '① 告警事件记录图'
+}
+
+// 设备状态类告警不派现场复核（与 D-21 派单策略一致）
+function reviewable(a) {
+  return a.alarmType !== 'DEVICE_OFFLINE' && a.alarmType !== 'BATTERY_LOW'
+}
+
 // 输入防抖：停止输入 400ms 后自动检索（体验即时，不必每次点按钮）
 function onFilterInput() {
   clearTimeout(debounceTimer)
@@ -144,10 +159,10 @@ onUnmounted(() => { clearInterval(timer); clearTimeout(debounceTimer); clearInte
     <p class="hint">{{ detail.description }}</p>
     <div class="evidence-row">
       <div class="evidence">
-        <div class="evidence-title">① 高空发现原图（无人机）</div>
-        <img :src="'/api/files/' + detail.alarmId" alt="高空证据图" class="evidence-img" />
+        <div class="evidence-title">{{ sourceLabel(detail) }}</div>
+        <img :src="'/api/files/' + detail.alarmId" :alt="sourceLabel(detail)" class="evidence-img" />
       </div>
-      <div class="evidence">
+      <div class="evidence" v-if="reviewable(detail)">
         <div class="evidence-title">② 机器狗红外复核图</div>
         <template v-if="detail.review && detail.review.imagePath">
           <img :src="'/api/files/' + detail.alarmId + '/review'" alt="红外复核图" class="evidence-img" />
@@ -162,7 +177,13 @@ onUnmounted(() => { clearInterval(timer); clearTimeout(debounceTimer); clearInte
           <div class="hint">{{ detail.review.note }}</div>
         </template>
         <div v-else class="hint" style="padding: 60px 0; text-align: center">
-          尚未复核（自动派单进行中或该类型告警不派单）
+          尚未复核（自动派单进行中）
+        </div>
+      </div>
+      <div class="evidence" v-else>
+        <div class="evidence-title">② 现场复核</div>
+        <div class="hint" style="padding: 60px 0; text-align: center">
+          设备状态类告警不派现场复核（由人工处置）
         </div>
       </div>
     </div>
