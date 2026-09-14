@@ -270,7 +270,7 @@ button:disabled { opacity: .4; cursor: not-allowed; }
 .photo-btn { display: inline-flex; align-items: center; gap: 4px; cursor: pointer; }
 .evidence-img { cursor: zoom-in; }
 .lightbox { position: fixed; inset: 0; background: rgba(10, 14, 20, 0.88); display: flex; align-items: center; justify-content: center; z-index: 9999; cursor: zoom-out; }
-.lightbox-img { max-width: 92%; max-height: 92%; border-radius: 8px; box-shadow: 0 8px 40px rgba(0, 0, 0, 0.6); }
+.lightbox-img { width: 94vw; height: 94vh; object-fit: contain; border-radius: 8px; box-shadow: 0 8px 40px rgba(0, 0, 0, 0.6); }
 .evidence { flex: 1 1 320px; }
 .evidence-title { font-size: 13px; font-weight: 600; margin-bottom: 6px; color: #33414e; }
 .evidence-img { width: 100%; border: 1px solid #e2e8ee; border-radius: 8px; display: block; }

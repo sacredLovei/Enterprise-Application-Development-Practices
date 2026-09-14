@@ -27,18 +27,19 @@ public class EvidenceImageGenerator {
 
     public Evidence generate(String alarmId, String alarmType, String description, long occurredTime) {
         try {
-            BufferedImage img = new BufferedImage(640, 360, BufferedImage.TYPE_INT_RGB);
+            // S82（用户反馈）：分辨率 640x360 -> 1280x720，原图清晰、大图模式放大不糊
+            BufferedImage img = new BufferedImage(1280, 720, BufferedImage.TYPE_INT_RGB);
             Graphics2D g = img.createGraphics();
             g.setColor(new Color(24, 30, 40));
-            g.fillRect(0, 0, 640, 360);
+            g.fillRect(0, 0, 1280, 720);
             g.setColor(Color.WHITE);
-            g.setFont(new Font(Font.SANS_SERIF, Font.BOLD, 28));
-            g.drawString("INSPECTION ALARM EVIDENCE", 30, 60);
-            g.setFont(new Font(Font.SANS_SERIF, Font.PLAIN, 20));
-            g.drawString("alarmId: " + alarmId, 30, 120);
-            g.drawString("alarmType: " + alarmType, 30, 155);
-            g.drawString("occurredTime: " + occurredTime, 30, 190);
-            g.drawString(trim(description, 48), 30, 230);
+            g.setFont(new Font(Font.SANS_SERIF, Font.BOLD, 48));
+            g.drawString("INSPECTION ALARM EVIDENCE", 50, 110);
+            g.setFont(new Font(Font.SANS_SERIF, Font.PLAIN, 34));
+            g.drawString("alarmId: " + alarmId, 50, 220);
+            g.drawString("alarmType: " + alarmType, 50, 285);
+            g.drawString("occurredTime: " + occurredTime, 50, 350);
+            g.drawString(trim(description, 48), 50, 420);
             g.dispose();
             ByteArrayOutputStream out = new ByteArrayOutputStream();
             ImageIO.write(img, "png", out);
@@ -61,18 +62,18 @@ public class EvidenceImageGenerator {
     /** S61：机器狗红外复核图（暗红 IR 风格 + 结论水印），与告警证据图同构、走同一 HDFS 归档链路。 */
     public Evidence generateReview(String alarmId, String conclusion, String reviewerDeviceId) {
         try {
-            BufferedImage img = new BufferedImage(640, 360, BufferedImage.TYPE_INT_RGB);
+            BufferedImage img = new BufferedImage(1280, 720, BufferedImage.TYPE_INT_RGB);
             Graphics2D g = img.createGraphics();
             g.setColor(new Color(30, 8, 8));
-            g.fillRect(0, 0, 640, 360);
+            g.fillRect(0, 0, 1280, 720);
             g.setColor(new Color(255, 90, 60));
-            g.setFont(new Font(Font.SANS_SERIF, Font.BOLD, 28));
-            g.drawString("ROBOT DOG IR REVIEW", 30, 60);
-            g.setFont(new Font(Font.SANS_SERIF, Font.PLAIN, 20));
-            g.drawString("alarmId: " + alarmId, 30, 120);
-            g.drawString("reviewer: " + reviewerDeviceId, 30, 155);
-            g.drawString("conclusion: " + conclusion, 30, 190);
-            g.drawString("thermal: 36.5 C (simulated)", 30, 230);
+            g.setFont(new Font(Font.SANS_SERIF, Font.BOLD, 48));
+            g.drawString("ROBOT DOG IR REVIEW", 50, 110);
+            g.setFont(new Font(Font.SANS_SERIF, Font.PLAIN, 34));
+            g.drawString("alarmId: " + alarmId, 50, 220);
+            g.drawString("reviewer: " + reviewerDeviceId, 50, 285);
+            g.drawString("conclusion: " + conclusion, 50, 350);
+            g.drawString("thermal: 36.5 C (simulated)", 50, 420);
             g.dispose();
             ByteArrayOutputStream out = new ByteArrayOutputStream();
             ImageIO.write(img, "png", out);

@@ -130,16 +130,17 @@ public class EvidenceMaintenanceController {
         return r;
     }
 
-    /** POST /api/maintenance/regenerate-evidence：重生成含中文描述的告警证据图（覆盖原路径，幂等）。 */
+    /** POST /api/maintenance/regenerate-evidence：重生成告警证据图（覆盖原路径，幂等）。
+     *  S63 起用于中文字体回填；S82 起 all=true 全量重生成（分辨率升级 1280x720）。 */
     @PostMapping("/api/maintenance/regenerate-evidence")
-    public Map<String, Object> regenerate() {
+    public Map<String, Object> regenerate(@RequestParam(defaultValue = "false") boolean all) {
         long start = System.currentTimeMillis();
         List<AlarmDoc> alarms = mongo.find(Query.query(Criteria.where("snapshotPath").ne(null)), AlarmDoc.class);
         int ok = 0;
         int fail = 0;
         int skipped = 0;
         for (AlarmDoc a : alarms) {
-            if (a.getDescription() == null || !CJK.matcher(a.getDescription()).find()) {
+            if (!all && (a.getDescription() == null || !CJK.matcher(a.getDescription()).find())) {
                 skipped++;
                 continue;
             }
@@ -157,6 +158,31 @@ public class EvidenceMaintenanceController {
         log.info("证据图重生成完成 total={} ok={} fail={} skipped={} elapsedMs={}",
                 alarms.size(), ok, fail, skipped, System.currentTimeMillis() - start);
         return Map.of("total", alarms.size(), "ok", ok, "fail", fail, "skipped", skipped,
+                "elapsedMs", System.currentTimeMillis() - start);
+    }
+
+    /** S82：重生成存量复核红外图（覆盖原路径，分辨率升级 1280x720）。 */
+    @PostMapping("/api/maintenance/regenerate-review-images")
+    public Map<String, Object> regenerateReviewImages() {
+        long start = System.currentTimeMillis();
+        List<AlarmDoc> alarms = mongo.find(
+                Query.query(Criteria.where("review.imagePath").ne(null)), AlarmDoc.class);
+        int ok = 0;
+        int fail = 0;
+        for (AlarmDoc a : alarms) {
+            try {
+                EvidenceImageGenerator.Evidence ev = evidence.generateReview(
+                        a.getAlarmId(), a.getReview().getConclusion(), a.getReview().getReviewerDeviceId());
+                hdfs.upload(a.getReview().getImagePath(), ev.bytes());
+                ok++;
+            } catch (Exception e) {
+                fail++;
+                log.warn("复核图重生成失败 alarmId={}: {}", a.getAlarmId(), e.getMessage());
+            }
+        }
+        log.info("复核图重生成完成 total={} ok={} fail={} elapsedMs={}",
+                alarms.size(), ok, fail, System.currentTimeMillis() - start);
+        return Map.of("total", alarms.size(), "ok", ok, "fail", fail,
                 "elapsedMs", System.currentTimeMillis() - start);
     }
 }
