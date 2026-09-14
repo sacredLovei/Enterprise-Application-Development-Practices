@@ -48,6 +48,13 @@ public class AlarmStore {
     /** S61：复核结论回填（自动派单回执 / IT009 手动复核共用）。 */
     public void applyReview(String alarmId, String reviewerDeviceId, String conclusion,
                             String note, String imagePath, java.time.Instant reviewedAt) {
+        applyReview(alarmId, reviewerDeviceId, conclusion, note, imagePath, null, reviewedAt);
+    }
+
+    /** S75：带现场照片路径的复核回填（manualPhotoPath 为 null 时不清除已有值）。 */
+    public void applyReview(String alarmId, String reviewerDeviceId, String conclusion,
+                            String note, String imagePath, String manualPhotoPath,
+                            java.time.Instant reviewedAt) {
         Query query = Query.query(Criteria.where("alarmId").is(alarmId));
         Update update = new Update()
                 .set("status", conclusion)
@@ -56,6 +63,9 @@ public class AlarmStore {
                 .set("review.note", note)
                 .set("review.imagePath", imagePath)
                 .set("review.reviewedAt", reviewedAt);
+        if (manualPhotoPath != null) {
+            update.set("review.manualPhotoPath", manualPhotoPath);
+        }
         mongo.updateFirst(query, update, AlarmDoc.class);
     }
 }

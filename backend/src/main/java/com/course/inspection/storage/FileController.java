@@ -57,4 +57,21 @@ public class FileController {
                 alarm.getReview().getImagePath().substring(alarm.getReview().getImagePath().lastIndexOf('/') + 1));
         return new ResponseEntity<>(data, headers, HttpStatus.OK);
     }
+
+    /** S75：人工复核现场照片下载（manual_review 目录）。 */
+    @GetMapping("/{alarmId}/review-photo")
+    public ResponseEntity<byte[]> manualPhoto(@PathVariable String alarmId) {
+        AlarmDoc alarm = mongo.findOne(
+                Query.query(Criteria.where("alarmId").is(alarmId)), AlarmDoc.class);
+        if (alarm == null || alarm.getReview() == null || alarm.getReview().getManualPhotoPath() == null) {
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "manual photo not found: " + alarmId);
+        }
+        byte[] data = hdfs.download(alarm.getReview().getManualPhotoPath());
+        HttpHeaders headers = new HttpHeaders();
+        headers.setContentType(MediaType.APPLICATION_OCTET_STREAM);
+        headers.setContentDispositionFormData("attachment",
+                alarm.getReview().getManualPhotoPath().substring(
+                        alarm.getReview().getManualPhotoPath().lastIndexOf('/') + 1));
+        return new ResponseEntity<>(data, headers, HttpStatus.OK);
+    }
 }

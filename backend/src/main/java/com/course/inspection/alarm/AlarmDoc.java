@@ -30,12 +30,13 @@ public class AlarmDoc {
     private String status;    // PENDING / CONFIRMED / FALSE_ALARM / RESOLVED
     private Review review;    // S61：机器狗复核结论（复核派单闭环回填）
 
-    /** 复核子文档（S61）：复核设备、结论、备注、红外复核图路径、复核时间。 */
+    /** 复核子文档（S61）：复核设备、结论、备注、红外复核图路径、复核时间；S75 增现场照片路径。 */
     public static class Review {
         private String reviewerDeviceId;
         private String conclusion;   // CONFIRMED / FALSE_ALARM
         private String note;
-        private String imagePath;
+        private String imagePath;        // 机器狗红外复核图（自动复核）
+        private String manualPhotoPath;  // S75：人工复核上传的现场照片
         private Instant reviewedAt;
 
         public String getReviewerDeviceId() {
@@ -68,6 +69,14 @@ public class AlarmDoc {
 
         public void setImagePath(String imagePath) {
             this.imagePath = imagePath;
+        }
+
+        public String getManualPhotoPath() {
+            return manualPhotoPath;
+        }
+
+        public void setManualPhotoPath(String manualPhotoPath) {
+            this.manualPhotoPath = manualPhotoPath;
         }
 
         public Instant getReviewedAt() {

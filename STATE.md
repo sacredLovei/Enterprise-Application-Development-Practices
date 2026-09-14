@@ -121,7 +121,7 @@
 | 消费组 | `biz-storage-consumer`、`biz-alarm-consumer`、`biz-task-consumer`（S32 新增，task.log 回执消费）、`biz-image-consumer`（S72 新增，image.meta 消费）、`sim-cmd-<deviceId>`（S32 重构：每设备独立指令消费组，见风险 #27） |
 | MongoDB 集合 | `device`、`device_status`、`task`、`alarm`、`task_log`、`image_meta`（S72 起，影像元数据；BUG-008 已实现）；TTL：device_status 30 天、task_log 90 天 |
 | ES 索引 | **`inspection_alarm_v3`**（现行，S63 起）：`dynamic: strict`；`location` geo_point（**顺序 [经度,纬度]**）；`description=ik_smart`（analysis-ik 8.13.0，插件+词典经 `docker/es-plugins` bind 挂载持久化）；`inspection_alarm_v1` 保留作回滚基线；`inspection_alarm_v2` 为映射损坏的中间产物（_reindex 动态映射误建，风险 #37），仅留档 |
-| HDFS 路径 | `/inspection/{imageType}/{yyyy}/{MM}/{dd}/{deviceId}/{uuid}.{ext}`；imageType ∈ {uav_patrol, dog_infrared, alarm_snapshot} |
+| HDFS 路径 | `/inspection/{imageType}/{yyyy}/{MM}/{dd}/{deviceId}/{uuid}.{ext}`；imageType ∈ {uav_patrol, dog_infrared, alarm_snapshot, **manual_review（S75 起，人工复核现场照片）**} |
 | 编号段 | 图：3-x/4-x/5-x（图 3-1~图 5-16）；表：4-x/5-x/6-x；用例 TC001~TC034、IT001~IT015、PT001~PT007；缺陷 BUG-xxx；决策 D-n；计划步骤 Sxx |
 | 节奏指标 | 心跳 5 s；遥测 2 s；离线阈值 15 s（3 个心跳周期，自然失联判定）；**手动上下线 5 s 内生效（指令驱动，S50 用户要求提速）**；遥测端到端 P95 < 1.5 s；检索 P95 < 500 ms；并发 ≥ 50 msg/s；网关 ≥ 200 QPS |
 | 文档文件 | `课程设计报告_第2-6章_园区安防巡检平台.md`（主交付文档，v0.1，基线提交 3056752）；头部含修订记录表 |
