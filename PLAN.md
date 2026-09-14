@@ -282,4 +282,44 @@
 - **验收结论**（2026-09-14）：**AI 侧部分全部达到**。工具链 `docs/工具/convert.js`（marked，npmmirror 安装可复现）；产出 `课程设计报告_第1-7章_园区安防巡检平台.html`（205KB）与 `.docx`（207KB，**3573 段 / 43 表**结构完整，Word COM 实测打开正常）。**剩余小组人工事项**（`docs/文档转换说明.md` 清单）：套课程模板样式、封面字段、小组分工表、Word 自动目录、插入 S65 截图后重新转换、终校
 - **产出物**：HTML/docx 版报告、转换工具、交付说明
 
-> P2 工程化可选项（Swagger/单元测试/死信重放/备份/监控面板等）待用户从清单勾选后再登记。
+### S76 Swagger/OpenAPI 接口文档（P2）
+- **状态**：in_progress
+- **目标**：springdoc 一键生成接口文档与调试界面
+- **内容**：pom 引入 springdoc-openapi-starter-webmvc-ui；Nginx 放行 /swagger-ui/ 与 /v3/api-docs
+- **验收标准**：经 8080 访问 /swagger-ui/index.html 可见全部接口并可 Try it out
+- **产出物**：pom/nginx 变更
+
+### S77 后端单元测试（P2）
+- **状态**：pending
+- **目标**：核心逻辑补 JUnit 单测（现状仅有集成验收脚本）
+- **内容**：spring-boot-starter-test 引入；TaskService 状态机（Mockito 打桩 Mongo/Kafka）、PathBuilder 路径规范、Json 序列化往返、simulator 的 TelemetryGenerator/GroundNetwork 纯逻辑
+- **验收标准**：`mvn test` 全绿且用例覆盖核心流转（create/cancel/applyReceipt/路径格式）
+- **产出物**：backend/simulator 测试类
+
+### S78 DLQ 死信重放维护接口（P2）
+- **状态**：pending
+- **目标**：死信主题可查看、可重放回告警主题
+- **内容**：GET /api/maintenance/dlq/peek?n=5（预览）与 POST /api/maintenance/dlq/replay-all（从头重放回 inspection.alarm 并提交位点）
+- **验收标准**：peek 返回消息列表；replay-all 后目标主题新增对应消息
+- **产出物**：backend 变更 + 验收记录
+
+### S79 数据备份脚本（P2/S60）
+- **状态**：pending
+- **目标**：一键备份 git 仓库 + MongoDB 全量 + 编排配置
+- **内容**：docker/init/backup.ps1——git bundle --all、mongodump --archive、docker compose config，产物入 _backups/（gitignore）；HDFS 数据在命名卷中随 Docker 持久化，脚本输出提示
+- **验收标准**：脚本执行成功且产物可列；bundle 可从空目录恢复仓库（实测 clone 校验）
+- **产出物**：backup.ps1 + 备份产物
+
+### S80 总览组件健康/LAG 面板（P2）
+- **状态**：pending
+- **目标**：总览页一眼可见六组件健康与 Kafka 消费积压
+- **内容**：GET /api/system/health（Mongo ping / ES cluster health / Kafka 消费组 LAG / HDFS 状态）→ 总览页健康面板（绿点/红点 + LAG 数字，10s 轮询）
+- **验收标准**：接口返回四组件状态与 LAG；前端面板与实测状态一致
+- **产出物**：backend+web 变更
+
+### S81 告警大图预览（P2）
+- **状态**：pending
+- **目标**：证据图点击放大查看
+- **内容**：详情面板证据图点击弹出全屏遮罩大图（点击关闭）
+- **验收标准**：点击放大/关闭可用
+- **产出物**：web 变更
