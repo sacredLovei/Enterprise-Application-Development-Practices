@@ -55,6 +55,22 @@ public class DeviceController {
         return doc;
     }
 
+    /** S69：设备历史轨迹（最近 N 分钟，最多 500 点降采样，地图轨迹回放）。 */
+    public record TrackPoint(long ts, double lng, double lat) {
+    }
+
+    @GetMapping("/{deviceId}/track")
+    public List<TrackPoint> track(@PathVariable String deviceId,
+                                  @RequestParam(defaultValue = "10") int minutes) {
+        if (store.get(deviceId) == null) {
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "device not found: " + deviceId);
+        }
+        int m = Math.min(Math.max(minutes, 1), 60);
+        return store.track(deviceId, java.time.Instant.now().minusSeconds(m * 60L), 500).stream()
+                .map(d -> new TrackPoint(d.getTs().toEpochMilli(), d.getLng(), d.getLat()))
+                .toList();
+    }
+
     /**
      * 手动下线（S34 + S50 提速）：控制指令经 Kafka 下发，仿真停发心跳/遥测；
      * 平台 5s 后指令驱动置 OFFLINE（给指令传播与在途心跳排水留窗口），并产生 DEVICE_OFFLINE 告警。

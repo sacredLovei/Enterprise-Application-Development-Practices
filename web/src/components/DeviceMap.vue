@@ -6,11 +6,14 @@ import 'leaflet/dist/leaflet.css'
 const props = defineProps({
   devices: { type: Array, default: () => [] },
   alarms: { type: Array, default: () => [] },
-  tasks: { type: Array, default: () => [] }   // 含 targetLng/targetLat 的任务（展示任务目标点）
+  tasks: { type: Array, default: () => [] },   // 含 targetLng/targetLat 的任务（展示任务目标点）
+  track: { type: Array, default: null }        // S69：设备历史轨迹 [{ts,lng,lat}]，null=无轨迹
 })
 
+const emit = defineEmits(['track-requested', 'track-clear'])
+
 const mapEl = ref(null)
-let map, deviceLayer, alarmLayer, targetLayer
+let map, deviceLayer, alarmLayer, targetLayer, trackLayer
 
 const UAV_ICON = L.divIcon({ className: '', iconSize: [34, 34], html: '<div style="background:#2f6fed;color:#fff;border-radius:50%;width:34px;height:34px;line-height:34px;text-align:center;font-size:20px;box-shadow:0 1px 4px rgba(0,0,0,.35)">✈</div>' })
 const DOG_ICON = L.divIcon({ className: '', iconSize: [34, 34], html: '<div style="background:#1a8a4a;color:#fff;border-radius:50%;width:34px;height:34px;line-height:34px;text-align:center;font-size:20px;box-shadow:0 1px 4px rgba(0,0,0,.35)">🐕</div>' })
@@ -28,10 +31,15 @@ onMounted(() => {
   deviceLayer = L.layerGroup().addTo(map)
   alarmLayer = L.layerGroup().addTo(map)
   targetLayer = L.layerGroup().addTo(map)
+  trackLayer = L.layerGroup().addTo(map)
+  // S69：Leaflet 弹窗 HTML 无法绑定 Vue 事件，经 window 桥接转发轨迹请求
+  window.__dshTrack = (id) => emit('track-requested', id)
   render()
+  renderTrack()
 })
 
 watch(() => [props.devices, props.alarms, props.tasks], render, { deep: true })
+watch(() => props.track, renderTrack)
 
 const TYPE_LABEL = {
   PERIMETER_PATROL: '周界巡逻',
@@ -76,7 +84,8 @@ function render() {
 
     L.marker([loc.lat, loc.lng], { icon })
       .bindTooltip(d.deviceId, { permanent: true, direction: 'right', offset: [8, 0], className: 'device-label' })
-      .bindPopup(`<b>${d.deviceId}</b><br/>类型：${d.deviceType}<br/>状态：${d.status}<br/>电量：${d.battery}%${taskHtml}`)
+      .bindPopup(`<b>${d.deviceId}</b><br/>类型：${d.deviceType}<br/>状态：${d.status}<br/>电量：${d.battery}%${taskHtml}` +
+        `<br/><a href="#" onclick="window.__dshTrack('${d.deviceId}');return false;" style="font-size:12px">📈 最近 10 分钟轨迹</a>`)
       .addTo(deviceLayer)
   })
 
@@ -99,6 +108,21 @@ function render() {
       .bindPopup(`<b>任务目标点</b><br/>任务：${t.taskId}<br/>类型：${t.taskType}<br/>设备：${t.deviceId}`)
       .addTo(targetLayer)
   })
+}
+
+/** S69：轨迹回放图层——折线 + 起终点标记。 */
+function renderTrack() {
+  if (!map || !trackLayer) return
+  trackLayer.clearLayers()
+  const pts = props.track
+  if (!pts || pts.length < 2) return
+  const latlngs = pts.map(p => [p.lat, p.lng])
+  L.polyline(latlngs, { color: '#c0392b', weight: 3, opacity: 0.85 }).addTo(trackLayer)
+  L.circleMarker(latlngs[0], { radius: 5, color: '#2f6fed', fillColor: '#2f6fed', fillOpacity: 1 })
+    .bindTooltip('起点', { direction: 'top', className: 'device-label' }).addTo(trackLayer)
+  L.circleMarker(latlngs[latlngs.length - 1], { radius: 5, color: '#1a8a4a', fillColor: '#1a8a4a', fillOpacity: 1 })
+    .bindTooltip('当前位置', { direction: 'top', className: 'device-label' }).addTo(trackLayer)
+  map.fitBounds(L.latLngBounds(latlngs), { padding: [30, 30] })
 }
 </script>
 

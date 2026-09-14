@@ -7,6 +7,7 @@ const devices = ref([])
 const alarms = ref([])
 const tasks = ref([])
 const summary = ref({})
+const track = ref(null)   // S69：设备历史轨迹
 let timer
 
 async function load() {
@@ -22,6 +23,19 @@ async function load() {
   } catch (e) {
     console.error('overview load failed', e)
   }
+}
+
+// S69：请求设备轨迹并交由地图渲染
+async function showTrack(deviceId) {
+  try {
+    track.value = await request.get('/devices/' + deviceId + '/track', { params: { minutes: 10 } })
+  } catch (e) {
+    console.error('track load failed', e)
+  }
+}
+
+function clearTrack() {
+  track.value = null
 }
 
 onMounted(() => {
@@ -40,8 +54,13 @@ onUnmounted(() => clearInterval(timer))
   </div>
   <div class="card">
     <h3>园区设备与告警分布（每 3 秒刷新）</h3>
-    <DeviceMap :devices="devices" :alarms="alarms" :tasks="tasks" />
-    <div class="hint">蓝色 ✈ 无人机 / 绿色 🐕 机器狗 / 红色 ! 告警点 / 🎯 任务目标点。底图为 OpenStreetMap。</div>
+    <DeviceMap :devices="devices" :alarms="alarms" :tasks="tasks" :track="track"
+               @track-requested="showTrack" />
+    <div class="hint">
+      蓝色 ✈ 无人机 / 绿色 🐕 机器狗 / 红色 ! 告警点 / 🎯 任务目标点。底图为 OpenStreetMap。
+      点击设备图标 → 「📈 最近 10 分钟轨迹」查看回放。
+      <button v-if="track" class="ghost small" style="margin-left:10px" @click="clearTrack">清除轨迹</button>
+    </div>
   </div>
 </template>
 

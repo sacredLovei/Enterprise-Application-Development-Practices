@@ -81,6 +81,33 @@ public class DeviceStore {
                 DeviceStatusDoc.class);
     }
 
+    /**
+     * S69：设备历史轨迹（from 之后的时序点，按时间升序，超过 maxPoints 等距降采样）。
+     * device_status 有 {deviceId, ts} 复合索引（风险 #34 修复），查询走索引。
+     */
+    public List<DeviceStatusDoc> track(String deviceId, Instant from, int maxPoints) {
+        List<DeviceStatusDoc> docs = mongo.find(
+                Query.query(Criteria.where("deviceId").is(deviceId).and("ts").gte(from))
+                        .with(org.springframework.data.domain.Sort.by(
+                                org.springframework.data.domain.Sort.Direction.ASC, "ts")),
+                DeviceStatusDoc.class);
+        if (docs.size() <= maxPoints) {
+            return docs;
+        }
+        int step = docs.size() / maxPoints;
+        List<DeviceStatusDoc> sampled = new java.util.ArrayList<>(maxPoints);
+        for (int i = 0; i < docs.size(); i += step) {
+            sampled.add(docs.get(i));
+            if (sampled.size() == maxPoints) {
+                break;
+            }
+        }
+        if (!sampled.isEmpty() && sampled.get(sampled.size() - 1) != docs.get(docs.size() - 1)) {
+            sampled.add(docs.get(docs.size() - 1));   // 保证终点完整
+        }
+        return sampled;
+    }
+
     public DeviceDoc get(String deviceId) {
         return mongo.findById(deviceId, DeviceDoc.class);
     }
