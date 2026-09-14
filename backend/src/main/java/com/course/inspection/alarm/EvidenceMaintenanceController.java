@@ -7,6 +7,7 @@ import org.slf4j.LoggerFactory;
 import org.springframework.data.mongodb.core.MongoTemplate;
 import org.springframework.data.mongodb.core.query.Criteria;
 import org.springframework.data.mongodb.core.query.Query;
+import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RestController;
 
@@ -29,11 +30,31 @@ public class EvidenceMaintenanceController {
     private final MongoTemplate mongo;
     private final EvidenceImageGenerator evidence;
     private final HdfsClient hdfs;
+    private final AlarmReconcileService reconcile;
 
-    public EvidenceMaintenanceController(MongoTemplate mongo, EvidenceImageGenerator evidence, HdfsClient hdfs) {
+    public EvidenceMaintenanceController(MongoTemplate mongo, EvidenceImageGenerator evidence,
+                                         HdfsClient hdfs, AlarmReconcileService reconcile) {
         this.mongo = mongo;
         this.evidence = evidence;
         this.hdfs = hdfs;
+        this.reconcile = reconcile;
+    }
+
+    /** S70：手动触发对账（验收用；平时由 5 分钟定时任务执行）。 */
+    @PostMapping("/api/maintenance/reconcile")
+    public AlarmReconcileService.ReconcileResult reconcileNow() {
+        return reconcile.run();
+    }
+
+    /** S70：最近一次对账结果。 */
+    @GetMapping("/api/maintenance/reconcile-status")
+    public AlarmReconcileService.ReconcileResult reconcileStatus() {
+        AlarmReconcileService.ReconcileResult r = reconcile.lastResult();
+        if (r == null) {
+            throw new org.springframework.web.server.ResponseStatusException(
+                    org.springframework.http.HttpStatus.NOT_FOUND, "尚未执行过对账");
+        }
+        return r;
     }
 
     /** POST /api/maintenance/regenerate-evidence：重生成含中文描述的告警证据图（覆盖原路径，幂等）。 */
