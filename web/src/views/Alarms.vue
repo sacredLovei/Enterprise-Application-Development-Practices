@@ -15,6 +15,16 @@ const reviewMsg = ref('')    // S74：复核成功提示（3 秒后消失）
 const photoFile = ref(null)  // S75：人工复核现场照片
 const bigImg = ref('')       // S81：大图预览
 
+// S84（用户反馈）：复核入口状态锁——
+// PENDING 可人工初判；机器狗已初判（reviewer != MANUAL）可人工复判推翻；
+// 人工已判 = 终审锁定，关闭入口；RESOLVED 始终关闭
+function reviewActionsVisible() {
+  if (!detail.value) return false
+  if (detail.value.status === 'RESOLVED') return false
+  if (detail.value.status === 'PENDING') return true
+  return detail.value.review && detail.value.review.reviewerDeviceId !== 'MANUAL'
+}
+
 // S81：点击证据图放大
 function zoomImg(src) {
   bigImg.value = src
@@ -245,8 +255,8 @@ onUnmounted(() => { clearInterval(timer); clearTimeout(debounceTimer); clearInte
         </div>
       </div>
     </div>
-    <!-- S68 人工复核入口（IT009）：待复核告警可一键处置；S74 反馈强化；S75 现场照片；S83 自动结论可复判 -->
-    <div v-if="detail.status !== 'RESOLVED'" class="review-actions">
+    <!-- S68 人工复核入口（IT009）；S83 复判；S84 状态锁——人工终审后入口关闭 -->
+    <div v-if="reviewActionsVisible()" class="review-actions">
       <span class="review-actions-title">
         {{ detail.review && detail.review.reviewerDeviceId !== 'MANUAL' ? '人工复判（推翻机器狗结论，人工为终审）：' : '人工复核：' }}
       </span>
@@ -258,6 +268,9 @@ onUnmounted(() => { clearInterval(timer); clearTimeout(debounceTimer); clearInte
       <button :disabled="reviewing" @click="submitReview('CONFIRMED')">确认属实</button>
       <button class="ghost" :disabled="reviewing" @click="submitReview('FALSE_ALARM')">误报</button>
       <span v-if="reviewMsg" class="review-toast">{{ reviewMsg }}</span>
+    </div>
+    <div v-else-if="detail.status !== 'RESOLVED' && detail.review && detail.review.reviewerDeviceId === 'MANUAL'" class="hint" style="margin-top:10px;padding-top:10px;border-top:1px solid #e2e8ee">
+      🔒 人工终审已完成，结论锁定（{{ statusText(detail.status) }}）——如需更改请联系管理员重新打开
     </div>
   </div>
   <!-- S81 大图预览遮罩（点击任意处关闭） -->
