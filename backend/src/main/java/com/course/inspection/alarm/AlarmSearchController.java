@@ -33,6 +33,11 @@ public class AlarmSearchController {
         AlarmSearchService.AlarmQuery q = query == null
                 ? new AlarmSearchService.AlarmQuery(null, null, null, null, null, null, null, null, null, null, 0, 20)
                 : query;
+        // S71 深分页防护：ES from+size 累计上限 10,000（与 BUG-006 同类陷阱），显式 400 + 明确提示
+        if ((long) q.page() * q.size() + q.size() > 10_000) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
+                    "分页深度超过 10,000 条上限（page*size），请缩小时间范围或增加筛选条件");
+        }
         try {
             return service.search(q);
         } catch (ElasticsearchException e) {

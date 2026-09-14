@@ -96,7 +96,13 @@ function goPage(p) {
   search()
 }
 
-const totalPages = () => Math.max(1, Math.ceil(result.value.total / size))
+const totalPages = () => {
+  // S71 深分页防护：ES 仅可翻前 10,000 条，页码按上限截断
+  const maxPages = Math.floor(10000 / size)
+  return Math.max(1, Math.min(Math.ceil(result.value.total / size), maxPages))
+}
+
+const depthCapped = () => result.value.total > 10000
 
 onMounted(() => {
   loadDevices()
@@ -132,7 +138,10 @@ onUnmounted(() => { clearInterval(timer); clearTimeout(debounceTimer); clearInte
       <input v-model="form.keyword" placeholder="关键词" style="width:140px" @input="onFilterInput" />
       <button @click="page = 0; search()">检索</button>
     </div>
-    <div class="hint">共 {{ result.total }} 条（时间 {{ form.from }} ~ {{ form.to }}，每 5 秒自动刷新，筛选即输即查）</div>
+    <div class="hint">
+      共 {{ result.total }} 条（时间 {{ form.from }} ~ {{ form.to }}，每 5 秒自动刷新，筛选即输即查）
+      <span v-if="depthCapped()" class="warn-hint">⚠ 超过 10,000 条时仅可浏览前 10,000 条，请缩小时间范围或增加筛选条件</span>
+    </div>
   </div>
 
   <div class="card">
