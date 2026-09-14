@@ -7,6 +7,7 @@ public final class TopicConst {
     public static final String ROBOT_TELEMETRY  = "robot.telemetry";
     public static final String DEVICE_HEARTBEAT = "device.heartbeat";
     public static final String INSPECTION_ALARM = "inspection.alarm";
+    public static final String IMAGE_META       = "inspection.image.meta";
     public static final String TASK_COMMAND     = "task.command";
     public static final String TASK_LOG         = "task.log";
     public static final String DLQ              = "inspection.dlq";
@@ -14,6 +15,7 @@ public final class TopicConst {
     public static final String GROUP_STORAGE = "biz-storage-consumer";
     public static final String GROUP_ALARM   = "biz-alarm-consumer";
     public static final String GROUP_TASK    = "biz-task-consumer";
+    public static final String GROUP_IMAGE   = "biz-image-consumer";
 
     private TopicConst() {
     }

@@ -135,13 +135,21 @@ public abstract class DeviceSimulator {
     }
 
     protected void emitAlarm(String alarmType, String level, String description) {
+        String alarmId = "ALM-" + UUID.randomUUID().toString().substring(0, 8);
         AlarmMsg msg = new AlarmMsg(
-                "ALM-" + UUID.randomUUID().toString().substring(0, 8),
-                deviceId, deviceType, alarmType, level, description,
+                alarmId, deviceId, deviceType, alarmType, level, description,
                 track.currentLng(), track.currentLat(),
                 System.currentTimeMillis());
         send("inspection.alarm", msg);
-        log.info("告警产生 {} {} {} deviceId={}", alarmType, level, description, deviceId);
+        // S72：同步产生影像元数据（BUG-008 设计差异兑现），打通 inspection.image.meta 链路
+        ImageMetaMsg meta = new ImageMetaMsg(
+                "IMG-" + UUID.randomUUID().toString().substring(0, 8),
+                deviceId, deviceType,
+                "UAV".equals(deviceType) ? "uav_patrol" : "dog_infrared",
+                track.currentLng(), track.currentLat(), System.currentTimeMillis(), alarmId);
+        send("inspection.image.meta", meta);
+        log.info("告警产生 {} {} {} deviceId={}（含影像元数据 {}）",
+                alarmType, level, description, deviceId, meta.imageId());
     }
 
     // ---------- S33 任务真实执行 ----------

@@ -6,6 +6,7 @@ import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 
 import java.util.Random;
+import java.util.UUID;
 
 /**
  * 无人机仿真（设计报告 5.2.1）：
@@ -41,10 +42,19 @@ public class UavSimulator extends DeviceSimulator {
 
     /** 随机隐患发现：每 30 秒以约 5% 概率产生周界入侵告警（演示数据，FR-1.4 语义）。
      *  S63 调整：原 15% 概率下告警流入约 0.6 条/分钟，与 2 台机器狗复核吞吐（每单 1~2 分钟）
-     *  持平偏紧，复核队列持续积压；降至 5%（约 0.2 条/分钟）匹配复核容量（配合 D-22 派单节流）。 */
+     *  持平偏紧，复核队列持续积压；降至 5%（约 0.2 条/分钟）匹配复核容量（配合 D-22 派单节流）。
+     *  S72：每次巡逻扫描同时产生一张巡逻影像元数据（uav_patrol，无告警关联）。 */
     @Scheduled(fixedDelay = 30_000)
     public void patrolScan() {
-        if (!isCommUp() || isPoweredOff() || random.nextDouble() >= 0.05) {
+        if (!isCommUp() || isPoweredOff()) {
+            return;
+        }
+        ImageMetaMsg photo = new ImageMetaMsg(
+                "IMG-" + UUID.randomUUID().toString().substring(0, 8),
+                deviceId, deviceType, "uav_patrol",
+                track.currentLng(), track.currentLat(), System.currentTimeMillis(), null);
+        send("inspection.image.meta", photo);
+        if (random.nextDouble() >= 0.05) {
             return;
         }
         emitAlarm("PERIMETER_BREACH", "CRITICAL", "周界检测到疑似人员活动，待地面复核");
