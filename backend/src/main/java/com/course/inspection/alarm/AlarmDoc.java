@@ -30,14 +30,19 @@ public class AlarmDoc {
     private String status;    // PENDING / CONFIRMED / FALSE_ALARM / RESOLVED
     private Review review;    // S61：机器狗复核结论（复核派单闭环回填）
 
-    /** 复核子文档（S61）：复核设备、结论、备注、红外复核图路径、复核时间；S75 增现场照片路径。 */
+    /** 复核子文档（S61）：复核设备、结论、备注、红外复核图路径、复核时间；S75 增现场照片路径；
+     *  S83 增自动初判快照（人工复判推翻时保留审计链）。 */
     public static class Review {
         private String reviewerDeviceId;
-        private String conclusion;   // CONFIRMED / FALSE_ALARM
+        private String conclusion;   // CONFIRMED / FALSE_ALARM（终审结论）
         private String note;
         private String imagePath;        // 机器狗红外复核图（自动复核）
         private String manualPhotoPath;  // S75：人工复核上传的现场照片
         private Instant reviewedAt;
+        // S83：自动初判快照（人工复判第一次覆盖时固化）
+        private String autoConclusion;
+        private String autoReviewerDeviceId;
+        private Instant autoReviewedAt;
 
         public String getReviewerDeviceId() {
             return reviewerDeviceId;
@@ -85,6 +90,30 @@ public class AlarmDoc {
 
         public void setReviewedAt(Instant reviewedAt) {
             this.reviewedAt = reviewedAt;
+        }
+
+        public String getAutoConclusion() {
+            return autoConclusion;
+        }
+
+        public void setAutoConclusion(String autoConclusion) {
+            this.autoConclusion = autoConclusion;
+        }
+
+        public String getAutoReviewerDeviceId() {
+            return autoReviewerDeviceId;
+        }
+
+        public void setAutoReviewerDeviceId(String autoReviewerDeviceId) {
+            this.autoReviewerDeviceId = autoReviewerDeviceId;
+        }
+
+        public Instant getAutoReviewedAt() {
+            return autoReviewedAt;
+        }
+
+        public void setAutoReviewedAt(Instant autoReviewedAt) {
+            this.autoReviewedAt = autoReviewedAt;
         }
     }
 

@@ -93,6 +93,9 @@ public class AlarmSearchController {
         if (alarm == null) {
             throw new ResponseStatusException(HttpStatus.NOT_FOUND, "alarm not found: " + alarmId);
         }
+        if ("RESOLVED".equals(alarm.getStatus())) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT, "已处置告警不可再复核: " + alarmId);
+        }
         // S75 修正：人工复核不伪造红外复核图——imagePath 仅保留已有自动复核图（若有）
         String imagePath = (alarm.getReview() != null) ? alarm.getReview().getImagePath() : null;
         store.applyReview(alarmId, "MANUAL", req.conclusion(),
@@ -117,6 +120,9 @@ public class AlarmSearchController {
         AlarmDoc alarm = store.findById(alarmId);
         if (alarm == null) {
             throw new ResponseStatusException(HttpStatus.NOT_FOUND, "alarm not found: " + alarmId);
+        }
+        if ("RESOLVED".equals(alarm.getStatus())) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT, "已处置告警不可再复核: " + alarmId);
         }
         String manualPhotoPath = null;
         if (file != null && !file.isEmpty()) {

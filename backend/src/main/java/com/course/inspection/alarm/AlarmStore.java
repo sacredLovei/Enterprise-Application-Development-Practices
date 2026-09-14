@@ -66,6 +66,17 @@ public class AlarmStore {
         if (manualPhotoPath != null) {
             update.set("review.manualPhotoPath", manualPhotoPath);
         }
+        // S83：人工复判推翻自动初判时，首次固化初判快照（审计链：机器狗初判 → 人工终审）
+        if ("MANUAL".equals(reviewerDeviceId)) {
+            AlarmDoc existing = mongo.findById(alarmId, AlarmDoc.class);
+            if (existing != null && existing.getReview() != null
+                    && !"MANUAL".equals(existing.getReview().getReviewerDeviceId())
+                    && existing.getReview().getAutoConclusion() == null) {
+                update.set("review.autoConclusion", existing.getReview().getConclusion())
+                        .set("review.autoReviewerDeviceId", existing.getReview().getReviewerDeviceId())
+                        .set("review.autoReviewedAt", existing.getReview().getReviewedAt());
+            }
+        }
         mongo.updateFirst(query, update, AlarmDoc.class);
     }
 }

@@ -217,6 +217,14 @@ onUnmounted(() => { clearInterval(timer); clearTimeout(debounceTimer); clearInte
         <div class="evidence-title">② 复核结果</div>
         <template v-if="detail.review">
           <img v-if="detail.review.imagePath" :src="'/api/files/' + detail.alarmId + '/review'" alt="红外复核图" class="evidence-img" @click="zoomImg('/api/files/' + detail.alarmId + '/review')" />
+          <div v-if="detail.review.autoConclusion" class="hint" style="margin-top:6px">
+            机器狗初判：
+            <span class="badge" :class="{ ok: detail.review.autoConclusion === 'CONFIRMED', warn: detail.review.autoConclusion === 'FALSE_ALARM' }">
+              {{ statusText(detail.review.autoConclusion) }}
+            </span>
+            （{{ detail.review.autoReviewerDeviceId }}<span v-if="detail.review.autoReviewedAt"> · {{ formatTime(detail.review.autoReviewedAt) }}</span>）
+            → 人工终审：
+          </div>
           <div class="review-conclusion">
             复核结论：
             <span class="badge" :class="{ ok: detail.review.conclusion === 'CONFIRMED', warn: detail.review.conclusion === 'FALSE_ALARM' }">
@@ -237,9 +245,11 @@ onUnmounted(() => { clearInterval(timer); clearTimeout(debounceTimer); clearInte
         </div>
       </div>
     </div>
-    <!-- S68 人工复核入口（IT009）：待复核告警可一键处置；S74 反馈强化；S75 现场照片 -->
-    <div v-if="detail.status === 'PENDING'" class="review-actions">
-      <span class="review-actions-title">人工复核：</span>
+    <!-- S68 人工复核入口（IT009）：待复核告警可一键处置；S74 反馈强化；S75 现场照片；S83 自动结论可复判 -->
+    <div v-if="detail.status !== 'RESOLVED'" class="review-actions">
+      <span class="review-actions-title">
+        {{ detail.review && detail.review.reviewerDeviceId !== 'MANUAL' ? '人工复判（推翻机器狗结论，人工为终审）：' : '人工复核：' }}
+      </span>
       <input v-model="reviewNote" placeholder="复核备注（可选）" style="flex:1" />
       <label class="ghost small photo-btn">📷 现场照片
         <input id="review-photo-input" type="file" accept="image/*" style="display:none" @change="onPhotoPick" />
