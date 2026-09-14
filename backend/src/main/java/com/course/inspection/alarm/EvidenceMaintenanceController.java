@@ -9,6 +9,7 @@ import org.springframework.data.mongodb.core.query.Criteria;
 import org.springframework.data.mongodb.core.query.Query;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.util.List;
@@ -33,15 +34,30 @@ public class EvidenceMaintenanceController {
     private final HdfsClient hdfs;
     private final AlarmReconcileService reconcile;
     private final co.elastic.clients.elasticsearch.ElasticsearchClient esClient;
+    private final DlqService dlq;
 
     public EvidenceMaintenanceController(MongoTemplate mongo, EvidenceImageGenerator evidence,
                                          HdfsClient hdfs, AlarmReconcileService reconcile,
-                                         co.elastic.clients.elasticsearch.ElasticsearchClient esClient) {
+                                         co.elastic.clients.elasticsearch.ElasticsearchClient esClient,
+                                         DlqService dlq) {
         this.mongo = mongo;
         this.evidence = evidence;
         this.hdfs = hdfs;
         this.reconcile = reconcile;
         this.esClient = esClient;
+        this.dlq = dlq;
+    }
+
+    /** S78：预览死信主题前 n 条。 */
+    @GetMapping("/api/maintenance/dlq/peek")
+    public List<Map<String, Object>> dlqPeek(@RequestParam(defaultValue = "5") int n) {
+        return dlq.peek(n);
+    }
+
+    /** S78：从头重放全部死信到 inspection.alarm。 */
+    @PostMapping("/api/maintenance/dlq/replay-all")
+    public Map<String, Object> dlqReplayAll() {
+        return Map.of("replayed", dlq.replayAll());
     }
 
     /**
