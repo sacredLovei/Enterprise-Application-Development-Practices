@@ -87,6 +87,7 @@
 | 2026-09-14 | f108321 | **S75 人工复核完善（用户确认）**：multipart 现场照片上传（HDFS `manual_review` 目录、5MB 校验）→ review.manualPhotoPath → 下载接口 + 前端展示；修正人工复核不再伪造红外复核图；端到端实测（上传 856B PNG → 回填 → 下载一致）。口径：HDFS imageType 增加 manual_review（STATE/报告同步） | AI |
 | 2026-09-14 | 8754cdc~c2181de | **P2 清单全部完成（S76~S81）**：S76 Swagger（springdoc，25 路径）；S77 单元测试（后端 9/9 + 仿真 6/6，mvn test 全绿）；S78 死信查看/重放（peek + replay-all 实测重放 22 条）；S79 一键备份（git bundle+mongodump+compose，clone 恢复 HEAD 一致实测）；S80 系统健康面板（mongo/es/hdfs/四组 LAG，10s 轮询）；S81 证据图大图预览。排错 2 例：UpdateResult 包路径、seekToBeginning 首轮空轮询 | AI |
 | 2026-09-14 | 5a75868 | **S82 用户反馈（大图视觉）**：证据图/复核图生成分辨率 640×360 → **1280×720**（字体同步放大），大图模式改 object-fit 满屏；维护接口 `regenerate-evidence?all=true` 与 `regenerate-review-images` 全量重生成——实测 **1008 证据图 + 73 复核图 fail=0**，下载验证尺寸 1280×720 | AI |
+| 2026-09-14 | 18b6c43 | **S83 用户反馈（机器狗误报无法人工纠错）**：复核语义升级——自动复核为**初判**、人工为**终审**：CONFIRMED/FALSE_ALARM（非 RESOLVED）均可人工复判推翻；首次推翻时机器狗初判快照入 `review.autoConclusion/autoReviewerDeviceId/autoReviewedAt`（审计链）；RESOLVED 禁止复核（409）。实测：ROBOT-002 判 CONFIRMED → 人工复判 FALSE_ALARM，autoConclusion=CONFIRMED 保留。前端：已复核告警显示"人工复判"入口与"机器狗初判→人工终审"链 | AI |
 
 ## 4. 决策记录（永不删除，只可被新决策取代）
 
