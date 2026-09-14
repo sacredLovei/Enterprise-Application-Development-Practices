@@ -86,6 +86,7 @@
 | 2026-09-14 | 59cddb1 | **S74 用户反馈三项修复**：① 测试注入告警污染列表（"S72 meta-link probe" 等）→ 新增清理接口，实测删 **10,053 条**（pt3k-/tc017-/v06/fontfix- 前缀，Mongo+ES+17 任务+48 日志），现存量自然告警 927 条；② 人工复核反馈不明显 + 备注不显示 → 复核结果面板重构（人工复核无图也显示结论/方式/备注）+ 提交中禁用按钮 + 成功/失败 toast 3-4 秒；③ 清理暴露 ES 存量缺口（v3 修复期写入失败）→ 新增全量对账入口（30 天窗口），**fixed=49，mongo=es=927 完全一致** | AI |
 | 2026-09-14 | f108321 | **S75 人工复核完善（用户确认）**：multipart 现场照片上传（HDFS `manual_review` 目录、5MB 校验）→ review.manualPhotoPath → 下载接口 + 前端展示；修正人工复核不再伪造红外复核图；端到端实测（上传 856B PNG → 回填 → 下载一致）。口径：HDFS imageType 增加 manual_review（STATE/报告同步） | AI |
 | 2026-09-14 | 8754cdc~c2181de | **P2 清单全部完成（S76~S81）**：S76 Swagger（springdoc，25 路径）；S77 单元测试（后端 9/9 + 仿真 6/6，mvn test 全绿）；S78 死信查看/重放（peek + replay-all 实测重放 22 条）；S79 一键备份（git bundle+mongodump+compose，clone 恢复 HEAD 一致实测）；S80 系统健康面板（mongo/es/hdfs/四组 LAG，10s 轮询）；S81 证据图大图预览。排错 2 例：UpdateResult 包路径、seekToBeginning 首轮空轮询 | AI |
+| 2026-09-14 | 5a75868 | **S82 用户反馈（大图视觉）**：证据图/复核图生成分辨率 640×360 → **1280×720**（字体同步放大），大图模式改 object-fit 满屏；维护接口 `regenerate-evidence?all=true` 与 `regenerate-review-images` 全量重生成——实测 **1008 证据图 + 73 复核图 fail=0**，下载验证尺寸 1280×720 | AI |
 
 ## 4. 决策记录（永不删除，只可被新决策取代）
 
