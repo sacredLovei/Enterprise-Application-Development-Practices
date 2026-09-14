@@ -9,6 +9,7 @@ const page = ref(0)
 const size = 15
 const result = ref({ total: 0, records: [] })
 const detail = ref(null)   // S62：告警详情（含复核证据链）
+const reviewNote = ref('')   // S68：人工复核备注
 let timer, debounceTimer, deviceTimer
 let seq = 0   // 请求序号：丢弃过期响应，防止自动刷新与手动检索竞态覆盖新结果
 
@@ -46,6 +47,22 @@ async function openDetail(alarmId) {
     detail.value = await request.get('/alarms/' + alarmId)
   } catch (e) {
     console.error('alarm detail failed', e)
+  }
+}
+
+// S68 人工复核（IT009 前端入口）：PENDING 告警可一键复核，回填后刷新详情与列表徽标
+async function submitReview(conclusion) {
+  if (!detail.value) return
+  try {
+    await request.post('/alarms/' + detail.value.alarmId + '/review', {
+      conclusion,
+      note: reviewNote.value || '人工复核（前端）'
+    })
+    reviewNote.value = ''
+    detail.value = await request.get('/alarms/' + detail.value.alarmId)
+    search()   // 同步刷新列表状态徽标
+  } catch (e) {
+    alert('复核失败：' + (e.response?.data?.message || '服务异常，请稍后重试'))
   }
 }
 
@@ -187,6 +204,13 @@ onUnmounted(() => { clearInterval(timer); clearTimeout(debounceTimer); clearInte
         </div>
       </div>
     </div>
+    <!-- S68 人工复核入口（IT009）：待复核告警可一键处置 -->
+    <div v-if="detail.status === 'PENDING'" class="review-actions">
+      <span class="review-actions-title">人工复核：</span>
+      <input v-model="reviewNote" placeholder="复核备注（可选）" style="flex:1" />
+      <button @click="submitReview('CONFIRMED')">确认属实</button>
+      <button class="ghost" @click="submitReview('FALSE_ALARM')">误报</button>
+    </div>
   </div>
 </template>
 
@@ -198,6 +222,8 @@ button:disabled { opacity: .4; cursor: not-allowed; }
 .detail-head { display: flex; justify-content: space-between; align-items: center; }
 .detail-meta { font-size: 13px; color: #5c6b7a; margin-bottom: 4px; }
 .evidence-row { display: flex; gap: 20px; flex-wrap: wrap; }
+.review-actions { display: flex; gap: 10px; align-items: center; margin-top: 14px; padding-top: 12px; border-top: 1px solid #e2e8ee; }
+.review-actions-title { font-size: 13px; color: #33414e; font-weight: 600; }
 .evidence { flex: 1 1 320px; }
 .evidence-title { font-size: 13px; font-weight: 600; margin-bottom: 6px; color: #33414e; }
 .evidence-img { width: 100%; border: 1px solid #e2e8ee; border-radius: 8px; display: block; }
