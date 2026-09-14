@@ -10,6 +10,8 @@ const size = 15
 const result = ref({ total: 0, records: [] })
 const detail = ref(null)   // S62：告警详情（含复核证据链）
 const reviewNote = ref('')   // S68：人工复核备注
+const reviewing = ref(false) // S74：复核提交中（按钮禁用防重复点击）
+const reviewMsg = ref('')    // S74：复核成功提示（3 秒后消失）
 let timer, debounceTimer, deviceTimer
 let seq = 0   // 请求序号：丢弃过期响应，防止自动刷新与手动检索竞态覆盖新结果
 
@@ -52,7 +54,9 @@ async function openDetail(alarmId) {
 
 // S68 人工复核（IT009 前端入口）：PENDING 告警可一键复核，回填后刷新详情与列表徽标
 async function submitReview(conclusion) {
-  if (!detail.value) return
+  if (!detail.value || reviewing.value) return
+  reviewing.value = true
+  reviewMsg.value = ''
   try {
     await request.post('/alarms/' + detail.value.alarmId + '/review', {
       conclusion,
@@ -61,8 +65,13 @@ async function submitReview(conclusion) {
     reviewNote.value = ''
     detail.value = await request.get('/alarms/' + detail.value.alarmId)
     search()   // 同步刷新列表状态徽标
+    reviewMsg.value = '✓ 复核成功：已标记为' + (conclusion === 'CONFIRMED' ? '确认属实' : '误报')
+    setTimeout(() => { reviewMsg.value = '' }, 3000)   // S74 反馈强化：3 秒后提示消失
   } catch (e) {
-    alert('复核失败：' + (e.response?.data?.message || '服务异常，请稍后重试'))
+    reviewMsg.value = '✗ 复核失败：' + (e.response?.data?.message || '服务异常，请稍后重试')
+    setTimeout(() => { reviewMsg.value = '' }, 4000)
+  } finally {
+    reviewing.value = false
   }
 }
 
@@ -188,37 +197,34 @@ onUnmounted(() => { clearInterval(timer); clearTimeout(debounceTimer); clearInte
         <div class="evidence-title">{{ sourceLabel(detail) }}</div>
         <img :src="'/api/files/' + detail.alarmId" :alt="sourceLabel(detail)" class="evidence-img" />
       </div>
-      <div class="evidence" v-if="reviewable(detail)">
-        <div class="evidence-title">② 机器狗红外复核图</div>
-        <template v-if="detail.review && detail.review.imagePath">
-          <img :src="'/api/files/' + detail.alarmId + '/review'" alt="红外复核图" class="evidence-img" />
+      <!-- S74 复核结果面板：有复核记录即展示结论+方式+备注；图可选（自动复核才有红外图） -->
+      <div class="evidence">
+        <div class="evidence-title">② 复核结果</div>
+        <template v-if="detail.review">
+          <img v-if="detail.review.imagePath" :src="'/api/files/' + detail.alarmId + '/review'" alt="红外复核图" class="evidence-img" />
           <div class="review-conclusion">
             复核结论：
             <span class="badge" :class="{ ok: detail.review.conclusion === 'CONFIRMED', warn: detail.review.conclusion === 'FALSE_ALARM' }">
               {{ statusText(detail.review.conclusion) }}
             </span>
-            · 复核设备 {{ detail.review.reviewerDeviceId }}
+            · 方式：{{ detail.review.reviewerDeviceId === 'MANUAL' ? '人工复核' : '机器狗自动（' + detail.review.reviewerDeviceId + '）' }}
             <span v-if="detail.review.reviewedAt"> · {{ formatTime(detail.review.reviewedAt) }}</span>
           </div>
-          <div class="hint">{{ detail.review.note }}</div>
+          <div class="hint" v-if="detail.review.note">备注：{{ detail.review.note }}</div>
         </template>
         <div v-else class="hint" style="padding: 60px 0; text-align: center">
-          尚未复核（自动派单进行中）
-        </div>
-      </div>
-      <div class="evidence" v-else>
-        <div class="evidence-title">② 现场复核</div>
-        <div class="hint" style="padding: 60px 0; text-align: center">
-          设备状态类告警不派现场复核（由人工处置）
+          <template v-if="reviewable(detail)">尚未复核（自动派单进行中）</template>
+          <template v-else>设备状态类告警不派现场复核（由人工处置）</template>
         </div>
       </div>
     </div>
-    <!-- S68 人工复核入口（IT009）：待复核告警可一键处置 -->
+    <!-- S68 人工复核入口（IT009）：待复核告警可一键处置；S74 反馈强化 -->
     <div v-if="detail.status === 'PENDING'" class="review-actions">
       <span class="review-actions-title">人工复核：</span>
       <input v-model="reviewNote" placeholder="复核备注（可选）" style="flex:1" />
-      <button @click="submitReview('CONFIRMED')">确认属实</button>
-      <button class="ghost" @click="submitReview('FALSE_ALARM')">误报</button>
+      <button :disabled="reviewing" @click="submitReview('CONFIRMED')">确认属实</button>
+      <button class="ghost" :disabled="reviewing" @click="submitReview('FALSE_ALARM')">误报</button>
+      <span v-if="reviewMsg" class="review-toast">{{ reviewMsg }}</span>
     </div>
   </div>
 </template>
@@ -233,6 +239,7 @@ button:disabled { opacity: .4; cursor: not-allowed; }
 .evidence-row { display: flex; gap: 20px; flex-wrap: wrap; }
 .review-actions { display: flex; gap: 10px; align-items: center; margin-top: 14px; padding-top: 12px; border-top: 1px solid #e2e8ee; }
 .review-actions-title { font-size: 13px; color: #33414e; font-weight: 600; }
+.review-toast { font-size: 13px; font-weight: 600; color: #1a8a4a; }
 .evidence { flex: 1 1 320px; }
 .evidence-title { font-size: 13px; font-weight: 600; margin-bottom: 6px; color: #33414e; }
 .evidence-img { width: 100%; border: 1px solid #e2e8ee; border-radius: 8px; display: block; }

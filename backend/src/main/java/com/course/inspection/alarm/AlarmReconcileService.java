@@ -46,12 +46,21 @@ public class AlarmReconcileService {
 
     @Scheduled(fixedDelay = 300_000)
     public void scheduled() {
-        run();
+        run(WINDOW_SECONDS);
     }
 
     public synchronized ReconcileResult run() {
+        return run(WINDOW_SECONDS);
+    }
+
+    /** S74：全量对账（30 天窗口 = 全部有效数据，用于修复历史存量缺口；窗口内文档数 << 10k 上限）。 */
+    public synchronized ReconcileResult runFull() {
+        return run(30L * 24 * 3600);
+    }
+
+    public synchronized ReconcileResult run(long windowSeconds) {
         long start = System.currentTimeMillis();
-        Instant from = Instant.now().minusSeconds(WINDOW_SECONDS);
+        Instant from = Instant.now().minusSeconds(windowSeconds);
 
         // 1) Mongo 权威：窗口内全部告警（近 6 小时量级，直接取回）
         List<AlarmDoc> docs = mongo.find(

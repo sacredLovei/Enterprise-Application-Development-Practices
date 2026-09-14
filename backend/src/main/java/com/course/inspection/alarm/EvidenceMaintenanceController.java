@@ -13,6 +13,7 @@ import org.springframework.web.bind.annotation.RestController;
 
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 /**
  * S63 维护接口：证据图重生成。
@@ -31,19 +32,75 @@ public class EvidenceMaintenanceController {
     private final EvidenceImageGenerator evidence;
     private final HdfsClient hdfs;
     private final AlarmReconcileService reconcile;
+    private final co.elastic.clients.elasticsearch.ElasticsearchClient esClient;
 
     public EvidenceMaintenanceController(MongoTemplate mongo, EvidenceImageGenerator evidence,
-                                         HdfsClient hdfs, AlarmReconcileService reconcile) {
+                                         HdfsClient hdfs, AlarmReconcileService reconcile,
+                                         co.elastic.clients.elasticsearch.ElasticsearchClient esClient) {
         this.mongo = mongo;
         this.evidence = evidence;
         this.hdfs = hdfs;
         this.reconcile = reconcile;
+        this.esClient = esClient;
+    }
+
+    /**
+     * S74（用户反馈）：清理测试注入数据——S50/S62/S63/S72 各轮验收注入的告警
+     * （前缀 pt3k-/tc017-/v06/fontfix-）污染演示数据，从 Mongo 权威、ES 副本、
+     * 关联复核任务与任务日志中一并删除。自然告警（ALM-*）保留。
+     */
+    @PostMapping("/api/maintenance/cleanup-test-data")
+    public Map<String, Object> cleanupTestData() {
+        List<String> prefixes = List.of("pt3k-", "tc017-", "v06", "fontfix-");
+        Criteria or = new Criteria().orOperator(prefixes.stream()
+                .map(p -> Criteria.where("alarmId").regex("^" + java.util.regex.Pattern.quote(p)))
+                .toArray(Criteria[]::new));
+        List<AlarmDoc> victims = mongo.find(Query.query(or), AlarmDoc.class);
+        Set<String> ids = victims.stream().map(AlarmDoc::getAlarmId).collect(java.util.stream.Collectors.toSet());
+        long alarms = ids.size();
+
+        long tasks = 0;
+        long taskLogs = 0;
+        long esDeleted = 0;
+        if (!ids.isEmpty()) {
+            mongo.remove(Query.query(or), AlarmDoc.class);
+            // 关联复核任务与任务日志
+            List<com.course.inspection.task.TaskDoc> ts = mongo.find(
+                    Query.query(Criteria.where("alarmId").in(ids)),
+                    com.course.inspection.task.TaskDoc.class);
+            Set<String> taskIds = ts.stream().map(com.course.inspection.task.TaskDoc::getTaskId)
+                    .collect(java.util.stream.Collectors.toSet());
+            if (!taskIds.isEmpty()) {
+                tasks = mongo.remove(Query.query(Criteria.where("taskId").in(taskIds)),
+                        com.course.inspection.task.TaskDoc.class).getDeletedCount();
+                taskLogs = mongo.remove(Query.query(Criteria.where("taskId").in(taskIds)),
+                        com.course.inspection.task.TaskLogDoc.class).getDeletedCount();
+            }
+            // ES 副本：按前缀 delete_by_query（alarmId 为 keyword，前缀查询命中）
+            try {
+                for (String p : prefixes) {
+                    esDeleted += esClient.deleteByQuery(d -> d.index(AlarmIndexInitializer.INDEX)
+                            .query(q -> q.prefix(pq -> pq.field("alarmId").value(p)))).deleted();
+                }
+            } catch (Exception e) {
+                log.error("测试数据 ES 清理失败（Mongo 已清，ES 由对账兜底）: {}", e.getMessage());
+            }
+        }
+        log.info("测试数据清理完成 alarms={} tasks={} taskLogs={} esDeleted={}",
+                alarms, tasks, taskLogs, esDeleted);
+        return Map.of("alarms", alarms, "tasks", tasks, "taskLogs", taskLogs, "esDeleted", esDeleted);
     }
 
     /** S70：手动触发对账（验收用；平时由 5 分钟定时任务执行）。 */
     @PostMapping("/api/maintenance/reconcile")
     public AlarmReconcileService.ReconcileResult reconcileNow() {
         return reconcile.run();
+    }
+
+    /** S74：全量对账（30 天窗口），修复历史存量缺口。 */
+    @PostMapping("/api/maintenance/reconcile-full")
+    public AlarmReconcileService.ReconcileResult reconcileFull() {
+        return reconcile.runFull();
     }
 
     /** S70：最近一次对账结果。 */
