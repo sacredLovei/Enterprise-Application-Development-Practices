@@ -8,7 +8,8 @@ const alarms = ref([])
 const tasks = ref([])
 const summary = ref({})
 const track = ref(null)   // S69：设备历史轨迹
-let timer
+const health = ref(null)  // S80：系统健康（Mongo/ES/HDFS/Kafka LAG）
+let timer, healthTimer
 
 async function load() {
   try {
@@ -38,11 +39,24 @@ function clearTrack() {
   track.value = null
 }
 
+// S80：系统健康（10 秒轮询）
+async function loadHealth() {
+  try {
+    health.value = await request.get('/system/health')
+  } catch (e) {
+    console.error('health load failed', e)
+  }
+}
+
+function up(v) { return v === 'up' || v === 'green' }
+
 onMounted(() => {
   load()
-  timer = setInterval(load, 3000)   // 总览 3s 轮询（设计报告 5.2.7 刷新策略）
+  loadHealth()
+  timer = setInterval(load, 3000)          // 总览 3s 轮询（设计报告 5.2.7 刷新策略）
+  healthTimer = setInterval(loadHealth, 10000)   // 健康面板 10s 轮询
 })
-onUnmounted(() => clearInterval(timer))
+onUnmounted(() => { clearInterval(timer); clearInterval(healthTimer) })
 </script>
 
 <template>
@@ -51,6 +65,26 @@ onUnmounted(() => clearInterval(timer))
     <div class="stat"><div class="num green">{{ summary.online ?? '-' }}</div><div class="label">在线</div></div>
     <div class="stat"><div class="num orange">{{ summary.alarmCount ?? '-' }}</div><div class="label">近 1 小时告警</div></div>
     <div class="stat"><div class="num red">{{ summary.critical ?? '-' }}</div><div class="label">严重告警</div></div>
+  </div>
+  <div v-if="health" class="card">
+    <h3>系统健康（10 秒轮询）</h3>
+    <div class="health-row">
+      <span class="health-item">
+        <i class="dot" :class="up(health.mongo) ? 'up' : 'down'"></i>MongoDB
+      </span>
+      <span class="health-item">
+        <i class="dot" :class="up(health.es) ? 'up' : 'down'"></i>Elasticsearch（{{ health.es }}）
+      </span>
+      <span class="health-item">
+        <i class="dot" :class="up(health.hdfs) ? 'up' : 'down'"></i>HDFS
+      </span>
+      <span class="health-item">
+        <i class="dot" :class="!health.kafkaLag.some(g => g.lag < 0) ? 'up' : 'down'"></i>Kafka
+      </span>
+      <span v-for="g in health.kafkaLag" :key="g.group" class="health-item lag">
+        LAG {{ g.group }} = <b>{{ g.lag >= 0 ? g.lag : '—' }}</b>
+      </span>
+    </div>
   </div>
   <div class="card">
     <h3>园区设备与告警分布（每 3 秒刷新）</h3>
@@ -75,4 +109,10 @@ onUnmounted(() => clearInterval(timer))
 .num.orange { color: #b97a12; }
 .num.red { color: #c0392b; }
 .label { color: #7b8a99; font-size: 12px; margin-top: 4px; }
+.health-row { display: flex; gap: 18px; flex-wrap: wrap; align-items: center; font-size: 13px; color: #33414e; }
+.health-item { display: inline-flex; align-items: center; gap: 6px; }
+.health-item.lag { color: #7b8a99; }
+.dot { width: 9px; height: 9px; border-radius: 50%; display: inline-block; }
+.dot.up { background: #1a8a4a; }
+.dot.down { background: #c0392b; }
 </style>
