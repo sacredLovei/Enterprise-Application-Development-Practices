@@ -13,6 +13,12 @@ const reviewNote = ref('')   // S68：人工复核备注
 const reviewing = ref(false) // S74：复核提交中（按钮禁用防重复点击）
 const reviewMsg = ref('')    // S74：复核成功提示（3 秒后消失）
 const photoFile = ref(null)  // S75：人工复核现场照片
+const bigImg = ref('')       // S81：大图预览
+
+// S81：点击证据图放大
+function zoomImg(src) {
+  bigImg.value = src
+}
 let timer, debounceTimer, deviceTimer
 let seq = 0   // 请求序号：丢弃过期响应，防止自动刷新与手动检索竞态覆盖新结果
 
@@ -204,13 +210,13 @@ onUnmounted(() => { clearInterval(timer); clearTimeout(debounceTimer); clearInte
     <div class="evidence-row">
       <div class="evidence">
         <div class="evidence-title">{{ sourceLabel(detail) }}</div>
-        <img :src="'/api/files/' + detail.alarmId" :alt="sourceLabel(detail)" class="evidence-img" />
+        <img :src="'/api/files/' + detail.alarmId" :alt="sourceLabel(detail)" class="evidence-img" @click="zoomImg('/api/files/' + detail.alarmId)" />
       </div>
       <!-- S74 复核结果面板：有复核记录即展示结论+方式+备注；图可选（自动复核红外图/人工现场照片） -->
       <div class="evidence">
         <div class="evidence-title">② 复核结果</div>
         <template v-if="detail.review">
-          <img v-if="detail.review.imagePath" :src="'/api/files/' + detail.alarmId + '/review'" alt="红外复核图" class="evidence-img" />
+          <img v-if="detail.review.imagePath" :src="'/api/files/' + detail.alarmId + '/review'" alt="红外复核图" class="evidence-img" @click="zoomImg('/api/files/' + detail.alarmId + '/review')" />
           <div class="review-conclusion">
             复核结论：
             <span class="badge" :class="{ ok: detail.review.conclusion === 'CONFIRMED', warn: detail.review.conclusion === 'FALSE_ALARM' }">
@@ -222,7 +228,7 @@ onUnmounted(() => { clearInterval(timer); clearTimeout(debounceTimer); clearInte
           <div class="hint" v-if="detail.review.note">备注：{{ detail.review.note }}</div>
           <div v-if="detail.review.manualPhotoPath" style="margin-top:10px">
             <div class="evidence-title" style="font-size:12px">📷 现场照片（人工拍摄）</div>
-            <img :src="'/api/files/' + detail.alarmId + '/review-photo'" alt="现场照片" class="evidence-img" />
+            <img :src="'/api/files/' + detail.alarmId + '/review-photo'" alt="现场照片" class="evidence-img" @click="zoomImg('/api/files/' + detail.alarmId + '/review-photo')" />
           </div>
         </template>
         <div v-else class="hint" style="padding: 60px 0; text-align: center">
@@ -244,6 +250,10 @@ onUnmounted(() => { clearInterval(timer); clearTimeout(debounceTimer); clearInte
       <span v-if="reviewMsg" class="review-toast">{{ reviewMsg }}</span>
     </div>
   </div>
+  <!-- S81 大图预览遮罩（点击任意处关闭） -->
+  <div v-if="bigImg" class="lightbox" @click="bigImg = null">
+    <img :src="bigImg" class="lightbox-img" alt="大图预览" />
+  </div>
 </template>
 
 <style scoped>
@@ -258,6 +268,9 @@ button:disabled { opacity: .4; cursor: not-allowed; }
 .review-actions-title { font-size: 13px; color: #33414e; font-weight: 600; }
 .review-toast { font-size: 13px; font-weight: 600; color: #1a8a4a; }
 .photo-btn { display: inline-flex; align-items: center; gap: 4px; cursor: pointer; }
+.evidence-img { cursor: zoom-in; }
+.lightbox { position: fixed; inset: 0; background: rgba(10, 14, 20, 0.88); display: flex; align-items: center; justify-content: center; z-index: 9999; cursor: zoom-out; }
+.lightbox-img { max-width: 92%; max-height: 92%; border-radius: 8px; box-shadow: 0 8px 40px rgba(0, 0, 0, 0.6); }
 .evidence { flex: 1 1 320px; }
 .evidence-title { font-size: 13px; font-weight: 600; margin-bottom: 6px; color: #33414e; }
 .evidence-img { width: 100%; border: 1px solid #e2e8ee; border-radius: 8px; display: block; }
