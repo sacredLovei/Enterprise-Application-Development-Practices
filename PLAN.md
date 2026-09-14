@@ -287,39 +287,45 @@
 - **目标**：springdoc 一键生成接口文档与调试界面
 - **内容**：pom 引入 springdoc-openapi-starter-webmvc-ui；Nginx 放行 /swagger-ui/ 与 /v3/api-docs
 - **验收标准**：经 8080 访问 /swagger-ui/index.html 可见全部接口并可 Try it out
+- **验收结论**（2026-09-14）：**全部达到**。springdoc 2.5.0 接入，nginx 放行两条路径；实测 swagger-ui 200、/v3/api-docs 含 25 个接口路径
 - **产出物**：pom/nginx 变更
 
 ### S77 后端单元测试（P2）
-- **状态**：pending
+- **状态**：done
 - **目标**：核心逻辑补 JUnit 单测（现状仅有集成验收脚本）
 - **内容**：spring-boot-starter-test 引入；TaskService 状态机（Mockito 打桩 Mongo/Kafka）、PathBuilder 路径规范、Json 序列化往返、simulator 的 TelemetryGenerator/GroundNetwork 纯逻辑
 - **验收标准**：`mvn test` 全绿且用例覆盖核心流转（create/cancel/applyReceipt/路径格式）
+- **验收结论**（2026-09-14）：**全部达到**。后端 **9/9**（TaskService 状态机 4 例含离线拒绝/并发取消/回执流转、PathBuilder 3 例、Json 中文往返 2 例）+ 仿真 **6/6**（路网 BFS 3 例、轨迹 3 例）全绿
 - **产出物**：backend/simulator 测试类
 
 ### S78 DLQ 死信重放维护接口（P2）
-- **状态**：pending
+- **状态**：done
 - **目标**：死信主题可查看、可重放回告警主题
 - **内容**：GET /api/maintenance/dlq/peek?n=5（预览）与 POST /api/maintenance/dlq/replay-all（从头重放回 inspection.alarm 并提交位点）
 - **验收标准**：peek 返回消息列表；replay-all 后目标主题新增对应消息
+- **验收结论**（2026-09-14）：**全部达到**。peek 实测 3 条历史坏消息可见；replay-all 实测**重放 22 条**，3 条真正无法解析的消息按预期再次失败回到死信（工具语义：恢复瞬时故障类死信）。排错 1 例：seekToBeginning 后首次 poll 空轮询抖动致返回 0 → 改为容忍首轮空轮询
 - **产出物**：backend 变更 + 验收记录
 
 ### S79 数据备份脚本（P2/S60）
-- **状态**：pending
+- **状态**：done
 - **目标**：一键备份 git 仓库 + MongoDB 全量 + 编排配置
-- **内容**：docker/init/backup.ps1——git bundle --all、mongodump --archive、docker compose config，产物入 _backups/（gitignore）；HDFS 数据在命名卷中随 Docker 持久化，脚本输出提示
+- **内容**：docker/init/backup.ps1——git bundle --all、mongodump、docker compose config，产物入 _backups/（gitignore）；HDFS 数据在命名卷中随 Docker 持久化，脚本输出提示
 - **验收标准**：脚本执行成功且产物可列；bundle 可从空目录恢复仓库（实测 clone 校验）
+- **验收结论**（2026-09-14）：**全部达到**。bundle 0.7MB + mongodump 各集合 BSON + compose 快照全部产出；**git clone bundle 到空目录，恢复 HEAD 与原仓库完全一致（实测 True）**
 - **产出物**：backup.ps1 + 备份产物
 
 ### S80 总览组件健康/LAG 面板（P2）
-- **状态**：pending
+- **状态**：done
 - **目标**：总览页一眼可见六组件健康与 Kafka 消费积压
 - **内容**：GET /api/system/health（Mongo ping / ES cluster health / Kafka 消费组 LAG / HDFS 状态）→ 总览页健康面板（绿点/红点 + LAG 数字，10s 轮询）
 - **验收标准**：接口返回四组件状态与 LAG；前端面板与实测状态一致
+- **验收结论**（2026-09-14）：**全部达到**。接口实测 `mongo:up / es:green / hdfs:up` + 四消费组 LAG 实时（alarm 组重放 24 条后回落）；前端绿点面板 10s 轮询已上线
 - **产出物**：backend+web 变更
 
 ### S81 告警大图预览（P2）
-- **状态**：pending
+- **状态**：done
 - **目标**：证据图点击放大查看
 - **内容**：详情面板证据图点击弹出全屏遮罩大图（点击关闭）
 - **验收标准**：点击放大/关闭可用
+- **验收结论**（2026-09-14）：**全部达到**。证据图/红外复核图/现场照片三处图片均挂放大事件，全屏遮罩 + 点击关闭，构建产物验证含 lightbox
 - **产出物**：web 变更
