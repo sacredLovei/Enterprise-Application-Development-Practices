@@ -90,6 +90,7 @@
 | 2026-09-14 | 5a75868 | **S82 用户反馈（大图视觉）**：证据图/复核图生成分辨率 640×360 → **1280×720**（字体同步放大），大图模式改 object-fit 满屏；维护接口 `regenerate-evidence?all=true` 与 `regenerate-review-images` 全量重生成——实测 **1008 证据图 + 73 复核图 fail=0**，下载验证尺寸 1280×720 | AI |
 | 2026-09-14 | 18b6c43 | **S83 用户反馈（机器狗误报无法人工纠错）**：复核语义升级——自动复核为**初判**、人工为**终审**：CONFIRMED/FALSE_ALARM（非 RESOLVED）均可人工复判推翻；首次推翻时机器狗初判快照入 `review.autoConclusion/autoReviewerDeviceId/autoReviewedAt`（审计链）；RESOLVED 禁止复核（409）。实测：ROBOT-002 判 CONFIRMED → 人工复判 FALSE_ALARM，autoConclusion=CONFIRMED 保留。前端：已复核告警显示"人工复判"入口与"机器狗初判→人工终审"链 | AI |
 | 2026-09-14 | 0fbdc0e | **S84 用户反馈（终审后仍可再判的状态问题）**：人工终审后复核入口锁定——按钮/照片上传关闭，显示"🔒 人工终审已完成，结论锁定"提示；入口仅在 PENDING（人工初判）或机器狗已初判（人工复判）时显示；如需改结论由管理员重新打开（后续版本可加撤销功能） | AI |
+| 2026-09-14 | 本步 | **版本库推送远端（用户要求，S60 兑现）**：配置 origin → GitHub `sacredLovei/Enterprise-Application-Development-Practices`；直连被重置（DNS 污染，风险 #9 同源）→ 经 Clash 代理推送成功：**master + v0.1~v0.7 全部标签**；仓库级 git 代理固化（.git/config），风险 #5 销项 | AI |
 
 ## 4. 决策记录（永不删除，只可被新决策取代）
 
@@ -140,7 +141,7 @@
 2. 排错预案 P-1~P-15（设计报告 5.3 节）：Kafka 地址回传、NameNode 重复格式化、WebHDFS 重定向、ES yellow、refresh 语义、geo 经纬序、时区等。
 3. 宿主机内存建议 ≥ 12 GB；实测本机总内存 **15.7 GB**（勉强达标）→ WSL2 内存分配定为 **8 GB**（D-14），资源不足时先停 Kibana、减少仿真实例（设计报告 4.6.3(5)）。
 4. Word 打开期间会在工作区生成 `~$*.docx` 锁文件——已被 .gitignore 排除；注意 Word 占用时不要删除/覆盖对应 docx。
-5. 版本库目前仅存本地，无远端；异地备份为候选步骤 S60。
+5. **已解决（2026-09-14）**：版本库已推送远端——GitHub `sacredLovei/Enterprise-Application-Development-Practices`（origin，master + v0.1~v0.7 全部标签）；本机直连 GitHub 被重置（DNS 污染），git 仓库级代理已固化（.git/config → 127.0.0.1:7897），后续直接 `git push`。
 6. 测试用例 TC/IT/PT 仅完成设计（第 6 章），尚未执行——执行是候选步骤 S50。
 7. 全局 `JAVA_HOME` 仍指向 JDK 8（1.8.0_151）：所有 Java 构建命令必须内联覆盖 `JAVA_HOME` 指向 `tools\jdk-21`（见 D-13）；用户可自行修改系统环境变量（可选）。
 8. 沙箱网络限制：AI 执行环境的 curl/Invoke-WebRequest 因 TLS 凭据不可用（SEC_E_NO_CREDENTIALS）无法下载外部文件；需要联网下载（Docker Desktop 安装包等）时由用户在系统终端执行。
