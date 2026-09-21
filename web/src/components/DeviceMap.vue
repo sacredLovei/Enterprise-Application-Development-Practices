@@ -1,7 +1,8 @@
 <script setup>
-import { ref, onMounted, watch } from 'vue'
+import { ref, onMounted, onUnmounted, watch } from 'vue'
 import L from 'leaflet'
 import 'leaflet/dist/leaflet.css'
+import { getTheme } from '../utils/theme'
 
 const props = defineProps({
   devices: { type: Array, default: () => [] },
@@ -15,27 +16,119 @@ const emit = defineEmits(['track-requested', 'track-clear'])
 const mapEl = ref(null)
 let map, deviceLayer, alarmLayer, targetLayer, trackLayer
 
-const UAV_ICON = L.divIcon({ className: '', iconSize: [34, 34], html: '<div style="background:#2f6fed;color:#fff;border-radius:50%;width:34px;height:34px;line-height:34px;text-align:center;font-size:20px;box-shadow:0 1px 4px rgba(0,0,0,.35)">✈</div>' })
-const DOG_ICON = L.divIcon({ className: '', iconSize: [34, 34], html: '<div style="background:#1a8a4a;color:#fff;border-radius:50%;width:34px;height:34px;line-height:34px;text-align:center;font-size:20px;box-shadow:0 1px 4px rgba(0,0,0,.35)">🐕</div>' })
-// 告警图标按等级区分：CRITICAL 红色大圆，WARN 橙色（等级口径见设计报告 4.5.1）
-const ALARM_CRITICAL_ICON = L.divIcon({ className: '', iconSize: [28, 28], html: '<div style="background:#c0392b;color:#fff;border-radius:50%;width:28px;height:28px;line-height:28px;text-align:center;font-size:17px;font-weight:700;box-shadow:0 0 0 3px rgba(192,57,43,.25),0 1px 4px rgba(0,0,0,.4)">!</div>' })
-const ALARM_WARN_ICON = L.divIcon({ className: '', iconSize: [24, 24], html: '<div style="background:#e67e22;color:#fff;border-radius:50%;width:24px;height:24px;line-height:24px;text-align:center;font-size:15px;font-weight:700;box-shadow:0 0 0 3px rgba(230,126,34,.2),0 1px 4px rgba(0,0,0,.35)">!</div>' })
-// 任务目标点（定点复核/区域覆盖中心）：红色十字靶标
-const TARGET_ICON = L.divIcon({ className: '', iconSize: [26, 26], html: '<div style="color:#c0392b;width:26px;height:26px;text-align:center;line-height:26px;font-size:22px;text-shadow:0 1px 3px rgba(0,0,0,.5)">🎯</div>' })
+// ============================================================
+// S97-c 地图焕新
+// 1) 底图：CARTO Positron（亮）/ Dark Matter（暗）——低饱和、专为数据可视化设计；
+//    降级保守化（风险 #48 教训）：连续 3 次瓦片失败且从未成功才回退 OSM，
+//    一次成功即视为可用，避免代理抖动导致底图被永久换掉。
+// 2) 设备标记：矢量 SVG 图标（无人机三角翼 / 机器狗爪印），颜色=类型+状态；
+//    告警点：等级配色 + CRITICAL 脉冲扩散圈。
+// 颜色全部走 tokens.css 变量——divIcon 注入 DOM 后随主题自动适配。
+// ============================================================
+
+const BASEMAPS = {
+  light: {
+    url: 'https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png',
+    attribution: '&copy; OpenStreetMap &copy; CARTO'
+  },
+  dark: {
+    url: 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}.png',
+    attribution: '&copy; OpenStreetMap &copy; CARTO'
+  },
+  fallback: {
+    url: 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',
+    attribution: '&copy; OpenStreetMap'
+  }
+}
+
+let baseLayer = null
+let tileOk = false        // 当前底图是否有瓦片成功加载
+let tileFails = 0         // 连续失败计数（成功即清零）
+let usingFallback = false // 是否已永久回退 OSM
+
+function currentBaseKey() {
+  return document.documentElement.dataset.theme === 'dark' ? 'dark' : 'light'
+}
+
+function setBaseLayer() {
+  if (!map) return
+  const key = usingFallback ? 'fallback' : currentBaseKey()
+  const conf = BASEMAPS[key]
+  if (baseLayer) map.removeLayer(baseLayer)
+  tileOk = false
+  tileFails = 0
+  baseLayer = L.tileLayer(conf.url, {
+    attribution: conf.attribution,
+    subdomains: key === 'fallback' ? 'abc' : 'abcd',
+    maxZoom: 19
+  })
+  baseLayer.on('tileload', () => { tileOk = true; tileFails = 0 })
+  baseLayer.on('tileerror', () => {
+    tileFails++
+    if (tileFails >= 3 && !tileOk && !usingFallback) {
+      usingFallback = true        // 风险 #48：连续 3 次失败且从未成功才降级，一次成功即视为可用
+      setBaseLayer()
+    }
+  })
+  baseLayer.addTo(map)
+}
+
+// 设备标记：divIcon 内嵌 SVG，颜色经 CSS 变量随主题适配
+function deviceIcon(deviceType, status) {
+  const offline = status !== 'ONLINE'
+  const cls = 'dev-pin ' + (deviceType === 'UAV' ? 'pin-uav' : 'pin-dog') + (offline ? ' pin-offline' : '')
+  const glyph = deviceType === 'UAV'
+    ? '<svg viewBox="0 0 24 24" width="17" height="17"><path d="m2 21 20-9L2 3l3 9-3 9z" fill="#fff"/></svg>'
+    : '<svg viewBox="0 0 24 24" width="17" height="17"><g fill="#fff"><circle cx="8" cy="6.5" r="2"/><circle cx="16" cy="6.5" r="2"/><circle cx="4.8" cy="11.5" r="1.8"/><circle cx="19.2" cy="11.5" r="1.8"/><path d="M12 10.5c-3 0-5.5 2.5-5.5 5 0 1.7 1.3 3 3 3 .9 0 1.7-.4 2.5-.4s1.6.4 2.5.4c1.7 0 3-1.3 3-3 0-2.5-2.5-5-5.5-5z"/></g></svg>'
+  return L.divIcon({
+    className: '',
+    iconSize: [34, 34],
+    iconAnchor: [17, 17],
+    html: `<div class="${cls}">${glyph}</div>`
+  })
+}
+
+// 告警点：等级配色 + CRITICAL 脉冲圈
+function alarmIcon(level) {
+  const cls = 'alarm-pin ' + (level === 'CRITICAL' ? 'alarm-critical' : 'alarm-warn')
+  return L.divIcon({
+    className: '',
+    iconSize: [26, 26],
+    iconAnchor: [13, 13],
+    html: `<div class="${cls}"><span>!</span></div>`
+  })
+}
+
+// 任务目标点：红色十字靶标（替换 🎯 emoji）——SVG 属性不支持 var()，
+// 经容器 color + currentColor 适配主题
+const TARGET_ICON = L.divIcon({
+  className: '',
+  iconSize: [26, 26],
+  iconAnchor: [13, 13],
+  html: '<div class="target-pin" style="color:var(--danger)"><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><circle cx="12" cy="12" r="6.5"/><path d="M12 2v4M12 18v4M2 12h4M18 12h4"/><circle cx="12" cy="12" r="1.4" fill="currentColor" stroke="none"/></svg></div>'
+})
+
+function onThemeChanged() {
+  if (!usingFallback) setBaseLayer()
+  render()   // 标记用 CSS 变量可自动适配，但 tooltip/popup 需重渲染的场景保留刷新
+}
 
 onMounted(() => {
   map = L.map(mapEl.value).setView([39.9092, 116.3974], 16)
-  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-    attribution: '&copy; OpenStreetMap'
-  }).addTo(map)
+  setBaseLayer()
   deviceLayer = L.layerGroup().addTo(map)
   alarmLayer = L.layerGroup().addTo(map)
   targetLayer = L.layerGroup().addTo(map)
   trackLayer = L.layerGroup().addTo(map)
   // S69：Leaflet 弹窗 HTML 无法绑定 Vue 事件，经 window 桥接转发轨迹请求
   window.__dshTrack = (id) => emit('track-requested', id)
+  window.addEventListener('inspection-theme-changed', onThemeChanged)
   render()
   renderTrack()
+})
+
+onUnmounted(() => {
+  window.removeEventListener('inspection-theme-changed', onThemeChanged)
 })
 
 watch(() => [props.devices, props.alarms, props.tasks], render, { deep: true })
@@ -65,7 +158,7 @@ function render() {
     // 设备台账无 location 字段时，用最近遥测位置（接口侧已拼接 lastLocation）
     const loc = d.lastLocation || (d.lng != null ? { lng: d.lng, lat: d.lat } : null)
     if (!loc) return
-    const icon = d.deviceType === 'UAV' ? UAV_ICON : DOG_ICON
+    const icon = deviceIcon(d.deviceType, d.status)
 
     // 悬浮面板：设备信息 + 当前任务与备注（用户要求）
     const acts = activeTasks(d.deviceId)
@@ -76,14 +169,14 @@ function render() {
       taskHtml = `<br/>━━━━━━━━━━<br/><b>任务：${label}</b>` +
         `<br/>状态：${cur.status === 'RUNNING' ? '执行中' : '已下发待执行'}` +
         `<br/>备注：${cur.remark || '—'}` +
-        `<br/><span style="font-size:11px;color:#7b8a99">${cur.taskId}</span>`
+        `<br/><span style="font-size:11px;color:var(--text-3)">${cur.taskId}</span>`
       if (acts.length > 1) {
         taskHtml += `<br/>另有 ${acts.length - 1} 个任务排队中`
       }
     }
 
     L.marker([loc.lat, loc.lng], { icon })
-      .bindTooltip(d.deviceId, { permanent: true, direction: 'right', offset: [8, 0], className: 'device-label' })
+      .bindTooltip(d.deviceId, { permanent: true, direction: 'right', offset: [10, 0], className: 'device-label' })
       .bindPopup(`<b>${d.deviceId}</b><br/>类型：${d.deviceType}<br/>状态：${d.status}<br/>电量：${d.battery}%${taskHtml}` +
         `<br/><a href="#" onclick="window.__dshTrack('${d.deviceId}');return false;" style="font-size:12px">📈 最近 10 分钟轨迹</a>`)
       .addTo(deviceLayer)
@@ -93,13 +186,13 @@ function render() {
     const loc = Array.isArray(a.location) ? { lng: a.location[0], lat: a.location[1] }
       : (a.lng != null ? { lng: a.lng, lat: a.lat } : null)
     if (!loc || (loc.lng === 0 && loc.lat === 0)) return
-    const icon = a.level === 'CRITICAL' ? ALARM_CRITICAL_ICON : ALARM_WARN_ICON
+    const icon = alarmIcon(a.level)
     L.marker([loc.lat, loc.lng], { icon })
       .bindPopup(`<b>${a.alarmType}</b><br/>等级：${a.level}<br/>${a.description ?? ''}`)
       .addTo(alarmLayer)
   })
 
-  // 任务目标点：仅展示执行中/已下发且带坐标的任务（🎯）
+  // 任务目标点：仅展示执行中/已下发且带坐标的任务（十字靶标）
   props.tasks?.forEach(t => {
     if (!t.targetLng || !t.targetLat) return
     if (!['DISPATCHED', 'RUNNING'].includes(t.status)) return
@@ -110,17 +203,26 @@ function render() {
   })
 }
 
-/** S69：轨迹回放图层——折线 + 起终点标记。 */
+/** S69：轨迹回放图层——渐隐折线（旧点淡、新点浓）+ 起终点标记。 */
 function renderTrack() {
   if (!map || !trackLayer) return
   trackLayer.clearLayers()
   const pts = props.track
   if (!pts || pts.length < 2) return
   const latlngs = pts.map(p => [p.lat, p.lng])
-  L.polyline(latlngs, { color: '#c0392b', weight: 3, opacity: 0.85 }).addTo(trackLayer)
-  L.circleMarker(latlngs[0], { radius: 5, color: '#2f6fed', fillColor: '#2f6fed', fillOpacity: 1 })
+  // 渐隐：分段绘制，透明度随进度 0.25 → 0.9（S97-c，替代单色折线）
+  const segs = latlngs.length - 1
+  for (let i = 0; i < segs; i++) {
+    const op = 0.25 + 0.65 * (i / segs)
+    L.polyline([latlngs[i], latlngs[i + 1]], {
+      color: getComputedStyle(document.documentElement).getPropertyValue('--accent').trim() || '#2563eb',
+      weight: 3,
+      opacity: op
+    }).addTo(trackLayer)
+  }
+  L.circleMarker(latlngs[0], { radius: 5, color: 'var(--accent)', fillColor: 'var(--accent)', fillOpacity: 1 })
     .bindTooltip('起点', { direction: 'top', className: 'device-label' }).addTo(trackLayer)
-  L.circleMarker(latlngs[latlngs.length - 1], { radius: 5, color: '#1a8a4a', fillColor: '#1a8a4a', fillOpacity: 1 })
+  L.circleMarker(latlngs[latlngs.length - 1], { radius: 5, color: 'var(--ok)', fillColor: 'var(--ok)', fillOpacity: 1 })
     .bindTooltip('当前位置', { direction: 'top', className: 'device-label' }).addTo(trackLayer)
   map.fitBounds(L.latLngBounds(latlngs), { padding: [30, 30] })
 }
@@ -131,17 +233,79 @@ function renderTrack() {
 </template>
 
 <style scoped>
-.map { height: 520px; width: 100%; border-radius: 10px; z-index: 1; }
-/* 常驻设备标签：白底圆角，随图标移动 */
+.map { height: 520px; width: 100%; border-radius: var(--radius-2); z-index: 1; }
+
+/* 常驻设备标签：卡片化，随主题适配 */
 :deep(.device-label) {
-  background: rgba(255, 255, 255, 0.92);
-  border: 1px solid #c9d4df;
+  background: var(--bg-card);
+  border: 1px solid var(--border-strong);
   border-radius: 6px;
   padding: 1px 6px;
   font-size: 12px;
   font-weight: 600;
-  color: #24303c;
-  box-shadow: 0 1px 3px rgba(20, 33, 46, 0.2);
+  color: var(--text-1);
+  box-shadow: var(--shadow-1);
 }
 :deep(.device-label::before) { display: none; }
+
+/* S97-c：设备矢量标记（divIcon 注入节点在组件子树内，经 :deep 命中） */
+:deep(.dev-pin) {
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 2px solid var(--bg-card);
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.35);
+}
+:deep(.pin-uav) { background: var(--accent); }
+:deep(.pin-dog) { background: var(--ok); }
+:deep(.pin-offline) { background: var(--text-3); }
+:deep(.pin-offline svg) { opacity: 0.85; }
+
+/* 告警点：实心圆 + CRITICAL 脉冲扩散圈 */
+:deep(.alarm-pin) {
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #fff;
+  font-size: 15px;
+  font-weight: 700;
+  border: 2px solid var(--bg-card);
+}
+:deep(.alarm-critical) { background: var(--danger); animation: alarm-pulse 2s ease-out infinite; }
+:deep(.alarm-warn) { background: var(--warn); }
+:deep(.target-pin) {
+  width: 26px;
+  height: 26px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.4));
+}
+@keyframes alarm-pulse {
+  0%   { box-shadow: 0 0 0 0 rgba(220, 38, 38, 0.55); }
+  70%  { box-shadow: 0 0 0 14px rgba(220, 38, 38, 0); }
+  100% { box-shadow: 0 0 0 0 rgba(220, 38, 38, 0); }
+}
+
+/* Leaflet 控件与弹窗随主题适配（全部走变量，暗色由 tokens 自动生效） */
+:deep(.leaflet-popup-content-wrapper),
+:deep(.leaflet-popup-tip) { background: var(--bg-card); color: var(--text-1); }
+:deep(.leaflet-popup-content) { font-size: 13px; line-height: 1.55; }
+:deep(.leaflet-popup-content a) { color: var(--accent); }
+:deep(.leaflet-bar a) {
+  background: var(--bg-card);
+  color: var(--text-2);
+  border-bottom-color: var(--border);
+}
+:deep(.leaflet-control-attribution) {
+  background: var(--bg-sidebar);
+  color: var(--text-3);
+}
+:deep(.leaflet-control-attribution a) { color: var(--text-2); }
 </style>
