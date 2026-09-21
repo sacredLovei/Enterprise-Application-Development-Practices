@@ -99,7 +99,7 @@ onMounted(() => {
         }
       }
     }
-    // 光标：向附近粒子连线 + 光晕
+    // 光标：仅向附近粒子连线（用户反馈：不要光晕色块与中心点）
     if (mouse.active) {
       ctx.lineWidth = 0.9
       for (const p of pts) {
@@ -114,15 +114,6 @@ onMounted(() => {
           ctx.stroke()
         }
       }
-      ctx.globalAlpha = 0.16
-      ctx.fillStyle = dot
-      ctx.beginPath()
-      ctx.arc(mouse.x, mouse.y, 34, 0, Math.PI * 2)
-      ctx.fill()
-      ctx.globalAlpha = 0.85
-      ctx.beginPath()
-      ctx.arc(mouse.x, mouse.y, 2.6, 0, Math.PI * 2)
-      ctx.fill()
     }
     // 粒子
     ctx.globalAlpha = 0.55
