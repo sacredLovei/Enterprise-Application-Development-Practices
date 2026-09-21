@@ -3,11 +3,21 @@ import { computed, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import request, { clearAuth, getUser } from './api/request'
 import AppIcon from './components/AppIcon.vue'
+import { getTheme, toggleTheme } from './utils/theme'
 
 const route = useRoute()
 const router = useRouter()
 const backend = ref('')
 const user = ref(getUser())
+const theme = ref(getTheme())   // S97-b：亮/暗主题状态（按钮图标随动）
+
+// S98 修复（用户反馈"点暗色模式没生效"）：S97-b 提交的 App.vue 模板含主题按钮，
+// 但 script 侧的 theme ref 与 toggleTheme import 缺失——模板引用未定义绑定，
+// 生产构建回退 ctx 查找得 undefined，点击即抛错且被 Vue 生产 errorHandler 吞掉
+// （无控制台几乎不可感知）。修复：补齐 script 定义；事件改具名函数引用（最保守形态）。
+function onToggleTheme() {
+  theme.value = toggleTheme()
+}
 
 // 登录态随路由变化刷新（App 实例常驻，登录成功跳转后需要重新读取 localStorage）
 watch(() => route.fullPath, () => { user.value = getUser() })
@@ -61,7 +71,7 @@ async function logout() {
           class="logout theme-toggle"
           type="button"
           :title="theme === 'dark' ? '切换为亮色主题' : '切换为暗色主题'"
-          @click="theme = toggleTheme()"
+          @click="onToggleTheme"
         >
           <AppIcon :name="theme === 'dark' ? 'sun' : 'moon'" :size="14" />
           <span>{{ theme === 'dark' ? '亮色模式' : '暗色模式' }}</span>
