@@ -508,5 +508,6 @@
 - **提交**：c6d886c
 - **补充（c038e25，用户需求两连）**：① 主题切换圆形扩散动效——theme.js 新增 `toggleThemeAt(x,y)`（View Transitions API，从触发点 clip-path circle 展开 0.55s；不支持/reduced-motion 直接切换），style.css 注册 `::view-transition` 动画，App.vue 侧边栏按钮传点击坐标；② 登录页右上角新增无边框主题切换（moon/sun SVG 图标 + 文字），雷达面板/粒子背景随 data-theme 自动适配。验证：vite build 7.88s；无头截图按钮正常（docs/_s102-login-toggle.png）；扩散动效以真实点击为准
 - **补充（712d935 + 34e4000，用户定制动效方向与圆心）**：切**亮色**=新画面从**屏幕中心**向外扩散（vt-expand：circle 0→150%，新帧置顶）；切**暗色**=旧画面（亮色）向**屏幕中心**收缩消失（vt-contract：circle 142%→0，旧帧 z-index 置顶盖住新帧）；theme.js 按 target 设 `data-vt=to-light/to-dark`，transition.finished 后清理。34e4000 修复 712d935 的 toggleTheme 重名声明（构建失败）。**同批（用户需求）**：仪表盘全部页面切换加平滑过渡（App.vue RouterView v-slot + Transition mode=out-in：旧页 0.16s 淡出上移、新页淡入上浮，reduced-motion 禁用）
+- **修复（d59e8e1，用户反馈"从地图总览/统计看板切向其他页面加载不出来"）**：**多根组件卡死页面过渡**——Vue Transition 要求单根节点，Overview/Stats/TasksList/AlarmsList/AlarmDetail 均为多根 fragment，mode=out-in 下旧页无法卸载 → 白屏且后续导航全部卡死（与"切到这两页之后再切又加载不出来"症状完全吻合）。修复：五视图模板包一层单根容器（内容/逻辑零改动）。端到端验证：导航链 总览→任务管理→统计看板 全部正常渲染（docs/_s103-nav.png）。教训入 STATE 风险 #54
 - **补充（db2cf4c 之后的连续微调）**：移除"清除轨迹"手动按钮后，另按用户反馈调侧边栏导航项（字号 14→15.5px、内边距 11→15px、图标 18→20px）
 - **补充（用户要求）**：移除"清除轨迹"手动按钮——弹窗关闭自动清除已覆盖该场景（clearTrack 函数保留供 track-clear 事件使用）
