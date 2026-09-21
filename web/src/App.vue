@@ -12,6 +12,25 @@ const backend = ref('')
 const user = ref(getUser())
 const theme = ref(getTheme())   // S97-b：亮/暗主题状态（按钮图标随动）
 
+// S102 补充：页面切换过渡名——单层方案（替代"外层淡出+内层水平滑动"的嵌套方案，
+// 嵌套 Transition × 异步路由组件存在切换失效问题）：
+// 同模块子页间（任务/告警的子项）→ 方向感知水平滑动；跨模块 → 上移淡出。
+const transName = ref('page')
+const depthOf = (p) => {
+  if (p.startsWith('/tasks/dispatch')) return { m: '/tasks', d: 0 }
+  if (p.startsWith('/tasks/list')) return { m: '/tasks', d: 1 }
+  if (p.startsWith('/alarms/detail')) return { m: '/alarms', d: 1 }
+  if (p.startsWith('/alarms/list')) return { m: '/alarms', d: 0 }
+  return { m: p, d: 0 }
+}
+watch(() => route.path, (to, from) => {
+  const a = depthOf(to)
+  const b = depthOf(from)
+  transName.value = a.m === b.m && a.m.startsWith('/') && b.m !== '/'
+    ? (a.d > b.d ? 'slide-left' : 'slide-right')
+    : 'page'
+})
+
 // S98 修复（用户反馈"点暗色模式没生效"）：S97-b 提交的 App.vue 模板含主题按钮，
 // 但 script 侧的 theme ref 与 toggleTheme import 缺失——模板引用未定义绑定，
 // 生产构建回退 ctx 查找得 undefined，点击即抛错且被 Vue 生产 errorHandler 吞掉
@@ -85,9 +104,12 @@ async function logout() {
     <!-- 主内容区 -->
     <main class="content">
       <h2 class="page-title">{{ route.meta.title }}</h2>
-      <!-- S102 补充：页面切换平滑动效（out-in：旧页淡出上移、新页淡入下落） -->
+      <!-- S102 补充：页面切换平滑动效（out-in：旧页淡出上移、新页淡入下落）。
+           key 用顶级路由段而非完整路径——子页切换（任务/告警的子项）时不重建布局壳，
+           由壳内层的水平滑动过渡接管；跨模块导航仍触发本层过渡 -->
+      <!-- S102 补充：单层页面过渡（key=完整路径；过渡名由 transName 按路由深度动态决定） -->
       <RouterView v-slot="{ Component }">
-        <Transition name="page" mode="out-in">
+        <Transition :name="transName" mode="out-in" :duration="170">
           <component :is="Component" :key="route.path" />
         </Transition>
       </RouterView>
