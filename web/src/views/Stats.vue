@@ -93,6 +93,8 @@ onUnmounted(() => {
 </script>
 
 <template>
+  <!-- S102 修复：单根节点（页面过渡要求） -->
+  <div class="page-root">
   <div class="card">
     <h3>近 24 小时概况（每 30 秒刷新）</h3>
     <div class="hint">数据源：Elasticsearch 聚合（Kibana 另有运维级仪表盘，经 /kibana/ 访问）</div>
@@ -100,6 +102,7 @@ onUnmounted(() => {
   </div>
   <div class="card">
     <div ref="trendEl" class="chart"></div>
+  </div>
   </div>
 </template>
 

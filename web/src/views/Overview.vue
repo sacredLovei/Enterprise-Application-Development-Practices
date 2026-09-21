@@ -89,6 +89,8 @@ onUnmounted(() => {
 </script>
 
 <template>
+  <!-- S102 修复：页面过渡要求单根节点——多根 fragment 会导致 out-in 过渡卡死白屏 -->
+  <div class="page-root">
   <div class="cards">
     <div class="stat"><div class="num">{{ summary.total ?? '-' }}</div><div class="label">设备总数</div></div>
     <div class="stat"><div class="num green">{{ summary.online ?? '-' }}</div><div class="label">在线</div></div>
@@ -127,6 +129,7 @@ onUnmounted(() => {
       </span>
       点击设备图标 → 「📈 最近 10 分钟轨迹」查看回放；关闭弹窗后轨迹自动清除。
     </div>
+  </div>
   </div>
 </template>
 

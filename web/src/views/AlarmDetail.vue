@@ -98,6 +98,8 @@ function zoomImg(src) {
 </script>
 
 <template>
+  <!-- S102 修复：单根节点（页面过渡要求） -->
+  <div class="page-root">
   <div v-if="detail">
     <!-- 信息条：标题 + 元数据 -->
     <div class="card head-card">
@@ -182,6 +184,7 @@ function zoomImg(src) {
   <!-- S81 大图预览遮罩 -->
   <div v-if="bigImg" class="lightbox" @click="bigImg = null">
     <img :src="bigImg" class="lightbox-img" alt="大图预览" />
+  </div>
   </div>
 </template>
 

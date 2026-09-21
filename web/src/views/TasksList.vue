@@ -73,6 +73,8 @@ onUnmounted(() => clearInterval(timer))
 </script>
 
 <template>
+  <!-- S102 修复：单根节点（页面过渡要求） -->
+  <div class="page-root">
   <div class="card">
     <div class="list-head">
       <h3>任务列表</h3>
@@ -125,6 +127,7 @@ onUnmounted(() => clearInterval(timer))
       </li>
     </ol>
     <div v-if="logs.length === 0" class="hint">暂无归档日志（任务下发后由设备回执产生）</div>
+  </div>
   </div>
 </template>
 

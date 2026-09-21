@@ -80,6 +80,8 @@ onUnmounted(() => { clearInterval(timer); clearTimeout(debounceTimer); clearInte
 </script>
 
 <template>
+  <!-- S102 修复：单根节点（页面过渡要求） -->
+  <div class="page-root">
   <div class="card">
     <div class="list-head">
       <h3>告警检索</h3>
@@ -138,6 +140,7 @@ onUnmounted(() => { clearInterval(timer); clearTimeout(debounceTimer); clearInte
       <span>第 {{ page + 1 }} / {{ totalPages() }} 页（每页 {{ size }} 条）</span>
       <button class="ghost" :disabled="page + 1 >= totalPages()" @click="goPage(page + 1)">下一页</button>
     </div>
+  </div>
   </div>
 </template>
 
