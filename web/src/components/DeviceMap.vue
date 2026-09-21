@@ -3,6 +3,7 @@ import { ref, onMounted, onUnmounted, watch } from 'vue'
 import L from 'leaflet'
 import 'leaflet/dist/leaflet.css'
 import { getTheme } from '../utils/theme'
+import { attachThemedBasemap } from '../utils/basemap'
 
 const props = defineProps({
   devices: { type: Array, default: () => [] },
@@ -21,68 +22,13 @@ let map, deviceLayer, alarmLayer, targetLayer, trackLayer
 let deviceMarkers = new Map()
 
 // ============================================================
-// S97-c 地图焕新
-// 1) 底图：CARTO Positron（亮）/ Dark Matter（暗）——低饱和、专为数据可视化设计；
-//    降级保守化（风险 #48 教训）：连续 3 次瓦片失败且从未成功才回退 OSM，
-//    一次成功即视为可用，避免代理抖动导致底图被永久换掉。
+// S97-c 地图焕新（S98 修补：底图逻辑抽到 utils/basemap.js 共享——
+// DeviceMap 与 TargetPicker 统一策略，避免两处维护漂移）
+// 1) 底图：Esri 灰度（亮/暗）随主题切换 + 保守降级（utils/basemap.js）；
 // 2) 设备标记：矢量 SVG 图标（无人机三角翼 / 机器狗爪印），颜色=类型+状态；
 //    告警点：等级配色 + CRITICAL 脉冲扩散圈。
 // 颜色全部走 tokens.css 变量——divIcon 注入 DOM 后随主题自动适配。
 // ============================================================
-
-// 底图换源（S97-c 验收实测修正）：CARTO 免费匿名瓦片 2026 起对无 key 请求返回
-// "API KEY REQUIRED" 水印瓦片（tileload 仍成功，风险 #48 的"成功即可用"判定无法拦截），
-// 改用 Esri Canvas Light/Dark Gray——同为低饱和数据可视化底图，免 key（z/y/x 顺序，原生最高 16 级、上方超采样）。
-const BASEMAPS = {
-  light: {
-    url: 'https://services.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Light_Gray_Base/MapServer/tile/{z}/{y}/{x}',
-    attribution: 'Tiles &copy; Esri &mdash; Esri, HERE, Garmin, FAO, USGS, NGA',
-    maxNativeZoom: 16
-  },
-  dark: {
-    url: 'https://services.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Base/MapServer/tile/{z}/{y}/{x}',
-    attribution: 'Tiles &copy; Esri &mdash; Esri, HERE, Garmin, FAO, USGS, NGA',
-    maxNativeZoom: 16
-  },
-  fallback: {
-    url: 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',
-    attribution: '&copy; OpenStreetMap',
-    maxNativeZoom: 19
-  }
-}
-
-let baseLayer = null
-let tileOk = false        // 当前底图是否有瓦片成功加载
-let tileFails = 0         // 连续失败计数（成功即清零）
-let usingFallback = false // 是否已永久回退 OSM
-
-function currentBaseKey() {
-  return document.documentElement.dataset.theme === 'dark' ? 'dark' : 'light'
-}
-
-function setBaseLayer() {
-  if (!map) return
-  const key = usingFallback ? 'fallback' : currentBaseKey()
-  const conf = BASEMAPS[key]
-  if (baseLayer) map.removeLayer(baseLayer)
-  tileOk = false
-  tileFails = 0
-  baseLayer = L.tileLayer(conf.url, {
-    attribution: conf.attribution,
-    subdomains: key === 'fallback' ? 'abc' : '',
-    maxNativeZoom: conf.maxNativeZoom,
-    maxZoom: 19
-  })
-  baseLayer.on('tileload', () => { tileOk = true; tileFails = 0 })
-  baseLayer.on('tileerror', () => {
-    tileFails++
-    if (tileFails >= 3 && !tileOk && !usingFallback) {
-      usingFallback = true        // 风险 #48：连续 3 次失败且从未成功才降级，一次成功即视为可用
-      setBaseLayer()
-    }
-  })
-  baseLayer.addTo(map)
-}
 
 // 设备标记：divIcon 内嵌 SVG，颜色经 CSS 变量随主题适配
 function deviceIcon(deviceType, status) {
@@ -120,13 +66,14 @@ const TARGET_ICON = L.divIcon({
 })
 
 function onThemeChanged() {
-  if (!usingFallback) setBaseLayer()
-  render()   // 标记用 CSS 变量可自动适配，但 tooltip/popup 需重渲染的场景保留刷新
+  render()   // 底图切换由共享 basemap 工具处理；此处刷新标记/弹窗（CSS 变量本身自动适配）
 }
+
+let detachBasemap = null
 
 onMounted(() => {
   map = L.map(mapEl.value).setView([39.9092, 116.3974], 16)
-  setBaseLayer()
+  detachBasemap = attachThemedBasemap(map)
   deviceLayer = L.layerGroup().addTo(map)
   alarmLayer = L.layerGroup().addTo(map)
   targetLayer = L.layerGroup().addTo(map)
@@ -140,6 +87,7 @@ onMounted(() => {
 
 onUnmounted(() => {
   window.removeEventListener('inspection-theme-changed', onThemeChanged)
+  if (detachBasemap) detachBasemap()
 })
 
 watch(() => [props.devices, props.alarms, props.tasks], render, { deep: true })
