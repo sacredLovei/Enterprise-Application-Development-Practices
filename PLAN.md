@@ -505,3 +505,4 @@
 - **内容**：DeviceMap 监听 Leaflet `popupclose` → emit `track-clear`（弹窗 X / 点击地图 / 打开其他弹窗均触发）；Overview 接入该事件调用 clearTrack；图例文案同步"关闭弹窗后轨迹自动清除"；手动"清除轨迹"按钮保留
 - **验收结论**（2026-09-21）：达到。vite build 7.87s；纯事件桥接（弹窗关闭 ⇒ 父级 track=null ⇒ renderTrack 清空图层），链路直观
 - **提交**：c6d886c
+- **补充（用户要求）**：移除"清除轨迹"手动按钮——弹窗关闭自动清除已覆盖该场景（clearTrack 函数保留供 track-clear 事件使用）
