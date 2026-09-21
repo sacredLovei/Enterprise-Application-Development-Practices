@@ -1,7 +1,8 @@
 <script setup>
-import { ref, onMounted, onUnmounted } from 'vue'
+import { ref, computed, onMounted, onUnmounted } from 'vue'
 import request from '../api/request'
 import DeviceMap from '../components/DeviceMap.vue'
+import { connectPositions } from '../utils/live'
 
 const devices = ref([])
 const alarms = ref([])
@@ -10,6 +11,29 @@ const summary = ref({})
 const track = ref(null)   // S69：设备历史轨迹
 const health = ref(null)  // S80：系统健康（Mongo/ES/HDFS/Kafka LAG）
 let timer, healthTimer
+
+// ===== S98：实时位置流（SSE 1 秒推送）=====
+const liveMap = ref(new Map())   // deviceId -> {lng, lat, status, battery, ts}
+const liveState = ref('off')     // off | open | closed | error
+let disconnectLive = null
+
+// 叠加层：3s 轮询的 devices 为底，SSE 最新位置覆盖其上（轮询保留作兜底与全量刷新）
+const devicesLive = computed(() => devices.value.map(d => {
+  const o = liveMap.value.get(d.deviceId)
+  return o ? { ...d, lng: o.lng, lat: o.lat, status: o.status, battery: o.battery } : d
+}))
+
+function onLiveMsg(msg) {
+  const next = new Map(liveMap.value)
+  for (const d of msg.devices || []) {
+    if (d.lng != null && d.lat != null) {
+      next.set(d.deviceId, { lng: d.lng, lat: d.lat, status: d.status, battery: d.battery, ts: msg.ts })
+    }
+  }
+  liveMap.value = next
+}
+
+function onLiveState(s) { liveState.value = s }
 
 async function load() {
   try {
@@ -53,10 +77,15 @@ function up(v) { return v === 'up' || v === 'green' }
 onMounted(() => {
   load()
   loadHealth()
-  timer = setInterval(load, 3000)          // 总览 3s 轮询（设计报告 5.2.7 刷新策略）
+  timer = setInterval(load, 3000)          // 总览 3s 轮询（S98 起降级为兜底与全量刷新）
   healthTimer = setInterval(loadHealth, 10000)   // 健康面板 10s 轮询
+  disconnectLive = connectPositions(onLiveMsg, onLiveState)   // S98 实时位置流
 })
-onUnmounted(() => { clearInterval(timer); clearInterval(healthTimer) })
+onUnmounted(() => {
+  clearInterval(timer)
+  clearInterval(healthTimer)
+  if (disconnectLive) disconnectLive()
+})
 </script>
 
 <template>
@@ -87,12 +116,15 @@ onUnmounted(() => { clearInterval(timer); clearInterval(healthTimer) })
     </div>
   </div>
   <div class="card">
-    <h3>园区设备与告警分布（每 3 秒刷新）</h3>
-    <DeviceMap :devices="devices" :alarms="alarms" :tasks="tasks" :track="track"
+    <h3>园区设备与告警分布（S98：位置实时推送，标记连续移动）</h3>
+    <DeviceMap :devices="devicesLive" :alarms="alarms" :tasks="tasks" :track="track"
                @track-requested="showTrack" />
     <div class="hint">
       蓝色标记 = 无人机，绿色 = 机器狗（灰色为离线）；红色 ! 为告警点（严重告警带脉冲圈）；红色靶标为任务目标点。
       底图为 Esri 灰度地图（低饱和，随亮/暗主题自动切换）。
+      <span class="live-state" :class="'ls-' + liveState">
+        {{ liveState === 'open' ? '● 实时推送中（1 秒级）' : liveState === 'error' ? '● 实时流中断，3 秒轮询兜底' : '● 实时流待连接' }}
+      </span>
       点击设备图标 → 「📈 最近 10 分钟轨迹」查看回放。
       <button v-if="track" class="ghost small" style="margin-left:10px" @click="clearTrack">清除轨迹</button>
     </div>
@@ -118,4 +150,9 @@ onUnmounted(() => { clearInterval(timer); clearInterval(healthTimer) })
 .dot { width: 9px; height: 9px; border-radius: 50%; display: inline-block; }
 .dot.up { background: var(--ok); }
 .dot.down { background: var(--danger); }
+/* S98：实时流状态指示 */
+.live-state { margin: 0 8px; font-weight: 600; }
+.live-state.ls-open { color: var(--ok); }
+.live-state.ls-error, .live-state.ls-closed { color: var(--warn); }
+.live-state.ls-off { color: var(--text-3); }
 </style>

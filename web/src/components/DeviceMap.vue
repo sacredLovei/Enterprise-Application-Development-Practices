@@ -16,6 +16,10 @@ const emit = defineEmits(['track-requested', 'track-clear'])
 const mapEl = ref(null)
 let map, deviceLayer, alarmLayer, targetLayer, trackLayer
 
+// S98：设备标记增量管理——deviceId -> {marker, latlng(当前显示位置), iconKey, animId}
+// 替代原 clearLayers 重建（重建会让标记每秒销毁重建，无法做移动动画）
+let deviceMarkers = new Map()
+
 // ============================================================
 // S97-c 地图焕新
 // 1) 底图：CARTO Positron（亮）/ Dark Matter（暗）——低饱和、专为数据可视化设计；
@@ -155,39 +159,87 @@ function activeTasks(deviceId) {
   return list.sort((a, b) => (a.status === 'RUNNING' ? 0 : 1) - (b.status === 'RUNNING' ? 0 : 1))
 }
 
+/** 悬浮面板 HTML（信息 + 当前任务与备注，用户要求）。 */
+function popupHtml(d) {
+  const acts = activeTasks(d.deviceId)
+  let taskHtml = ''
+  if (acts.length > 0) {
+    const cur = acts[0]
+    const label = TYPE_LABEL[cur.taskType] || cur.taskType
+    taskHtml = `<br/>━━━━━━━━━━<br/><b>任务：${label}</b>` +
+      `<br/>状态：${cur.status === 'RUNNING' ? '执行中' : '已下发待执行'}` +
+      `<br/>备注：${cur.remark || '—'}` +
+      `<br/><span style="font-size:11px;color:var(--text-3)">${cur.taskId}</span>`
+    if (acts.length > 1) {
+      taskHtml += `<br/>另有 ${acts.length - 1} 个任务排队中`
+    }
+  }
+  return `<b>${d.deviceId}</b><br/>类型：${d.deviceType}<br/>状态：${d.status}<br/>电量：${d.battery}%${taskHtml}` +
+    `<br/><a href="#" onclick="window.__dshTrack('${d.deviceId}');return false;" style="font-size:12px">📈 最近 10 分钟轨迹</a>`
+}
+
+/** S98：标记平滑移动——rAF 缓动插值（~900ms 走完一段），远距跳变（初始/轨迹回放后回位）直接落点。 */
+function moveSmoothly(entry, lat, lng) {
+  const target = L.latLng(lat, lng)
+  if (entry.latlng.equals(target)) return
+  const from = entry.latlng.clone()
+  if (from.distanceTo(target) > 150) {   // 大位移视为异常跳变，不动画
+    entry.latlng = target
+    entry.marker.setLatLng(target)
+    return
+  }
+  cancelAnimationFrame(entry.animId)
+  const duration = 900
+  const t0 = performance.now()
+  const ease = t => 1 - Math.pow(1 - t, 3)
+  const step = now => {
+    const p = Math.min(1, (now - t0) / duration)
+    const k = ease(p)
+    const cur = L.latLng(from.lat + (target.lat - from.lat) * k, from.lng + (target.lng - from.lng) * k)
+    entry.latlng = cur
+    entry.marker.setLatLng(cur)
+    if (p < 1) entry.animId = requestAnimationFrame(step)
+  }
+  entry.animId = requestAnimationFrame(step)
+}
+
 function render() {
   if (!map) return
-  deviceLayer.clearLayers()
   alarmLayer.clearLayers()
   targetLayer.clearLayers()
 
+  // 设备标记：增量更新（S98）——位置插值移动、状态变 更换图标/面板，消失才移除
+  const seen = new Set()
   props.devices?.forEach(d => {
     // 设备台账无 location 字段时，用最近遥测位置（接口侧已拼接 lastLocation）
     const loc = d.lastLocation || (d.lng != null ? { lng: d.lng, lat: d.lat } : null)
     if (!loc) return
+    seen.add(d.deviceId)
     const icon = deviceIcon(d.deviceType, d.status)
-
-    // 悬浮面板：设备信息 + 当前任务与备注（用户要求）
-    const acts = activeTasks(d.deviceId)
-    let taskHtml = ''
-    if (acts.length > 0) {
-      const cur = acts[0]
-      const label = TYPE_LABEL[cur.taskType] || cur.taskType
-      taskHtml = `<br/>━━━━━━━━━━<br/><b>任务：${label}</b>` +
-        `<br/>状态：${cur.status === 'RUNNING' ? '执行中' : '已下发待执行'}` +
-        `<br/>备注：${cur.remark || '—'}` +
-        `<br/><span style="font-size:11px;color:var(--text-3)">${cur.taskId}</span>`
-      if (acts.length > 1) {
-        taskHtml += `<br/>另有 ${acts.length - 1} 个任务排队中`
+    const iconKey = d.deviceType + '/' + d.status
+    let entry = deviceMarkers.get(d.deviceId)
+    if (!entry) {
+      const marker = L.marker([loc.lat, loc.lng], { icon })
+        .bindTooltip(d.deviceId, { permanent: true, direction: 'right', offset: [10, 0], className: 'device-label' })
+        .bindPopup(popupHtml(d))
+        .addTo(deviceLayer)
+      deviceMarkers.set(d.deviceId, { marker, latlng: L.latLng(loc.lat, loc.lng), iconKey, animId: 0 })
+    } else {
+      if (entry.iconKey !== iconKey) {
+        entry.marker.setIcon(icon)
+        entry.iconKey = iconKey
       }
+      entry.marker.setPopupContent(popupHtml(d))
+      moveSmoothly(entry, loc.lat, loc.lng)
     }
-
-    L.marker([loc.lat, loc.lng], { icon })
-      .bindTooltip(d.deviceId, { permanent: true, direction: 'right', offset: [10, 0], className: 'device-label' })
-      .bindPopup(`<b>${d.deviceId}</b><br/>类型：${d.deviceType}<br/>状态：${d.status}<br/>电量：${d.battery}%${taskHtml}` +
-        `<br/><a href="#" onclick="window.__dshTrack('${d.deviceId}');return false;" style="font-size:12px">📈 最近 10 分钟轨迹</a>`)
-      .addTo(deviceLayer)
   })
+  for (const [id, entry] of deviceMarkers) {
+    if (!seen.has(id)) {
+      cancelAnimationFrame(entry.animId)
+      deviceLayer.removeLayer(entry.marker)
+      deviceMarkers.delete(id)
+    }
+  }
 
   props.alarms?.forEach(a => {
     const loc = Array.isArray(a.location) ? { lng: a.location[0], lat: a.location[1] }
