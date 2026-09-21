@@ -282,7 +282,7 @@ onUnmounted(() => { clearInterval(timer); clearTimeout(debounceTimer); clearInte
       <button class="ghost" :disabled="reviewing" @click="submitReview('FALSE_ALARM')">误报</button>
       <span v-if="reviewMsg" class="review-toast">{{ reviewMsg }}</span>
     </div>
-    <div v-else-if="detail.status !== 'RESOLVED' && detail.review && detail.review.reviewerDeviceId === 'MANUAL'" class="hint" style="margin-top:10px;padding-top:10px;border-top:1px solid #e2e8ee">
+    <div v-else-if="detail.status !== 'RESOLVED' && detail.review && detail.review.reviewerDeviceId === 'MANUAL'" class="hint" style="margin-top:10px;padding-top:10px;border-top:1px solid var(--border)">
       🔒 人工终审已完成，结论锁定（{{ statusText(detail.status) }}）——如需更改请联系管理员重新打开
     </div>
   </div>
@@ -293,22 +293,23 @@ onUnmounted(() => { clearInterval(timer); clearTimeout(debounceTimer); clearInte
 </template>
 
 <style scoped>
-.pager { display: flex; gap: 14px; align-items: center; justify-content: center; margin-top: 12px; font-size: 13px; color: #5c6b7a; }
+.pager { display: flex; gap: 14px; align-items: center; justify-content: center; margin-top: 12px; font-size: 13px; color: var(--text-2); }
 button:disabled { opacity: .4; cursor: not-allowed; }
 .small { font-size: 12px; padding: 3px 10px; }
-.ok { background: #e8f5e9; color: #2e7d32; border: 1px solid #a5d6a7; }
+.ok { background: var(--ok-soft); color: var(--ok); }
 .detail-head { display: flex; justify-content: space-between; align-items: center; }
-.detail-meta { font-size: 13px; color: #5c6b7a; margin-bottom: 4px; }
+.detail-meta { font-size: 13px; color: var(--text-2); margin-bottom: 4px; }
 .evidence-row { display: flex; gap: 20px; flex-wrap: wrap; }
-.review-actions { display: flex; gap: 10px; align-items: center; margin-top: 14px; padding-top: 12px; border-top: 1px solid #e2e8ee; }
-.review-actions-title { font-size: 13px; color: #33414e; font-weight: 600; }
-.review-toast { font-size: 13px; font-weight: 600; color: #1a8a4a; }
+.review-actions { display: flex; gap: 10px; align-items: center; margin-top: 14px; padding-top: 12px; border-top: 1px solid var(--border); }
+.review-actions-title { font-size: 13px; color: var(--text-1); font-weight: 600; }
+.review-toast { font-size: 13px; font-weight: 600; color: var(--ok); }
 .photo-btn { display: inline-flex; align-items: center; gap: 4px; cursor: pointer; }
 .evidence-img { cursor: zoom-in; }
 .lightbox { position: fixed; inset: 0; background: rgba(10, 14, 20, 0.88); display: flex; align-items: center; justify-content: center; z-index: 9999; cursor: zoom-out; }
-.lightbox-img { width: 94vw; height: 94vh; object-fit: contain; border-radius: 8px; box-shadow: 0 8px 40px rgba(0, 0, 0, 0.6); }
+.lightbox-img { width: 94vw; height: 94vh; object-fit: contain; border-radius: var(--radius-1); box-shadow: var(--shadow-2); }
 .evidence { flex: 1 1 320px; }
-.evidence-title { font-size: 13px; font-weight: 600; margin-bottom: 6px; color: #33414e; }
-.evidence-img { width: 100%; border: 1px solid #e2e8ee; border-radius: 8px; display: block; }
-.review-conclusion { margin-top: 8px; font-size: 13px; color: #33414e; }
+.evidence-title { font-size: 13px; font-weight: 600; margin-bottom: 6px; color: var(--text-1); }
+.evidence-img { width: 100%; border: 1px solid var(--border); border-radius: var(--radius-1); display: block; }
+.review-conclusion { margin-top: 8px; font-size: 13px; color: var(--text-1); }
+.warn-hint { color: var(--warn); margin-left: 10px; }
 </style>

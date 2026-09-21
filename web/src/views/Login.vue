@@ -44,10 +44,25 @@ async function submit() {
 </script>
 
 <template>
+  <!-- S97-d：左右分栏——左侧品牌区（窄屏自动隐藏），右侧登录卡（S92 chip 成果保留） -->
   <div class="login-page">
+    <aside class="login-hero">
+      <div class="hero-brand">
+        <svg viewBox="0 0 24 24" width="30" height="30" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="6.5"/><path d="M12 2v4M12 18v4M2 12h4M18 12h4"/></svg>
+        <span>空地协同巡检平台</span>
+      </div>
+      <p class="hero-sub">无人机 - 机器狗空地协同巡检集成平台 · 园区安防</p>
+      <ul class="hero-points">
+        <li><b>实时感知</b>——4 台设备心跳与遥测经 Kafka 流式入库，秒级上屏</li>
+        <li><b>智能复核</b>——告警自动就近派单机器狗，红外复核回填证据链</li>
+        <li><b>全链闭环</b>——任务下发 / 执行回执 / 日志归档 / 数据备份一体</li>
+      </ul>
+      <p class="hero-foot">HDFS · Kafka · MongoDB · Elasticsearch · Kibana · Nginx</p>
+    </aside>
+
     <form class="login-card" @submit.prevent="submit">
-      <div class="login-brand">🚁 空地协同巡检平台</div>
-      <div class="login-sub">无人机 - 机器狗空地协同巡检集成平台 · 园区安防</div>
+      <div class="login-brand">登录</div>
+      <div class="login-sub">使用演示账号或分配的账号进入平台</div>
 
       <label class="login-field">
         <span>用户名</span>
@@ -83,38 +98,65 @@ async function submit() {
   display: flex;
   align-items: center;
   justify-content: center;
-  background: linear-gradient(135deg, #eef1f6 0%, #dfe8f6 100%);
+  gap: 56px;
+  background: var(--bg-page);
   padding: 20px;
 }
+
+/* 左侧品牌区：克制配色，不抢登录卡视觉 */
+.login-hero { max-width: 400px; color: var(--text-1); }
+.hero-brand {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 22px;
+  font-weight: 700;
+  color: var(--text-1);
+}
+.hero-brand svg { color: var(--accent); }
+.hero-sub { margin-top: 10px; font-size: 13px; color: var(--text-2); }
+.hero-points { list-style: none; padding: 0; margin: 26px 0; display: flex; flex-direction: column; gap: 14px; }
+.hero-points li {
+  font-size: 13px;
+  color: var(--text-2);
+  line-height: 1.6;
+  padding-left: 14px;
+  border-left: 3px solid var(--accent);
+}
+.hero-points b { color: var(--text-1); margin-right: 4px; }
+.hero-foot { font-size: 12px; color: var(--text-3); letter-spacing: .4px; }
+@media (max-width: 860px) { .login-hero { display: none; } }
+
 .login-card {
   width: 372px;
-  background: rgba(255, 255, 255, 0.92);
-  backdrop-filter: blur(18px);
-  border: 1px solid #e2e7ee;
-  border-radius: 16px;
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-2);
   padding: 30px 28px 22px;
-  box-shadow: 0 18px 44px rgba(36, 48, 60, 0.10);
+  box-shadow: var(--shadow-2);
   display: flex;
   flex-direction: column;
   gap: 14px;
 }
-.login-brand { font-size: 19px; font-weight: 700; text-align: center; }
-.login-sub { font-size: 12px; color: #8b98a6; text-align: center; margin-top: -6px; }
-.login-field { display: flex; flex-direction: column; gap: 6px; font-size: 13px; color: #5c6b7a; }
+.login-brand { font-size: 19px; font-weight: 700; text-align: center; color: var(--text-1); }
+.login-sub { font-size: 12px; color: var(--text-3); text-align: center; margin-top: -6px; }
+.login-field { display: flex; flex-direction: column; gap: 6px; font-size: 13px; color: var(--text-2); }
 .login-field input {
   padding: 11px 12px;
-  border: 1px solid #d8dfe8;
-  border-radius: 8px;
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-1);
   font-size: 14px;
+  background: var(--bg-card);
+  color: var(--text-1);
   outline: none;
   transition: border-color .15s, box-shadow .15s;
 }
-.login-field input:focus { border-color: #2f6fed; box-shadow: 0 0 0 3px rgba(47, 111, 237, 0.12); }
+.login-field input:focus { border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-soft); }
 .login-error {
-  background: #fdecec;
-  color: #c0392b;
-  border: 1px solid #f6d0cc;
-  border-radius: 8px;
+  background: var(--danger-soft);
+  color: var(--danger);
+  border: 1px solid transparent;
+  border-radius: var(--radius-1);
   padding: 8px 10px;
   font-size: 13px;
 }
@@ -122,37 +164,36 @@ async function submit() {
   margin-top: 4px;
   padding: 12px;
   border: none;
-  border-radius: 8px;
-  background: #2f6fed;
+  border-radius: var(--radius-1);
+  background: var(--accent);
   color: #fff;
   font-size: 15px;
   font-weight: 600;
   cursor: pointer;
   transition: background .15s;
 }
-.login-btn:hover:not(:disabled) { background: #245ccd; }
+.login-btn:hover:not(:disabled) { background: var(--accent-hover); }
 .login-btn:disabled { opacity: .6; cursor: not-allowed; }
-.login-hint { font-size: 12px; color: #9aa7b5; text-align: center; }
 
-/* S92：演示账号一键填入 */
+/* S92：演示账号一键填入（成果保留） */
 .login-demo {
   display: flex;
   flex-direction: column;
   gap: 6px;
   margin-top: 4px;
   padding-top: 12px;
-  border-top: 1px dashed #e2e7ee;
+  border-top: 1px dashed var(--border);
 }
-.demo-title { font-size: 12px; color: #9aa7b5; text-align: center; }
+.demo-title { font-size: 12px; color: var(--text-3); text-align: center; }
 .demo-chip {
   padding: 8px 10px;
   font-size: 12px;
-  color: #2f6fed;
-  background: #f2f6fe;
-  border: 1px solid #d8e3fb;
-  border-radius: 8px;
+  color: var(--accent);
+  background: var(--accent-soft);
+  border: 1px solid transparent;
+  border-radius: var(--radius-1);
   cursor: pointer;
-  transition: background .15s, border-color .15s;
+  transition: background .15s;
 }
-.demo-chip:hover { background: #e6effd; border-color: #b9cdf7; }
+.demo-chip:hover { background: var(--bg-hover); }
 </style>

@@ -30,6 +30,14 @@ async function control(deviceId, action) {
   }
 }
 
+function battClass(b) {
+  const v = Number(b)
+  if (!Number.isFinite(v)) return 'b-ok'
+  if (v < 20) return 'b-danger'
+  if (v < 50) return 'b-warn'
+  return 'b-ok'
+}
+
 const filtered = () => devices.value.filter(d =>
   (!filter.value.status || d.status === filter.value.status) &&
   (!filter.value.deviceType || d.deviceType === filter.value.deviceType))
@@ -67,7 +75,12 @@ onUnmounted(() => clearInterval(timer))
           <td>{{ d.deviceId }}</td>
           <td>{{ d.deviceType === 'UAV' ? '无人机' : '机器狗' }}</td>
           <td><span class="badge" :class="d.status === 'ONLINE' ? 'online' : 'offline'">{{ d.status }}</span></td>
-          <td>{{ d.battery }}%</td>
+          <td>
+            <div class="batt-row">
+              <div class="batt"><i :class="battClass(d.battery)" :style="{ width: (d.battery ?? 0) + '%' }"></i></div>
+              <span class="batt-num">{{ d.battery }}%</span>
+            </div>
+          </td>
           <td>{{ formatTime(d.registerTime) }}</td>
           <td>{{ formatTime(d.lastHeartbeat) }}</td>
           <td>
