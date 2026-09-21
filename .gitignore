@@ -27,3 +27,4 @@ test/jmeter/report-*/
 
 # ---- ES 插件二进制（ik，由 install-ik.ps1 安装，不入库） ----
 docker/es-plugins/
+.workbuddy/

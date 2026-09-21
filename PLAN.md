@@ -421,6 +421,27 @@
 - **验收结论**（2026-09-21）：**全部达到**。`git log master` = `3b80787`（= origin/master）、工作树 0 变更；重建后 `web/dist` 产物为 master 版本（`index-B6vb0r54.js` / `index-B5SIb47Y.css`），线上核验：**S94 主题令牌与 `inspection_theme` 开关均为 False、旧浅色主色 `eef1f6` 为 True**；远端分支已删除（`[deleted] feature/s94-dark-ui`）；`POST /api/auth/login` → 200（业务不受影响）；S94 文件在工作区全部消失
 - **产出物**：本步记录 + STATE 时间线 + 快照标签 `backup-20260921-s94-pre`
 
+### S96 告警证据图带令牌加载（上会话遗留补提，2026-09-21）
+- **状态**：done
+- **背景**：用户反馈"告警中心的图没了"——S88 鉴权后 `<img src="/api/files/**">` 不携带 Authorization 头（令牌在 localStorage），证据图/复核图/现场照片一律 401
+- **内容**：新增 `web/src/utils/authImage.js`（useAuthImage：axios blob 带令牌取图 → objectURL，自动回收）；`Alarms.vue` 三处证据图接入；探针 `docker/init/_s96-probe.js`
+- **验收标准**：告警详情三处图片经令牌正常加载；无令牌不入 URL
+- **验收结论**（2026-09-21）：**达到**。vite build 通过（11.26s），dist bind 挂载即部署；实现细节与登记见提交 64faaf5。**流程偏差如实记录**：本步代码在上会话已完成但未提交，本次补验补提
+- **提交**：64faaf5
+
+### S97 前端视觉焕新——路线 C 双主题 Token 化（用户 2026-09-21 批准"选c"）
+- **状态**：in_progress
+- **依据**：`docs/前端视觉焕新方案.md`（v1.1，提案已批准）
+- **目标**：建立设计令牌体系，亮/暗双主题一键切换（CSS 变量 + data-theme），ECharts 双主题，地图焕新；**必须早于 S65 截图回填**（S94 顺序约束）
+- **子步骤**（每步独立提交可回滚）：
+  1. S97-a 亮色 Token 化：`styles/tokens.css` + `components/AppIcon.vue`（SVG 图标替换 emoji）+ `style.css` 变量化 + `App.vue` 接入
+  2. S97-b 暗色 Token + 主题切换按钮（localStorage `inspection_theme`）+ ECharts inspection-light/dark 双主题注册
+  3. S97-c 地图焕新：CARTO Positron/Dark Matter 底图（连续 3 次失败才降级 OSM，风险 #48）、无人机/机器狗矢量 divIcon、轨迹渐隐、告警脉冲圈
+  4. S97-d 细节打磨：Toast 替换 alert、Login 左右分栏、空状态（S92 演示账号 chip 成果不回退）
+  5. S97-f 重建部署 + 验收（像素/资源自检，风险 #49 方法论）+ PLAN/STATE 收尾（S97-e `/wall` 大屏属路线 D，用户未选，不执行）
+- **风险控制**：开工前快照 tag `backup-20260921-s97-pre`；暗色先自检后交付，吸取 S94"整版做完被弃"教训；`dist` bind 挂载重建陷阱（S95 实锤）；视觉定稿前不做 S65 截图
+- **产出物**：web 源码变更（分步提交）+ 方案文档入库
+
 ### S91 报告转换与截图回填收尾（S65 兑现）
 - **状态**：done（转换部分已完成；**截图回填部分阻塞于用户实机截图，归 S65**）
 - **目标**：报告 md（v1.2）→ HTML → docx 全链重生成；17 张截图回填 5.4
