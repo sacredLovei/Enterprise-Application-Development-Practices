@@ -3,6 +3,7 @@ import { computed, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import request, { clearAuth, getUser } from './api/request'
 import AppIcon from './components/AppIcon.vue'
+import ToastHost from './components/ToastHost.vue'
 import { getTheme, toggleTheme } from './utils/theme'
 
 const route = useRoute()
@@ -86,4 +87,7 @@ async function logout() {
       <RouterView />
     </main>
   </div>
+
+  <!-- S100：全局通知（登录页也可见） -->
+  <ToastHost />
 </template>
