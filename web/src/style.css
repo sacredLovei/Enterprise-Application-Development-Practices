@@ -113,14 +113,37 @@ body {
 }
 .theme-toggle:hover { background: var(--bg-hover); color: var(--text-1); }
 
-/* ===== 主内容区 ===== */
-.content { flex: 1; padding: 22px 26px; max-width: 1320px; min-width: 0; }
+/* ===== 主内容区（S99：满幅——去除 1320px 上限，TDesign 式均匀留白） ===== */
+.content { flex: 1; padding: 18px 28px 32px; min-width: 0; }
 .page-title {
   font-size: 20px;
-  margin-bottom: 16px;
+  margin-bottom: 12px;
   padding-bottom: 10px;
   border-bottom: 1px solid var(--border);
   color: var(--text-1);
+}
+
+/* S99：二级子项标签条（任务管理/告警中心的母-子导航，TDesign Starter 式） */
+.subnav {
+  display: flex;
+  gap: 4px;
+  margin-bottom: 16px;
+  border-bottom: 1px solid var(--border);
+}
+.subnav a {
+  color: var(--text-2);
+  text-decoration: none;
+  font-size: 14px;
+  padding: 8px 16px 10px;
+  border-bottom: 2px solid transparent;
+  margin-bottom: -1px;
+  transition: color .15s, border-color .15s;
+}
+.subnav a:hover { color: var(--text-1); }
+.subnav a.active {
+  color: var(--accent);
+  font-weight: 600;
+  border-bottom-color: var(--accent);
 }
 
 .card {

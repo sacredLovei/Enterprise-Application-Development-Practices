@@ -5,7 +5,8 @@ import 'leaflet/dist/leaflet.css'
 import { attachThemedBasemap } from '../utils/basemap'
 
 const props = defineProps({
-  modelValue: { type: Object, default: null }   // { lng, lat } | null
+  modelValue: { type: Object, default: null },   // { lng, lat } | null
+  height: { type: String, default: '240px' }     // S99：支持外部传高度（下发任务大地图）
 })
 const emit = defineEmits(['update:modelValue'])
 
@@ -50,7 +51,7 @@ function setMarker(lng, lat) {
 
 <template>
   <div>
-    <div ref="mapEl" class="picker-map"></div>
+    <div ref="mapEl" class="picker-map" :style="{ height }"></div>
     <div class="hint">
       {{ modelValue ? `已选目标：lng=${modelValue.lng}, lat=${modelValue.lat}` : '点击地图选取目标位置（准星光标处单击）' }}
     </div>
@@ -59,7 +60,6 @@ function setMarker(lng, lat) {
 
 <style scoped>
 .picker-map {
-  height: 240px;
   width: 100%;
   border-radius: var(--radius-2);
   z-index: 1;

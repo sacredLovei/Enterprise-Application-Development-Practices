@@ -6,9 +6,30 @@ const routes = [
   { path: '/login', name: 'login', component: () => import('../views/Login.vue'), meta: { title: '登录', public: true } },
   { path: '/overview', name: 'overview', component: () => import('../views/Overview.vue'), meta: { title: '设备地图总览' } },
   { path: '/devices', name: 'devices', component: () => import('../views/Devices.vue'), meta: { title: '设备台账' } },
-  { path: '/tasks', name: 'tasks', component: () => import('../views/Tasks.vue'), meta: { title: '任务管理' } },
-  { path: '/alarms', name: 'alarms', component: () => import('../views/Alarms.vue'), meta: { title: '告警中心' } },
-  { path: '/stats', name: 'stats', component: () => import('../views/Stats.vue'), meta: { title: '统计看板' } }
+  // S99：任务管理拆二级子项——下发任务（大地图）/ 任务列表（满幅表格）
+  {
+    path: '/tasks',
+    component: () => import('../views/Tasks.vue'),
+    redirect: '/tasks/dispatch',
+    meta: { title: '任务管理' },
+    children: [
+      { path: 'dispatch', name: 'tasks-dispatch', component: () => import('../views/TasksDispatch.vue'), meta: { title: '任务管理 · 下发任务' } },
+      { path: 'list', name: 'tasks-list', component: () => import('../views/TasksList.vue'), meta: { title: '任务管理 · 任务列表' } }
+    ]
+  },
+  // S99：告警中心拆母/子项——告警列表（母）/ 告警详情（子路由，照片满幅）
+  {
+    path: '/alarms',
+    component: () => import('../views/Alarms.vue'),
+    redirect: '/alarms/list',
+    meta: { title: '告警中心' },
+    children: [
+      { path: 'list', name: 'alarms-list', component: () => import('../views/AlarmsList.vue'), meta: { title: '告警中心' } },
+      { path: 'detail/:alarmId', name: 'alarms-detail', component: () => import('../views/AlarmDetail.vue'), meta: { title: '告警中心 · 详情' } }
+    ]
+  },
+  { path: '/stats', name: 'stats', component: () => import('../views/Stats.vue'), meta: { title: '统计看板' } },
+  { path: '/:pathMatch(.*)*', redirect: '/overview' }
 ]
 
 const router = createRouter({
