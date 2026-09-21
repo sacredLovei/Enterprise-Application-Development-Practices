@@ -506,5 +506,7 @@
 - **内容**：DeviceMap 监听 Leaflet `popupclose` → emit `track-clear`（弹窗 X / 点击地图 / 打开其他弹窗均触发）；Overview 接入该事件调用 clearTrack；图例文案同步"关闭弹窗后轨迹自动清除"；手动"清除轨迹"按钮保留
 - **验收结论**（2026-09-21）：达到。vite build 7.87s；纯事件桥接（弹窗关闭 ⇒ 父级 track=null ⇒ renderTrack 清空图层），链路直观
 - **提交**：c6d886c
+- **补充（c038e25，用户需求两连）**：① 主题切换圆形扩散动效——theme.js 新增 `toggleThemeAt(x,y)`（View Transitions API，从触发点 clip-path circle 展开 0.55s；不支持/reduced-motion 直接切换），style.css 注册 `::view-transition` 动画，App.vue 侧边栏按钮传点击坐标；② 登录页右上角新增无边框主题切换（moon/sun SVG 图标 + 文字），雷达面板/粒子背景随 data-theme 自动适配。验证：vite build 7.88s；无头截图按钮正常（docs/_s102-login-toggle.png）；扩散动效以真实点击为准
+- **补充（712d935 + 34e4000，用户定制动效方向与圆心）**：切**亮色**=新画面从**屏幕中心**向外扩散（vt-expand：circle 0→150%，新帧置顶）；切**暗色**=旧画面（亮色）向**屏幕中心**收缩消失（vt-contract：circle 142%→0，旧帧 z-index 置顶盖住新帧）；theme.js 按 target 设 `data-vt=to-light/to-dark`，transition.finished 后清理。34e4000 修复 712d935 的 toggleTheme 重名声明（构建失败）。**同批（用户需求）**：仪表盘全部页面切换加平滑过渡（App.vue RouterView v-slot + Transition mode=out-in：旧页 0.16s 淡出上移、新页淡入上浮，reduced-motion 禁用）
 - **补充（db2cf4c 之后的连续微调）**：移除"清除轨迹"手动按钮后，另按用户反馈调侧边栏导航项（字号 14→15.5px、内边距 11→15px、图标 18→20px）
 - **补充（用户要求）**：移除"清除轨迹"手动按钮——弹窗关闭自动清除已覆盖该场景（clearTrack 函数保留供 track-clear 事件使用）
