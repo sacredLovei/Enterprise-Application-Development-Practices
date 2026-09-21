@@ -3,15 +3,25 @@
    ============================================================ */
 * { box-sizing: border-box; margin: 0; padding: 0; }
 
-/* S102 补充：主题切换圆形扩散动效（View Transitions API；不支持的浏览器无感知降级） */
+/* S102 补充：主题切换方向性动效（View Transitions API；用户定制——
+   切亮色=新画面从点击点向外扩散；切暗色=旧画面向点击点收缩消失。降级为直接切换） */
 ::view-transition-old(root),
 ::view-transition-new(root) { animation: none; mix-blend-mode: normal; }
-::view-transition-new(root) {
-  animation: vt-reveal .55s ease-in;
+html[data-vt="to-light"]::view-transition-new(root) {
+  animation: vt-expand .55s ease-in;
+  z-index: 2;
 }
-@keyframes vt-reveal {
-  from { clip-path: circle(0px at var(--vt-x, 100%) var(--vt-y, 0%)); }
-  to   { clip-path: circle(150% at var(--vt-x, 100%) var(--vt-y, 0%)); }
+html[data-vt="to-dark"]::view-transition-old(root) {
+  animation: vt-contract .55s ease-in forwards;
+  z-index: 2;
+}
+@keyframes vt-expand {
+  from { clip-path: circle(0px at var(--vt-x, 50%) var(--vt-y, 0%)); }
+  to   { clip-path: circle(150% at var(--vt-x, 50%) var(--vt-y, 0%)); }
+}
+@keyframes vt-contract {
+  from { clip-path: circle(142% at var(--vt-x, 50%) var(--vt-y, 0%)); }
+  to   { clip-path: circle(0px at var(--vt-x, 50%) var(--vt-y, 0%)); }
 }
 
 body {
