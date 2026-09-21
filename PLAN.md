@@ -511,5 +511,6 @@
 - **修复（d59e8e1，用户反馈"从地图总览/统计看板切向其他页面加载不出来"）**：**多根组件卡死页面过渡**——Vue Transition 要求单根节点，Overview/Stats/TasksList/AlarmsList/AlarmDetail 均为多根 fragment，mode=out-in 下旧页无法卸载 → 白屏且后续导航全部卡死（与"切到这两页之后再切又加载不出来"症状完全吻合）。修复：五视图模板包一层单根容器（内容/逻辑零改动）。端到端验证：导航链 总览→任务管理→统计看板 全部正常渲染（docs/_s103-nav.png）。教训入 STATE 风险 #54
 - **补充（315af87，用户要求子页切换改水平切换）**：任务管理/告警中心布局壳的嵌套 RouterView 加**方向感知水平滑动**过渡——切向更靠右的子项新页从右滑入（slide-left），反之从左滑回（slide-right）；列表↔详情同理；0.16s + 28px 位移，reduced-motion 禁用
 - **修复（a43f1ab，用户反馈"刷新后水平滑动没生效"）**：滑动样式原写在布局壳 scoped 样式内，但路由视图是**异步组件**（router 懒加载）——异步子组件根元素**不继承父组件 scoped 属性**，过渡类名匹配不到 → 切换发生但无动画。修复：`.slide-*` 样式移至全局 style.css（与 `.page-*` 同级）。教训：**Transition 过渡类样式一律放全局**，勿写在包壳组件的 scoped 内
+- **重构（98f24ba，用户复测"还是左边导航栏那种动画"）**：scoped 修复后子页切换仍走外层过渡——根因是外层 Transition key=route.path，子页切换时**整个布局壳被重建**、外层动画覆盖内层；且嵌套两层 out-in Transition × 异步路由组件存在切换失效（新组件不挂载，无头诊断 roots=0）。**重构为单层方案**：App.vue 顶层 Transition name 动态化（watch route.path 按路由深度判定：同模块子页间=slide-left/right 水平滑动，跨模块=page 上移淡出），key=route.path，:duration=170 显式计时；布局壳恢复纯 RouterView。无头验证受限于动画时序（virtual-time 缺 transitionend / timeout 模式 load 即截，风险 #49/#53），以真实浏览器为准
 - **补充（db2cf4c 之后的连续微调）**：移除"清除轨迹"手动按钮后，另按用户反馈调侧边栏导航项（字号 14→15.5px、内边距 11→15px、图标 18→20px）
 - **补充（用户要求）**：移除"清除轨迹"手动按钮——弹窗关闭自动清除已覆盖该场景（clearTrack 函数保留供 track-clear 事件使用）
