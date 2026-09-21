@@ -368,7 +368,9 @@
 - **提交号/完成时间**：本步提交（2026-09-21）
 
 ### S89 报告"全局异常处理"口径修正（待用户决策）
-- **状态**：pending
+- **状态**：in_progress
+- **用户决策（2026-09-21）**：选择 **方案 A——补实现全局异常处理并回归**（使报告所述组件真实存在，而非改报告）
+- **开始时间**：2026-09-21
 - **背景**：报告 5.2/6.4.2 声称"通过 `@Valid` + `@RestControllerAdvice` 全局异常处理统一保证"错误语义，实际代码全项目检索无 `@ControllerAdvice`/`@ExceptionHandler`（依赖 Spring 默认错误响应 + `server.error.include-message: always`）。见 STATE 风险 #42 / 决策 D-24
 - **目标**：消除报告与实现的矛盾
 - **内容（二选一，由用户决定）**：A. **补实现**——新增 `GlobalExceptionHandler`（`@RestControllerAdvice`）：`ResponseStatusException` → `{code,error,message}`、`MethodArgumentNotValidException` → 400 含字段明细、兜底 500 不含栈信息，并回归全部接口用例；B. **改报告**——把表述改为"各控制器以 `@Valid` 与显式状态码返回语义，未引入全局异常处理器（如实记录）"
