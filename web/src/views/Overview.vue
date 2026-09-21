@@ -126,7 +126,6 @@ onUnmounted(() => {
         {{ liveState === 'open' ? '● 实时推送中（1 秒级）' : liveState === 'error' ? '● 实时流中断，3 秒轮询兜底' : '● 实时流待连接' }}
       </span>
       点击设备图标 → 「📈 最近 10 分钟轨迹」查看回放；关闭弹窗后轨迹自动清除。
-      <button v-if="track" class="ghost small" style="margin-left:10px" @click="clearTrack">清除轨迹</button>
     </div>
   </div>
 </template>
