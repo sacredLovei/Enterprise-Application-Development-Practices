@@ -11,10 +11,10 @@
 | 项 | 值 |
 |---|---|
 | 项目 | 无人机-机器狗空地协同巡检集成平台（选题 1 园区安防，课程：企业应用开发实践） |
-| 当前步骤 | **S85 / S86 / S87 / S88 全部完成**——课程指定的四项要求（① 简单权限认证 ② 任务执行日志完整归档 ③ 模拟多机多狗并发上报压测 ④ 数据备份恢复演示）**已全部交付**；下一步：S89/S90（报告口径修正与测试资产适配，待用户确认）、S65 截图回填 |
-| 最近完成 | S88 简单权限认证（FR-5.7 落地，13/13 断言通过：401 语义、令牌跨双实例、登出吊销、前端登录闭环）；S87 备份恢复演示（PASS=2/0）；S86 四设备并发压测（3000/3000 零丢失）；S85 任务日志归档可查询闭环 |
+| 当前步骤 | **S85 / S86 / S87 / S88 / S89 全部完成**；下一步：**S90 测试资产适配**（用户 2026-09-21 选定顺序：先 S90 再 S91）→ S91 报告重转与截图回填；S65 截图（17 张） |
+| 最近完成 | S89 全局异常处理落地（方案 A，14/14 单测 + TC037 实测）；S88 简单权限认证（13/13）；S87 备份恢复演示（PASS=2/0）；S86 四设备并发压测（3000/3000 零丢失）；S85 任务日志归档可查询闭环 |
 | 当前版本 | 里程碑 **v0.7**（2026-09-14 用户确认打标：P0 收尾 + P1 六项 + P2 六项 + 用户反馈轮全部兑现）；历史 v0.6 / v0.5 / v0.4 / v0.3 / v0.2 / v0.1 |
-| 进行中事项 | 无（待办：**S89 报告"全局异常处理"表述与实现不一致**——报告 5.2/6.4.2 声称有 `@RestControllerAdvice` 全局异常处理，实际代码中不存在，需用户决策"补实现"或"改报告"；**S90 测试资产适配**——V-5/V-7 数据依赖失效修复 + `accept-s50-*.ps1`/JMeter 适配令牌；S65 截图回填（现为 17 张，含图 5-17 登录页）；报告 docx 重转） |
+| 进行中事项 | 无（待办：**S90 测试资产适配**——V-5 改动态选现存告警、V-7 校正检索时间窗、`accept-s50-*.ps1`/JMeter 带令牌；**S91 报告重转与截图回填**——md v1.0 → HTML/docx、17 张截图；报告小组人工项；S65 截图待用户按 `docs/截图操作清单.md` 执行） |
 | 工作树状态 | 干净（随每次提交保持） |
 
 ## 2. 版本表
@@ -98,6 +98,7 @@
 | 2026-09-21 | 本步 | **S87 完成（项 4）**：`docker/init/restore-demo.ps1` 备份恢复验证 **PASS=2 FAIL=0**——① 静态窗口（暂停 4 仿真 + 2 后端）导出 → 恢复临时库 `inspection_restore` → **6/6 集合计数 MATCH**（device 4 / device_status 116,439 / task 181 / task_log 524 / alarm 1,282 / image_meta 1,398）→ 清理临时库 → 恢复写入方；② `git bundle`（0.73MB）克隆恢复 HEAD 一致、tag 7/7；产出 `docs/备份恢复演示记录.md`（含复现命令与如实记录的边界：未覆盖 ES/HDFS）。首轮仅暂停仿真时 alarm 差 1 条 → 风险 #40 | AI |
 | 2026-09-21 | 本步 | **治理一致性修正**：核对发现 PLAN 中 S85 仍为 `in_progress`、S86/S87 为 `pending`，与已提交的 597b166 / 3b92b7c 及本次 S87 实际状态不符（S85/S86 完成时未同步 PLAN 状态与 STATE 时间线，违反纪律 §3.4）。处理：PLAN 三步状态改 `done` 并补"验收结论/产出物/提交号"，STATE 时间线补登 S85/S86/S87 三条；**未改动任何历史提交**。附带口径核定：`docker ps` 实测当前 **13 容器**（v0.7 时所述 12 为旧口径，本行为准） | AI |
 | 2026-09-21 | 本步 | **S88 完成（项 1，课程四项要求全部交付）**：FR-5.7 简易权限认证落地——后端新增 `auth` 包（`AuthProperties`/`TokenService`/`AuthInterceptor`/`AuthController`/`RevokedToken`/`WebConfig`），HMAC-SHA256 自包含令牌 + `/api/**` 统一拦截（白名单仅登录接口）+ MongoDB `auth_revoked` 吊销表（`_id=jti` + TTL）；前端新增 `/login` 页、路由守卫、axios 令牌注入与 401 回跳、侧边栏用户信息与退出登录。实测 `accept-s88.ps1` **13/13 通过**（无令牌/错误口令/空口令 → 401/401/400；篡改与伪造签名 401；6 个业务接口 200；令牌跨 backend-1/backend-2 均有效；登出吊销文档 0→1 且旧令牌复用 401；前端产物含登录页）；`mvn package` 单测 **9/9 全绿**。回归：`accept-v06.ps1` 适配令牌后复跑 **6/8**（8 例请求无一 401，2 例失败为测试数据陈旧 → 风险 #41）。报告升版 **v0.9**：新增 5.2.8 认证模块（含 401/403 边界与简化说明）、TC035/TC036、IT016~IT018、表 6-7 汇总行、5.3 的 P-16/P-17 与实施期补充、图 5-17；同步修正报告 5.5 小结"15 项故障/七个模块"→"17 项/八个模块"、图号范围，以及 `docs/截图操作清单.md`（12→13 容器、curl 步骤带令牌、新增图 5-17）。新增 `docs/权限认证说明.md`。**两处发现登记 S89/S90**（D-24、风险 #41/#42） | AI |
+| 2026-09-21 | 本步 | **S89 完成（用户决策方案 A：补实现全局异常处理）**：新增 `common/GlobalExceptionHandler`（`@RestControllerAdvice`）——业务异常保留原状态码与 reason、`@Valid` 校验失败 **400 + `fields[]` 字段明细**、请求体不可解析/参数缺失/类型错误 400、兜底 **500 不吐异常栈**，统一响应体 `{timestamp,status,code,error,message,path[,fields]}`。实测：`mvn package` 单测 **14/14**（新增 `GlobalExceptionHandlerTest` 5 例，含"500 不泄露异常类名与细节"强断言）；网关六类异常实测 404/404/400/400+字段/400/401；S88 验收复跑 **13/13**（吊销文档 1→2）；v0.6 回归仍 6/8（均为风险 #41 的测试数据陈旧，与本步无关）；报告升版 **v1.0**（新增 5.2.9、6.4.3 单元测试、TC037、6.4.2 错误体实测表、5.5 小结模块数）。排错一例：MockMvc 响应默认 ISO-8859-1 解码致中文断言恒失败 → 改 `getContentAsString(UTF_8)`（风险 #43） | AI |
 
 ## 4. 决策记录（永不删除，只可被新决策取代）
 
@@ -125,7 +126,8 @@
 | D-21 | S61 复核派单策略（v0.6，BUG-003 回归）：**可复核类型** PERIMETER_BREACH/INTRUSION/FIRE_SMOKE/DEVICE_OVERHEAT（BATTERY_LOW/DEVICE_OFFLINE 属设备状态事件不派现场复核）触发就近派单——2dsphere `nearSphere` 查最近 4 台在线机器狗（deviceType=ROBOT_DOG），空闲（无 DISPATCHED/RUNNING 任务）优先、全忙派最近（设备优先级队列兜底）；任务关联 `TaskDoc.alarmId`；DONE 回执 → 生成红外复核图（`dog_infrared` 目录）→ 告警 status/review 回填。**复核结论规则为仿真口径**：alarmId 哈希 70% CONFIRMED / 30% FALSE_ALARM（真实系统应由识别模型输出）；历史 10k 告警不回放派单；手动复核 IT009 覆盖人工干预路径 | 与设计 O-6/TC021/IT009 对齐；结论规则显式标注仿真口径，不伪装成真实识别 | 有效 |
 | D-22 | S63 复核吞吐匹配策略：① 派单节流——选中机器人待办复核任务 ≥ 2 时跳过自动派单（告警留待人工复核 IT009）；② 仿真告警频率调低——UAV patrolScan 15%/30s → 5%/30s（告警流入约 0.6 → 0.2 条/分钟），匹配 2 台机器狗复核吞吐（每单 1~2 分钟）。背景：实测告警高峰下复核队列持续积压、任务永久停在 DISPATCHED | 让自动复核闭环在真实告警速率下可持续，而非只在测试注入下可演示 | 有效 |
 | D-23 | S88 权限认证方案：**HMAC-SHA256 自包含令牌 + 后端拦截器统一校验 + MongoDB 共享吊销表**。具体取舍：① 不引入 JWT 库（只用 JDK `javax.crypto`，规避构建期依赖下载）；② 校验放后端而非 Nginx `auth_request`（令牌语义属业务域，网关职责单一化）；③ 登出吊销必须落 MongoDB（`auth_revoked`，`_id=jti` + TTL 索引）而非进程内存——后端为双实例负载均衡（D-4），内存黑名单会漏放行；④ 账号配置化 + 口令明文比对（课程"简单"范围），生产改用户表 + 加盐哈希。**只做认证（401）、不做基于角色的细粒度授权（403）**，边界已在报告 5.2.8(3) 与 `docs/权限认证说明.md` 如实标注 | 覆盖 FR-5.7 加分项，同时保持"零新增依赖 + 双实例安全"两个硬约束；方案与实现细节可复现（`accept-s88.ps1` 13 例断言） | 有效 |
-| D-24 | S88 执行中发现的"报告与实现不一致"**不夹带修复**：报告 5.2/6.4.2 声称通过 `@Valid` + `@RestControllerAdvice` 全局异常处理统一保证错误语义，但代码中**不存在任何 `@ControllerAdvice`/`@ExceptionHandler`**（当前依赖 Spring 默认错误响应 + `server.error.include-message: always`）。按纪律 §3.2（不得夹带计划外改动）登记为独立步骤 **S89**，由用户决策"补实现全局异常处理并回归"或"修正报告表述" | 治理纪律要求一个提交只做一步；该不一致会影响答辩追问（错误语义的真实来源），必须先经用户决策再动 | 有效（待用户决策） |
+| D-24 | S88 执行中发现的"报告与实现不一致"**不夹带修复**：报告 6.4.2 声称通过 `@Valid` + `@RestControllerAdvice` 全局异常处理统一保证错误语义，但代码中**不存在任何 `@ControllerAdvice`/`@ExceptionHandler`**（当时依赖 Spring 默认错误响应 + `server.error.include-message: always`）。按纪律 §3.2（不得夹带计划外改动）登记为独立步骤 **S89**，由用户决策"补实现全局异常处理并回归"或"修正报告表述" | 治理纪律要求一个提交只做一步；该不一致会影响答辩追问（错误语义的真实来源），必须先经用户决策再动 | **已被 D-25 取代**（用户 2026-09-21 选择方案 A：补实现） |
+| D-25 | S89 采用**方案 A——补实现全局异常处理**（`common/GlobalExceptionHandler`，`@RestControllerAdvice`）：`ResponseStatusException` 保留原状态码与业务 message；`@Valid` 校验失败 400 + `fields[]` 字段明细；请求体不可解析/参数缺失/类型错误 400；兜底 500 统一中性文案且**不吐异常栈**（细节仅落日志）；统一响应体 `{timestamp,status,code,error,message,path[,fields]}`，与鉴权 401 响应结构对齐 | 用户选择"让报告所述组件真实存在"而非改报告：既消除报告与实现的矛盾，又实实在在提升错误语义质量（异常路径 4xx、参数校验带明细、不泄露栈），并为答辩提供可 `grep` 到的证据；代价是一个步骤 + 一轮回归（已执行：单测 14/14、网关六类异常实测、S88 验收 13/13、v0.6 回归 6/8） | 有效 |
 
 ## 5. 术语与口径注册表（全项目唯一权威口径，改口径必须先改本表）
 
@@ -138,7 +140,8 @@
 | MongoDB 集合 | `device`、`device_status`、`task`、`alarm`、`task_log`、`image_meta`（S72 起，影像元数据；BUG-008 已实现）；TTL：device_status 30 天、task_log 90 天 |
 | ES 索引 | **`inspection_alarm_v3`**（现行，S63 起）：`dynamic: strict`；`location` geo_point（**顺序 [经度,纬度]**）；`description=ik_smart`（analysis-ik 8.13.0，插件+词典经 `docker/es-plugins` bind 挂载持久化）；`inspection_alarm_v1` 保留作回滚基线；`inspection_alarm_v2` 为映射损坏的中间产物（_reindex 动态映射误建，风险 #37），仅留档 |
 | HDFS 路径 | `/inspection/{imageType}/{yyyy}/{MM}/{dd}/{deviceId}/{uuid}.{ext}`；imageType ∈ {uav_patrol, dog_infrared, alarm_snapshot, **manual_review（S75 起，人工复核现场照片）**} |
-| 编号段 | 图：3-x/4-x/5-x（图 3-1~**图 5-17**，图 5-17 = S88 登录页与鉴权）；表：4-x/5-x/6-x；用例 TC001~**TC036**、IT001~**IT018**、PT001~**PT008**；缺陷 BUG-xxx；决策 D-n；计划步骤 Sxx |
+| 编号段 | 图：3-x/4-x/5-x（图 3-1~**图 5-17**，图 5-17 = S88 登录页与鉴权）；表：4-x/5-x/6-x；用例 TC001~**TC037**、IT001~**IT018**、PT001~**PT008**；单元测试后端 14 + 仿真 6 = **20 例**；缺陷 BUG-xxx；决策 D-n；计划步骤 Sxx |
+| 错误语义口径（S89） | 所有 `/api/**` 错误响应统一为 `{timestamp,status,code,error,message,path[,fields]}`：业务异常（`ResponseStatusException`）保留原状态码与 reason（404/400/409/500）；`@Valid` 校验失败 **400 + `fields[]`（field/message/rejectedValue）**；请求体不可解析、参数缺失、类型错误 **400**；兜底异常 **500** 且不吐栈；鉴权 401 由拦截器直接写出（结构一致，`application/json;charset=UTF-8`）。实现类 `common/GlobalExceptionHandler` |
 | 部署规模 | 当前 **13 容器**：namenode、datanode、mongodb、kafka、elasticsearch、kibana、nginx、backend-1、backend-2、uav-sim-1、uav-sim-2、dog-sim-1、dog-sim-2（2026-09-21 `docker ps` 实测；历史记录中"10 容器"为 S21 时期口径、"12 容器"为 S50 时期口径，均已被本行取代） |
 | 认证口径（S88，FR-5.7） | 接口：`POST /api/auth/login`（唯一免鉴权）、`GET /api/auth/me`、`POST /api/auth/logout`；保护范围 `/api/**`（`/actuator/health`、`/swagger-ui/**`、`/v3/api-docs` 天然放行）；令牌：HMAC-SHA256 自包含，格式 `base64url(payload).base64url(签名)`，有效期 **12 h**（`AUTH_TTL_HOURS`）；演示账号 **admin/admin123（ADMIN）**、**operator/operator123（OPERATOR）**（口令可经 `AUTH_ADMIN_PASSWORD`/`AUTH_OPERATOR_PASSWORD` 覆盖）；密钥 `AUTH_SECRET`（**双实例必须一致**）；吊销集合 `auth_revoked`（`_id=jti`，TTL 随 exp）；未认证统一 **401** + `{code,error,message}`；前端令牌存 `localStorage`（`inspection_token`/`inspection_user`） |
 | 节奏指标 | 心跳 5 s；遥测 2 s；离线阈值 15 s（3 个心跳周期，自然失联判定）；**手动上下线 5 s 内生效（指令驱动，S50 用户要求提速）**；遥测端到端 P95 < 1.5 s；检索 P95 < 500 ms；并发 ≥ 50 msg/s；网关 ≥ 200 QPS |
@@ -189,7 +192,8 @@
 39. **长耗时维护接口被 nginx 网关超时（S63 已踩坑，S64 已修复）**：`POST /api/maintenance/regenerate-evidence` 同步处理数千张证据图（分钟级），经 Nginx 触发 `proxy_read_timeout 30s` → 504。**结论（已落地）**：nginx 新增 `/api/maintenance/` 专属 location——`proxy_read_timeout 900s`、不限流；该路径接口照常同步执行。
 40. **备份恢复比对必须"完全静态窗口"（S87 已踩坑，已修复）**：恢复演示首轮只暂停 4 个仿真，`alarm` 集合出现 `1279 vs 1278` 的 1 条差异——设备心跳停止后**后端离线检测器（15s 阈值）在导出窗口内补发了一条 `DEVICE_OFFLINE` 告警**，导出/恢复期间仍有写入。**结论**：需要精确比对的备份/恢复演练必须同时暂停**全部写入方（4 仿真 + 2 后端）**并等待 8s 让在途消息落库，再导出；改为静态窗口后 6/6 集合计数完全一致。此类"仍在跑的写入方"是备份一致性验证的通用陷阱（等价于数据库热备的一致性问题）。
 41. **测试资产的"数据依赖"会伪装成回归失败（S88 发现，待修）**：S88 后复跑主回归套件 `accept-v06.ps1` 得 6/8——两例失败与本步无关：① **V-5** 硬编码告警编号 `pt3k-00002` 已随 S74 测试数据清理删除（Mongo 实测 0 条）→ 复核接口 404；② **V-7** 关键词"红外温度"在 24 h 窗口 0 条（90 天窗口 5 条），语料随时间窗衰减（同脚本"人员"命中 38 条证明 ik 正常）。**结论**：验收脚本不得硬编码测试数据编号，应动态选取现存样本；时间窗类断言要么放宽窗口要么随语料刷新。修复登记为 **S90**。
-42. **报告声称的组件可能并不存在（S88 发现，待决策）**：报告 5.2/6.4.2 写有"通过 `@Valid` + `@RestControllerAdvice` 全局异常处理统一保证"错误语义，全项目代码检索**无任何 `@ControllerAdvice`/`@ExceptionHandler`**——当前实际依赖 Spring 默认错误响应 + `server.error.include-message: always`。**教训**：报告里"我用了某技术"的表述必须能被 `grep` 到，否则答辩追问即穿帮。处置见 D-24（登记 S89，由用户决策补实现或改报告）。
+42. **报告声称的组件可能并不存在（S88 发现，S89 已解决）**：报告 6.4.2 写有"通过 `@Valid` + `@RestControllerAdvice` 全局异常处理统一保证"错误语义，全项目代码检索**无任何 `@ControllerAdvice`/`@ExceptionHandler`**——当时实际依赖 Spring 默认错误响应 + `server.error.include-message: always`。**教训**：报告里"我用了某技术"的表述必须能被 `grep` 到，否则答辩追问即穿帮。**处置（用户 2026-09-21 决策方案 A，D-25）**：新增 `common/GlobalExceptionHandler` 真实实现——单测 **14/14**（新增 5 例，其中"500 不泄露异常类名与细节"为强断言）、网关六类异常实测（404/404/400/400+字段明细/400/401）、S88 验收复跑 **13/13**、v0.6 回归仍 6/8（两例为风险 #41 的测试数据陈旧，与本步无关）；报告升版 v1.0 并新增 5.2.9 与 6.4.3。
+43. **MockMvc 响应默认按 ISO-8859-1 解码（S89 踩坑，已修复）**：新增的 `GlobalExceptionHandlerTest` 首跑 3 例失败——断言 `body.contains("服务内部错误")` 恒为 false，而响应体打印出来是乱码。根因：`MockMvcResultMatchers`/`getContentAsString()` 用响应声明的字符集解码，JSON 响应无 `charset` 时退化为 ISO-8859-1，中文断言必然失败（**不是被测代码的问题，是测试自身的写法缺陷**）。**结论**：含中文断言的 MockMvc 测试一律 `getContentAsString(StandardCharsets.UTF_8)`；该"先证明测试会红、再修测试写法"的过程已记入报告 6.4.3。
 
 ## 7. 下一步计划
 

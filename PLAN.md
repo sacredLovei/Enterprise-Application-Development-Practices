@@ -367,15 +367,15 @@
 - **产出物**：后端 `com.course.inspection.auth`（`AuthProperties`/`TokenService`/`AuthInterceptor`/`AuthController`/`RevokedToken`/`WebConfig`）+ `application.yml` 认证配置；前端 `views/Login.vue`、`router/index.js` 守卫、`api/request.js` 令牌注入与 401 回跳、`App.vue` 用户信息与退出登录；`docker/init/accept-s88.ps1`；`docs/权限认证说明.md`；报告 v0.9 回填（5.2.8、TC035/TC036、IT016~IT018、表 6-7、P-16/P-17、图 5-17）
 - **提交号/完成时间**：本步提交（2026-09-21）
 
-### S89 报告"全局异常处理"口径修正（待用户决策）
-- **状态**：in_progress
+### S89 报告"全局异常处理"口径修正（用户决策：方案 A）
+- **状态**：done
 - **用户决策（2026-09-21）**：选择 **方案 A——补实现全局异常处理并回归**（使报告所述组件真实存在，而非改报告）
-- **开始时间**：2026-09-21
-- **背景**：报告 5.2/6.4.2 声称"通过 `@Valid` + `@RestControllerAdvice` 全局异常处理统一保证"错误语义，实际代码全项目检索无 `@ControllerAdvice`/`@ExceptionHandler`（依赖 Spring 默认错误响应 + `server.error.include-message: always`）。见 STATE 风险 #42 / 决策 D-24
 - **目标**：消除报告与实现的矛盾
-- **内容（二选一，由用户决定）**：A. **补实现**——新增 `GlobalExceptionHandler`（`@RestControllerAdvice`）：`ResponseStatusException` → `{code,error,message}`、`MethodArgumentNotValidException` → 400 含字段明细、兜底 500 不含栈信息，并回归全部接口用例；B. **改报告**——把表述改为"各控制器以 `@Valid` 与显式状态码返回语义，未引入全局异常处理器（如实记录）"
-- **验收标准**：`grep` 报告所述组件在代码中可查到（方案 A），或报告表述与代码一致（方案 B）；回归无新增失败
-- **产出物**：backend 变更或报告修订（视决策）
+- **内容**：新增 `common/GlobalExceptionHandler`（`@RestControllerAdvice`）：`ResponseStatusException` 保留原状态码与业务 message；`@Valid` 校验失败 400 + `fields[]` 字段明细；请求体不可解析 / 参数缺失 / 类型错误 400；兜底 500 统一中性文案且不吐异常栈；统一响应体 `{timestamp,status,code,error,message,path[,fields]}`（与鉴权 401 结构对齐）
+- **验收标准**：`grep` 报告所述组件在代码中可查到；异常路径 4xx 而非 5xx；回归无新增失败
+- **验收结论**（2026-09-21）：**全部达到**。① 代码可查——`GlobalExceptionHandler` 已落地并经网关实测；② 异常路径实测：设备不存在 **404**、告警不存在 **404**、非法 JSON **400**、缺必填字段 **400（含 `fields=[{field:deviceId,…}]`）**、非法查询参数 **400**、无令牌 **401**，**均非 500**；③ 单测 `mvn package` **14/14 全绿**（新增 `GlobalExceptionHandlerTest` 5 例：状态码保留 / 校验 400 带明细 / 请求体 400 / 兜底 500 不泄露异常类名与细节 / 错误体字段稳定）；④ 回归：`accept-s88.ps1` **13/13** 复跑通过、`accept-v06.ps1` 仍 6/8（两例为风险 #41 的测试数据陈旧，非本步引入）。过程中修复测试自身缺陷：MockMvc 响应默认 ISO-8859-1 解码致中文断言恒失败（风险 #43）
+- **产出物**：`backend/.../common/GlobalExceptionHandler.java`、`backend/src/test/.../common/GlobalExceptionHandlerTest.java`；报告 v1.0（5.2.9、6.4.3、TC037、6.4.2 错误体实测表、5.5 小结口径修正）
+- **提交号/完成时间**：本步提交（2026-09-21）
 
 ### S90 测试资产适配与修复（数据依赖 + 鉴权）
 - **状态**：pending
