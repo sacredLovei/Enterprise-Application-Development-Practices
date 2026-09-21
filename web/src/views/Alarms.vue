@@ -37,16 +37,5 @@ const tabs = computed(() => [
 </template>
 
 <style scoped>
-.slide-left-enter-active, .slide-left-leave-active,
-.slide-right-enter-active, .slide-right-leave-active {
-  transition: opacity .16s ease, transform .16s ease;
-}
-.slide-left-enter-from { opacity: 0; transform: translateX(28px); }
-.slide-left-leave-to { opacity: 0; transform: translateX(-28px); }
-.slide-right-enter-from { opacity: 0; transform: translateX(-28px); }
-.slide-right-leave-to { opacity: 0; transform: translateX(28px); }
-@media (prefers-reduced-motion: reduce) {
-  .slide-left-enter-active, .slide-left-leave-active,
-  .slide-right-enter-active, .slide-right-leave-active { transition: none; }
-}
+/* 滑动过渡样式已上移至全局 style.css（异步路由组件不继承父 scoped 属性，S102 实测） */
 </style>

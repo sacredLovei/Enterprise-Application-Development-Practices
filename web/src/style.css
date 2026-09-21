@@ -34,6 +34,22 @@ html[data-vt="to-dark"]::view-transition-old(root) {
   .page-enter-active, .page-leave-active { transition: none; }
 }
 
+/* S102 补充：任务/告警二级子页水平滑动（方向感知）——
+   必须放全局：路由视图是异步组件，子组件根元素不继承父组件 scoped 属性，
+   写在布局壳的 scoped 样式里过渡类名匹配不到（实测动画失效） */
+.slide-left-enter-active, .slide-left-leave-active,
+.slide-right-enter-active, .slide-right-leave-active {
+  transition: opacity .16s ease, transform .16s ease;
+}
+.slide-left-enter-from { opacity: 0; transform: translateX(28px); }
+.slide-left-leave-to { opacity: 0; transform: translateX(-28px); }
+.slide-right-enter-from { opacity: 0; transform: translateX(-28px); }
+.slide-right-leave-to { opacity: 0; transform: translateX(28px); }
+@media (prefers-reduced-motion: reduce) {
+  .slide-left-enter-active, .slide-left-leave-active,
+  .slide-right-enter-active, .slide-right-leave-active { transition: none; }
+}
+
 body {
   font-family: var(--font-sans);
   background: var(--bg-page);
