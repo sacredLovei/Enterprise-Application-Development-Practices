@@ -92,7 +92,7 @@ onUnmounted(() => { clearInterval(timer); clearInterval(healthTimer) })
                @track-requested="showTrack" />
     <div class="hint">
       蓝色标记 = 无人机，绿色 = 机器狗（灰色为离线）；红色 ! 为告警点（严重告警带脉冲圈）；红色靶标为任务目标点。
-      底图为 CARTO 低饱和地图，随亮/暗主题自动切换。
+      底图为 Esri 灰度地图（低饱和，随亮/暗主题自动切换）。
       点击设备图标 → 「📈 最近 10 分钟轨迹」查看回放。
       <button v-if="track" class="ghost small" style="margin-left:10px" @click="clearTrack">清除轨迹</button>
     </div>

@@ -26,18 +26,24 @@ let map, deviceLayer, alarmLayer, targetLayer, trackLayer
 // 颜色全部走 tokens.css 变量——divIcon 注入 DOM 后随主题自动适配。
 // ============================================================
 
+// 底图换源（S97-c 验收实测修正）：CARTO 免费匿名瓦片 2026 起对无 key 请求返回
+// "API KEY REQUIRED" 水印瓦片（tileload 仍成功，风险 #48 的"成功即可用"判定无法拦截），
+// 改用 Esri Canvas Light/Dark Gray——同为低饱和数据可视化底图，免 key（z/y/x 顺序，原生最高 16 级、上方超采样）。
 const BASEMAPS = {
   light: {
-    url: 'https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png',
-    attribution: '&copy; OpenStreetMap &copy; CARTO'
+    url: 'https://services.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Light_Gray_Base/MapServer/tile/{z}/{y}/{x}',
+    attribution: 'Tiles &copy; Esri &mdash; Esri, HERE, Garmin, FAO, USGS, NGA',
+    maxNativeZoom: 16
   },
   dark: {
-    url: 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}.png',
-    attribution: '&copy; OpenStreetMap &copy; CARTO'
+    url: 'https://services.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Base/MapServer/tile/{z}/{y}/{x}',
+    attribution: 'Tiles &copy; Esri &mdash; Esri, HERE, Garmin, FAO, USGS, NGA',
+    maxNativeZoom: 16
   },
   fallback: {
     url: 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',
-    attribution: '&copy; OpenStreetMap'
+    attribution: '&copy; OpenStreetMap',
+    maxNativeZoom: 19
   }
 }
 
@@ -59,7 +65,8 @@ function setBaseLayer() {
   tileFails = 0
   baseLayer = L.tileLayer(conf.url, {
     attribution: conf.attribution,
-    subdomains: key === 'fallback' ? 'abc' : 'abcd',
+    subdomains: key === 'fallback' ? 'abc' : '',
+    maxNativeZoom: conf.maxNativeZoom,
     maxZoom: 19
   })
   baseLayer.on('tileload', () => { tileOk = true; tileFails = 0 })
