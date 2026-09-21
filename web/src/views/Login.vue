@@ -70,15 +70,15 @@ async function submit() {
             <span class="ping p3"></span>
             <svg class="radar-route" viewBox="0 0 260 200" fill="none">
               <path id="rt1" d="M20 170 L20 40 L130 40 L130 170 L240 170 L240 90 L150 90"
-                    stroke="#38bdf8" stroke-opacity=".55" stroke-width="1.6" stroke-dasharray="7 7" class="flow"/>
+                    style="stroke: var(--rp-route1)" stroke-opacity=".55" stroke-width="1.6" stroke-dasharray="7 7" class="flow"/>
               <path d="M20 170 L20 40 L130 40 L130 170 L240 170 L240 90 L150 90"
-                    stroke="#38bdf8" stroke-opacity=".14" stroke-width="4" stroke-linecap="round"/>
-              <circle r="4.5" fill="#38bdf8">
+                    style="stroke: var(--rp-route1)" stroke-opacity=".14" stroke-width="4" stroke-linecap="round"/>
+              <circle r="4.5" style="fill: var(--rp-route1)">
                 <animateMotion dur="9s" repeatCount="indefinite" path="M20 170 L20 40 L130 40 L130 170 L240 170 L240 90 L150 90"/>
               </circle>
-              <path id="rt2" d="M50 30 C90 10, 180 20, 235 55" stroke="#34d399" stroke-opacity=".55"
+              <path id="rt2" d="M50 30 C90 10, 180 20, 235 55" style="stroke: var(--rp-route2)" stroke-opacity=".55"
                     stroke-width="1.6" stroke-dasharray="6 6" class="flow2"/>
-              <circle r="4" fill="#34d399">
+              <circle r="4" style="fill: var(--rp-route2)">
                 <animateMotion dur="6s" repeatCount="indefinite" path="M50 30 C90 10, 180 20, 235 55"/>
               </circle>
             </svg>
@@ -146,8 +146,42 @@ async function submit() {
   gap: 56px;
 }
 
-/* ---------- 左：品牌 + 雷达面板（常暗大屏风，主题解耦） ---------- */
-.login-hero { max-width: 420px; color: var(--text-1); }
+/* ---------- 左：品牌 + 雷达面板（S101 补充：双主题适配——局部令牌 --rp-*，
+   亮色浅蓝工作台风 / 暗色大屏风，随 data-theme 切换） ---------- */
+.login-hero {
+  --rp-panel-bg: #ffffff;
+  --rp-panel-border: var(--border);
+  --rp-panel-shadow: var(--shadow-1);
+  --rp-status: #1d4ed8;
+  --rp-alive: #16a34a;
+  --rp-radar-grid: rgba(37, 99, 235, 0.09);
+  --rp-radar-glow: rgba(37, 99, 235, 0.10);
+  --rp-radar-base: #f2f6fc;
+  --rp-sweep: rgba(37, 99, 235, 0.16);
+  --rp-ping: #dc2626;
+  --rp-ping-ring: rgba(220, 38, 38, 0.55);
+  --rp-route1: var(--accent);
+  --rp-route2: #16a34a;
+  --rp-tag: #1d4ed8;
+  max-width: 420px;
+  color: var(--text-1);
+}
+[data-theme="dark"] .login-hero {
+  --rp-panel-bg: #0b1524;
+  --rp-panel-border: #1e3a5f;
+  --rp-panel-shadow: 0 10px 34px rgba(2, 12, 27, 0.5);
+  --rp-status: #7dd3fc;
+  --rp-alive: #34d399;
+  --rp-radar-grid: rgba(56, 189, 248, 0.07);
+  --rp-radar-glow: rgba(56, 189, 248, 0.10);
+  --rp-radar-base: #0a1220;
+  --rp-sweep: rgba(56, 189, 248, 0.35);
+  --rp-ping: #f87171;
+  --rp-ping-ring: rgba(248, 113, 113, 0.6);
+  --rp-route1: #38bdf8;
+  --rp-route2: #34d399;
+  --rp-tag: #7dd3fc;
+}
 .hero-brand {
   display: flex;
   align-items: center;
@@ -165,9 +199,9 @@ async function submit() {
   margin: 22px 0 20px;
   padding: 14px 16px 16px;
   border-radius: var(--radius-2);
-  background: #0b1524;
-  border: 1px solid #1e3a5f;
-  box-shadow: 0 10px 34px rgba(2, 12, 27, 0.5);
+  background: var(--rp-panel-bg);
+  border: 1px solid var(--rp-panel-border);
+  box-shadow: var(--rp-panel-shadow);
 }
 .radar-status {
   display: flex;
@@ -175,13 +209,13 @@ async function submit() {
   gap: 8px;
   font-size: 11px;
   letter-spacing: 1.5px;
-  color: #7dd3fc;
+  color: var(--rp-status);
   font-family: var(--font-mono);
   margin-bottom: 12px;
 }
 .blink {
   width: 8px; height: 8px; border-radius: 50%;
-  background: #34d399;
+  background: var(--rp-alive);
   animation: blink 1.6s ease-in-out infinite;
 }
 @keyframes blink { 0%,100% { opacity: 1; } 50% { opacity: .25; } }
@@ -192,17 +226,17 @@ async function submit() {
   border-radius: var(--radius-1);
   overflow: hidden;
   background:
-    linear-gradient(rgba(56, 189, 248, 0.07) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(56, 189, 248, 0.07) 1px, transparent 1px),
-    radial-gradient(circle at 50% 50%, rgba(56, 189, 248, 0.10), transparent 65%),
-    #0a1220;
+    linear-gradient(var(--rp-radar-grid) 1px, transparent 1px),
+    linear-gradient(90deg, var(--rp-radar-grid) 1px, transparent 1px),
+    radial-gradient(circle at 50% 50%, var(--rp-radar-glow), transparent 65%),
+    var(--rp-radar-base);
   background-size: 26px 26px, 26px 26px, 100% 100%, 100% 100%;
 }
 /* 旋转扫描扇面 */
 .radar-sweep {
   position: absolute;
   inset: -40%;
-  background: conic-gradient(from 0deg, rgba(56, 189, 248, 0.35), rgba(56, 189, 248, 0.06) 55deg, transparent 90deg);
+  background: conic-gradient(from 0deg, var(--rp-sweep), transparent 90deg);
   animation: sweep 4.5s linear infinite;
 }
 @keyframes sweep { to { transform: rotate(360deg); } }
@@ -211,17 +245,17 @@ async function submit() {
   position: absolute;
   width: 8px; height: 8px;
   border-radius: 50%;
-  background: #f87171;
-  box-shadow: 0 0 0 0 rgba(248, 113, 113, 0.6);
+  background: var(--rp-ping);
+  box-shadow: 0 0 0 0 var(--rp-ping-ring);
   animation: ping 2.6s ease-out infinite;
 }
 .ping.p1 { left: 30%; top: 32%; }
 .ping.p2 { left: 64%; top: 58%; animation-delay: .9s; }
 .ping.p3 { left: 45%; top: 72%; animation-delay: 1.7s; }
 @keyframes ping {
-  0%   { box-shadow: 0 0 0 0 rgba(248, 113, 113, 0.55); }
-  70%  { box-shadow: 0 0 0 14px rgba(248, 113, 113, 0); }
-  100% { box-shadow: 0 0 0 0 rgba(248, 113, 113, 0); }
+  0%   { box-shadow: 0 0 0 0 var(--rp-ping-ring); }
+  70%  { box-shadow: 0 0 0 14px transparent; }
+  100% { box-shadow: 0 0 0 0 transparent; }
 }
 /* 航迹：虚线流动 + animateMotion 光点 */
 .radar-route { position: absolute; inset: 10px; width: calc(100% - 20px); height: calc(100% - 20px); }
@@ -233,7 +267,7 @@ async function submit() {
   left: 10px;
   bottom: 8px;
   font-size: 11px;
-  color: #7dd3fc;
+  color: var(--rp-tag);
   font-family: var(--font-mono);
   opacity: .85;
 }
