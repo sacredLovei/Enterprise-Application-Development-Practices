@@ -161,27 +161,40 @@ if ($r.code -eq 200) {
 V "V-4" "review image download" ($r.code -eq 200 -and $bytes -gt 0) ("code=" + $r.code + " bytes=" + $bytes)
 Remove-Item $tmp -ErrorAction SilentlyContinue
 
-# --- V-5: IT009 manual review (regression) ---
-$r = Req "POST" "$base/api/alarms/pt3k-00002/review" '{"conclusion":"FALSE_ALARM","note":"v06 manual review"}'
-$a5 = Alarm "pt3k-00002"
-$ok5 = ($r.code -eq 200 -and $a5 -ne $null -and $a5.status -eq 'FALSE_ALARM' -and $a5.review -ne $null -and $a5.review.reviewerDeviceId -eq 'MANUAL')
-V "V-5" "IT009 manual review" $ok5 ("code=" + $r.code + " status=" + $(if($a5){$a5.status}else{"?"}))
+# --- V-5: IT009 manual review (regression; S90: pick a LIVE alarm dynamically) ---
+# S90 fix: the script used to hardcode alarm pt3k-00002, which S74 deleted during test-data cleanup
+# (0 docs left) so the case failed with 404 - a stale test asset, not a product defect.
+# Now we pick the first existing alarm whose status is not RESOLVED (review only requires a valid
+# conclusion and an un-disposed alarm; see AlarmSearchController#review).
+$reviewId = $null
+$list5 = (Req "GET" "$base/api/alarms?page=0&size=50" $null).body | ConvertFrom-Json
+foreach ($a in $list5.records) { if ($a.status -ne 'RESOLVED') { $reviewId = $a.alarmId; break } }
+$r = $null; $a5 = $null
+if ($reviewId) {
+    $r = Req "POST" "$base/api/alarms/$reviewId/review" '{"conclusion":"FALSE_ALARM","note":"v06 manual review"}'
+    $a5 = Alarm $reviewId
+}
+$ok5 = ($reviewId -ne $null -and $r -ne $null -and $r.code -eq 200 -and $a5 -ne $null -and $a5.status -eq 'FALSE_ALARM' -and $a5.review -ne $null -and $a5.review.reviewerDeviceId -eq 'MANUAL')
+V "V-5" "IT009 manual review" $ok5 ("alarm=" + $(if($reviewId){$reviewId}else{"none"}) + " code=" + $(if($r){$r.code}else{"?"}) + " status=" + $(if($a5){$a5.status}else{"?"}))
 
 # --- V-6: TC032 detail API (snapshot + review both present) ---
 $a6 = Alarm $aid1
 $ok6 = ($a6 -ne $null -and $a6.snapshotPath -ne $null -and $a6.review -ne $null -and $a6.review.imagePath -ne $null)
 V "V-6" "TC032 detail evidence chain API" $ok6 ("snapshot=" + $(if($a6){$a6.snapshotPath}else{"?"}) + " reviewImage=" + $(if($a6 -and $a6.review){$a6.review.imagePath}else{"?"}))
 
-# --- V-7: TC027 Chinese ik search (S63: v3 index, ik_smart; keywords exist in data) ---
-function CSearch([string]$kw) {
-    $body = '{"keyword":"' + $kw + '","from":"now-24h","to":"now","page":0,"size":5}'
+# --- V-7: TC027 Chinese ik search (S63: v3 index, ik_smart) ---
+# S90 fix: with the 10k injected corpus removed by S74, keyword "IR temperature" has 0 hits inside a
+# 24h window (5 hits within 90d), so the window is widened for that keyword. Tokenisation itself is
+# still proven by the "person" keyword returning hits inside 24h; both windows are printed as evidence.
+function CSearch([string]$kw, [string]$from) {
+    $body = '{"keyword":"' + $kw + '","from":"' + $from + '","to":"now","page":0,"size":5}'
     try {
         $r = Invoke-WebRequest -Uri "$base/api/search/alarms" -Method POST -ContentType "application/json; charset=utf-8" -Body ([System.Text.Encoding]::UTF8.GetBytes($body)) -UseBasicParsing -TimeoutSec 20 -Headers @{ Authorization = "Bearer $script:token" }
         return [long](( $r.Content | ConvertFrom-Json).total)
     } catch { return -1 }
 }
-$tPerson = CSearch (-join [char[]](0x4EBA, 0x5458))                      # 人员 (ASCII-safe, risk #16)
-$tIr = CSearch (-join [char[]](0x7EA2, 0x5916, 0x6E29, 0x5EA6))          # 红外温度
-V "V-7" "TC027 chinese ik search" ($tPerson -gt 0 -and $tIr -gt 0) ("keyword-person total=" + $tPerson + " keyword-ir total=" + $tIr + " (ik_smart, v3 index)")
+$tPerson = CSearch (-join [char[]](0x4EBA, 0x5458)) "now-24h"              # person, 24h window
+$tIr = CSearch (-join [char[]](0x7EA2, 0x5916, 0x6E29, 0x5EA6)) "now-90d"  # IR temperature, 90d window
+V "V-7" "TC027 chinese ik search" ($tPerson -gt 0 -and $tIr -gt 0) ("person(24h)=" + $tPerson + " ir(90d)=" + $tIr + " (ik_smart, v3 index)")
 
 Write-Output "===== V0.6 SUMMARY: PASS=$pass FAIL=$fail ====="

@@ -3,6 +3,8 @@
 # Measures: produced / drained / lost / per-device split / consumer LAG peak + recall / batch drain time.
 # ASCII-only (PS 5.1 lesson, STATE risk #16).
 $base = "http://127.0.0.1:8080"
+. "$PSScriptRoot\auth-helper.ps1"     # S90: /api/** requires a Bearer token (S88)
+Connect-InspectionApi -Base $base | Out-Null
 $perDevice = 750
 $intervalMs = 80          # 12.5 msg/s per device
 $pass = 0; $fail = 0
@@ -31,16 +33,16 @@ function Lag() {
 Write-Output "===== S86 CONCURRENT REPORTING STRESS TEST ====="
 
 # --- pre-step: all devices online ---
-$devs = ((Invoke-WebRequest -Uri "$base/api/devices" -UseBasicParsing -TimeoutSec 15).Content) | ConvertFrom-Json
+$devs = ((Invoke-WebRequest -Uri "$base/api/devices" -UseBasicParsing -TimeoutSec 15 -Headers (AuthHeaders)).Content) | ConvertFrom-Json
 foreach ($d in $devs) {
     if ($d.status -ne 'ONLINE') {
-        Invoke-WebRequest -Uri "$base/api/devices/$($d.deviceId)/online" -Method POST -UseBasicParsing -TimeoutSec 15 | Out-Null
+        Invoke-WebRequest -Uri "$base/api/devices/$($d.deviceId)/online" -Method POST -UseBasicParsing -TimeoutSec 15 -Headers (AuthHeaders) | Out-Null
         Write-Output ("pre-step: restore online -> " + $d.deviceId)
     }
 }
 $deadline = (Get-Date).AddSeconds(60)
 while ((Get-Date) -lt $deadline) {
-    $still = (((Invoke-WebRequest -Uri "$base/api/devices" -UseBasicParsing -TimeoutSec 15).Content) | ConvertFrom-Json) | Where-Object { $_.status -ne 'ONLINE' }
+    $still = (((Invoke-WebRequest -Uri "$base/api/devices" -UseBasicParsing -TimeoutSec 15 -Headers (AuthHeaders)).Content) | ConvertFrom-Json) | Where-Object { $_.status -ne 'ONLINE' }
     if (@($still).Count -eq 0) { break }
     Start-Sleep -Seconds 5
 }

@@ -3,6 +3,8 @@
 # ASCII-only script (STATE risk #16); Chinese text lives in the UTF-8 template file.
 $ErrorActionPreference = "Stop"
 $base = "http://127.0.0.1:8080"
+. "$PSScriptRoot\auth-helper.ps1"     # S90: sample calls under /api/** need a Bearer token (S88); /v3/api-docs is whitelisted
+Connect-InspectionApi -Base $base | Out-Null
 $ws = Split-Path -Parent (Split-Path -Parent $PSScriptRoot)   # docker/init -> project root
 $template = Join-Path $ws "docs\前端接口契约_模板.md"
 $outFile = Join-Path $ws "docs\前端接口契约.md"
@@ -40,7 +42,7 @@ Write-Output "=== sample responses ==="
 $ssb = New-Object System.Text.StringBuilder
 function Sample([string]$title, [string]$method, [string]$url, [string]$body) {
     try {
-        $p = @{ Uri = $url; Method = $method; TimeoutSec = 30; UseBasicParsing = $true }
+        $p = @{ Uri = $url; Method = $method; TimeoutSec = 30; UseBasicParsing = $true; Headers = (AuthHeaders) }
         if ($body) { $p.ContentType = "application/json"; $p.Body = $body }
         $r = Invoke-WebRequest @p
         $text = $r.Content
@@ -69,10 +71,10 @@ Sample "overview stats" "GET" "$base/api/stats/overview" $null
 
 # alarm detail sample: prefer one that already has a review
 try {
-    $alarms = ((Invoke-WebRequest -Uri "$base/api/alarms?page=0&size=10" -UseBasicParsing -TimeoutSec 20).Content) | ConvertFrom-Json
+    $alarms = ((Invoke-WebRequest -Uri "$base/api/alarms?page=0&size=10" -UseBasicParsing -TimeoutSec 20 -Headers (AuthHeaders)).Content) | ConvertFrom-Json
     $withReview = $null
     foreach ($a in $alarms.records) {
-        $d = ((Invoke-WebRequest -Uri "$base/api/alarms/$($a.alarmId)" -UseBasicParsing -TimeoutSec 20).Content) | ConvertFrom-Json
+        $d = ((Invoke-WebRequest -Uri "$base/api/alarms/$($a.alarmId)" -UseBasicParsing -TimeoutSec 20 -Headers (AuthHeaders)).Content) | ConvertFrom-Json
         if ($d.review) { $withReview = $d; break }
     }
     if ($withReview) {

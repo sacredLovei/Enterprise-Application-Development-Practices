@@ -2,6 +2,8 @@
 # TC030 (rate limit) evidenced by PT006 in accept-s50-pt.ps1.
 # ASCII-only (PowerShell 5.1 GBK/UTF-8 parsing lesson, STATE risk #16).
 $base = "http://127.0.0.1:8080"
+. "$PSScriptRoot\auth-helper.ps1"     # S90: /api/** requires a Bearer token (S88)
+Connect-InspectionApi -Base $base | Out-Null
 $pass = 0; $fail = 0
 
 function V([string]$id, [string]$name, [bool]$ok, [string]$ev) {
@@ -11,7 +13,7 @@ function V([string]$id, [string]$name, [bool]$ok, [string]$ev) {
 
 function Req([string]$method, [string]$url, [string]$body) {
     try {
-        $p = @{ Uri = $url; Method = $method; TimeoutSec = 20; UseBasicParsing = $true }
+        $p = @{ Uri = $url; Method = $method; TimeoutSec = 20; UseBasicParsing = $true; Headers = (AuthHeaders) }
         if ($body) { $p.ContentType = "application/json; charset=utf-8"; $p.Body = $body }
         $r = Invoke-WebRequest @p
         return @{ code = [int]$r.StatusCode; body = $r.Content }
@@ -95,7 +97,11 @@ $total017 = AlarmCount ('{_id:{$regex:''^' + $batch + '-''}}')
 V "TC017" "consumer restart no loss" ($okA -and $okB -and $total017 -eq 10) ("batch=" + $batch + " docs=" + $total017 + " (expect 10, 0 dup 0 loss)")
 
 # --- TC018: HDFS download + MD5 integrity ---
-$eval018 = 'var a = db.getSiblingDB(''inspection'').alarm.findOne({snapshotPath:{$exists:true}}); print(a._id + ''|'' + a.snapshotPath)'
+# S90 fix: the container temp file had a FIXED name and `hdfs dfs -get` was not checked, so a failed
+# or partial get silently reused a stale file from an earlier run (that is why the hashes disagreed).
+# Now the temp name is unique per run and the get result is verified.
+$runId = [guid]::NewGuid().ToString("N").Substring(0, 8)
+$eval018 = 'var a = db.getSiblingDB(''inspection'').alarm.findOne({snapshotPath:{$exists:true},status:{$ne:''RESOLVED''}}); print(a._id + ''|'' + a.snapshotPath)'
 $docLine = docker exec mongodb mongosh --quiet --eval $eval018 2>&1 | Select-Object -Last 1
 $alarmId = $null; $hdfsPath = $null
 if ($docLine -is [string] -and $docLine -match '\|') {
@@ -103,29 +109,34 @@ if ($docLine -is [string] -and $docLine -match '\|') {
     $alarmId = $parts[0].Trim()
     $hdfsPath = $parts[1].Trim()
 }
-$apiFile = "$env:TEMP\s50-tc018-api.png"
-$hdfsFile = "$env:TEMP\s50-tc018-hdfs.png"
+$apiFile = "$env:TEMP\s50-tc018-api-$runId.png"
+$hdfsFile = "$env:TEMP\s50-tc018-hdfs-$runId.png"
 $ok018 = $false
 $ev018 = "no snapshot found"
 if ($alarmId -and $hdfsPath) {
-    Invoke-WebRequest -Uri "$base/api/files/$alarmId" -OutFile $apiFile -UseBasicParsing -TimeoutSec 20 | Out-Null
-    docker exec namenode bash -c "hdfs dfs -get '$hdfsPath' /tmp/s50-tc018.png" 2>&1 | Out-Null
-    docker cp namenode:/tmp/s50-tc018.png $hdfsFile 2>&1 | Out-Null
+    Invoke-WebRequest -Uri "$base/api/files/$alarmId" -OutFile $apiFile -UseBasicParsing -TimeoutSec 20 -Headers (AuthHeaders) | Out-Null
+    $inner = "/tmp/s50-tc018-$runId.png"
+    docker exec namenode bash -c "rm -f $inner; hdfs dfs -get '$hdfsPath' $inner && echo GET_OK" 2>&1 | Out-Null
+    $getOk = (docker exec namenode bash -c "test -s $inner && echo YES || echo NO" 2>&1 | Select-String -Pattern 'YES') -ne $null
+    if ($getOk) { docker cp "namenode:$inner" $hdfsFile 2>&1 | Out-Null }
     if ((Test-Path $apiFile) -and (Test-Path $hdfsFile)) {
         $md5Api = (Get-FileHash -Algorithm MD5 $apiFile).Hash
         $md5Hdfs = (Get-FileHash -Algorithm MD5 $hdfsFile).Hash
         $ok018 = ($md5Api -eq $md5Hdfs)
-        $ev018 = "api=$md5Api hdfs=$md5Hdfs alarm=$alarmId"
-    } else { $ev018 = "download failed" }
+        $ev018 = "api=$md5Api hdfs=$md5Hdfs alarm=$alarmId get=$getOk"
+    } else { $ev018 = "download failed (get=$getOk)" }
 }
 V "TC018" "HDFS download MD5 match" $ok018 $ev018
 Remove-Item $apiFile, $hdfsFile -ErrorAction SilentlyContinue
 
-# --- TC019: HDFS path spec /inspection/{type}/{yyyy}/{MM}/{dd}/{deviceId}/{uuid}.png ---
+# --- TC019: HDFS path spec /inspection/{type}/{yyyy}/{MM}/{dd}/{deviceId}/{uuid}.{ext} ---
+# S90 fix: the spec allows any image extension ({uuid}.{ext}); the old regex demanded .png and thus
+# flagged the 5 S75 manual-review .jpg photos as violations. Extension set is now checked explicitly.
 $ls = docker exec namenode bash -c "hdfs dfs -ls -R /inspection" 2>&1
 $files = $ls | Where-Object { $_ -match '^-rw' }
-$badPath = $files | Where-Object { $_ -notmatch '/inspection/[A-Z_0-9]+/[0-9]{4}/[0-9]{2}/[0-9]{2}/[A-Z0-9-]+/[a-f0-9]{12}\.png$' }
-V "TC019" "HDFS dir partition spec" (($files.Count -gt 0) -and ($badPath.Count -eq 0)) ("files=" + $files.Count + " bad=" + $badPath.Count)
+$badPath = $files | Where-Object { $_ -notmatch '/inspection/[A-Z_0-9]+/[0-9]{4}/[0-9]{2}/[0-9]{2}/[A-Z0-9-]+/[a-f0-9]{12}\.(png|jpg|jpeg|webp)$' }
+$exts = (($files | ForEach-Object { [System.IO.Path]::GetExtension(($_ -split '\s+')[-1]) } | Sort-Object -Unique) -join ",")
+V "TC019" "HDFS dir partition spec" (($files.Count -gt 0) -and (@($badPath).Count -eq 0)) ("files=" + $files.Count + " bad=" + @($badPath).Count + " extensions=" + $exts)
 
 # --- TC020: device_status TTL index ---
 $idx = docker exec mongodb mongosh --quiet --eval "JSON.stringify(db.getSiblingDB('inspection').device_status.getIndexes())" 2>&1 | Select-Object -Last 1
@@ -133,8 +144,28 @@ $hasTtl = (($idx | Out-String) -match '"expireAfterSeconds"\s*:\s*2592000')
 $hasCompound = (($idx | Out-String) -match 'idx_device_status_device_ts')
 V "TC020" "device_status TTL index" ($hasTtl) ("ttl=" + $hasTtl + " compound=" + $hasCompound + " (defect found in S50, fixed)")
 
-# --- TC021: nearest dispatch (review loop) - known unimplemented ---
-V "TC021" "nearest robot review dispatch" $false "unimplemented: review dispatch loop not built (BUG-003)"
+# --- TC021: nearest-dispatch review loop ---
+# S90 fix: BUG-003 was closed in S61/v0.6 (2dsphere nearest dispatch + receipt-driven review
+# backfill), but this case still hardcoded FAIL. It now verifies the live loop end to end:
+# an alarm-linked task assigned to a robot dog whose alarm carries a review conclusion.
+# (The "nearest" half of TC021 is proven by accept-v06.ps1 V-2 / V-2b, which inject alarms at each
+#  robot's coordinates and assert the geographically closest one is selected.)
+$ok21 = $false; $ev21 = "no alarm-linked review task found"
+try {
+    $tk21 = (Req "GET" "$base/api/tasks?page=0&size=100" $null).body | ConvertFrom-Json
+    $linked = @($tk21.records | Where-Object { $_.alarmId } | Select-Object -First 8)
+    foreach ($t in $linked) {
+        $a = (Req "GET" "$base/api/alarms/$($t.alarmId)" $null).body | ConvertFrom-Json
+        if ($a -and $a.review -and $a.review.imagePath -and $t.deviceId -like 'ROBOT*') {
+            $ok21 = $true
+            $ev21 = "task=" + $t.taskId + " device=" + $t.deviceId + " alarm=" + $t.alarmId + " conclusion=" + $a.review.conclusion + " (nearest-selection proven by accept-v06 V-2/V-2b)"
+            break
+        }
+        Start-Sleep -Milliseconds 100
+    }
+    if (-not $ok21) { $ev21 = "checked " + @($linked).Count + " alarm-linked tasks, none had a robot review backfill yet" }
+} catch { $ev21 = "probe failed: " + $_.Exception.Message }
+V "TC021" "nearest robot review dispatch" $ok21 $ev21
 
 # --- TC022: concurrent cancel guard ---
 $devList = (Req "GET" "$base/api/devices" $null).body | ConvertFrom-Json
@@ -209,7 +240,7 @@ Start-Sleep -Seconds 6
 $ok029 = $true; $c2count = 0
 1..5 | ForEach-Object {
     try {
-        $h = (Invoke-WebRequest -Uri "$base/api/devices" -TimeoutSec 10 -UseBasicParsing).Headers['X-Backend-Instance']
+        $h = (Invoke-WebRequest -Uri "$base/api/devices" -TimeoutSec 10 -UseBasicParsing -Headers (AuthHeaders)).Headers['X-Backend-Instance']
         if ($h -eq 'backend-2') { $c2count++ } else { $ok029 = $false }
     } catch { $ok029 = $false }
 }

@@ -2,6 +2,8 @@
 # ASCII-only (PowerShell 5.1 GBK/UTF-8 parsing lesson, STATE risk #16).
 # UI display cases (TC009/TC032/TC034) verified visually by user during S40 rounds - PASS(manual).
 $base = "http://127.0.0.1:8080"
+. "$PSScriptRoot\auth-helper.ps1"     # S90: /api/** requires a Bearer token (S88)
+Connect-InspectionApi -Base $base | Out-Null
 $pass = 0; $fail = 0
 
 function V([string]$id, [string]$name, [bool]$ok, [string]$ev) {
@@ -11,7 +13,7 @@ function V([string]$id, [string]$name, [bool]$ok, [string]$ev) {
 
 function Req([string]$method, [string]$url, [string]$body) {
     try {
-        $p = @{ Uri = $url; Method = $method; TimeoutSec = 20; UseBasicParsing = $true }
+        $p = @{ Uri = $url; Method = $method; TimeoutSec = 20; UseBasicParsing = $true; Headers = (AuthHeaders) }
         if ($body) { $p.ContentType = "application/json; charset=utf-8"; $p.Body = $body }
         $r = Invoke-WebRequest @p
         return @{ code = [int]$r.StatusCode; body = $r.Content }
@@ -96,7 +98,7 @@ V "TC023" "geo radius search" ($r2.code -eq 200 -and $json2.total -gt 0) ("total
 $c1 = 0; $c2 = 0
 for ($i = 0; $i -lt 10; $i++) {
     try {
-        $h = (Invoke-WebRequest -Uri "$base/api/devices" -TimeoutSec 10 -UseBasicParsing).Headers['X-Backend-Instance']
+        $h = (Invoke-WebRequest -Uri "$base/api/devices" -TimeoutSec 10 -UseBasicParsing -Headers (AuthHeaders)).Headers['X-Backend-Instance']
         if ($h -eq 'backend-1') { $c1++ } else { $c2++ }
     } catch {}
 }
@@ -129,9 +131,15 @@ Start-Sleep -Seconds 8
 $cAfter = docker exec mongodb mongosh --quiet --eval "db.getSiblingDB('inspection').alarm.countDocuments({_id:'$($one.Trim())'})" 2>&1 | Select-Object -Last 1
 V "TC016" "idempotent consume" ([int]($cBefore.Trim()) -ge 1 -and [int]($cBefore.Trim()) -eq [int]($cAfter.Trim())) ("docs for alarm: $($cBefore.Trim()) -> $($cAfter.Trim())")
 
-$dlq = docker exec kafka /opt/kafka/bin/kafka-console-consumer.sh --bootstrap-server localhost:9092 --topic inspection.dlq --from-beginning --max-messages 3 --timeout-ms 8000 2>&1
+# TC015 DLQ: S90 fix - the queue was drained by the S78 replay-all test, so leftovers are not a
+# reliable signal. Inject a poison message (invalid JSON) and require it to show up in the DLQ.
+$dlqBefore = (docker exec kafka /opt/kafka/bin/kafka-console-consumer.sh --bootstrap-server localhost:9092 --topic inspection.dlq --from-beginning --max-messages 500 --timeout-ms 6000 2>&1 | Measure-Object).Count
+'this-is-not-json-{ S90 poison' | docker exec -i kafka /opt/kafka/bin/kafka-console-producer.sh --bootstrap-server localhost:9092 --topic inspection.alarm 2>&1 | Out-Null
+Start-Sleep -Seconds 12
+$dlq = docker exec kafka /opt/kafka/bin/kafka-console-consumer.sh --bootstrap-server localhost:9092 --topic inspection.dlq --from-beginning --max-messages 500 --timeout-ms 8000 2>&1
 $dlqText = $dlq -join ' '
-V "TC015" "dead letter queue" ($dlqText -match "not-json|ping|this-is") ("dlq msgs=" + (($dlq | Select-String "not-json|ping|this-is" | Measure-Object).Count))
+$dlqNow = ($dlq | Measure-Object).Count
+V "TC015" "dead letter queue" ($dlqText -match 'this-is-not-json') ("poison injected; dlq lines " + $dlqBefore + " -> " + $dlqNow + " match=" + [bool]($dlqText -match 'this-is-not-json'))
 
 # --- priority scheduling (pre-wait device idle to avoid leftover-task pollution) ---
 $deadline = (Get-Date).AddMinutes(3)

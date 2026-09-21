@@ -1,6 +1,8 @@
 # S50 performance tests PT001/002/005/006/007 (JMeter covers PT003/PT004 separately).
 # ASCII-only. $base via Nginx 8080.
 $base = "http://127.0.0.1:8080"
+. "$PSScriptRoot\auth-helper.ps1"     # S90: /api/** requires a Bearer token (S88)
+Connect-InspectionApi -Base $base | Out-Null
 $pass = 0; $fail = 0
 
 function V([string]$id, [string]$name, [bool]$ok, [string]$ev) {
@@ -42,7 +44,7 @@ V "PT002" "e2e batch drain latency" ($drained -and $sw.ElapsedMilliseconds -lt 5
 $c1 = 0; $c2 = 0
 1..100 | ForEach-Object {
     try {
-        $h = (Invoke-WebRequest -Uri "$base/api/devices" -TimeoutSec 10 -UseBasicParsing).Headers['X-Backend-Instance']
+        $h = (Invoke-WebRequest -Uri "$base/api/devices" -TimeoutSec 10 -UseBasicParsing -Headers (AuthHeaders)).Headers['X-Backend-Instance']
         if ($h -eq 'backend-1') { $c1++ } else { $c2++ }
     } catch {}
     Start-Sleep -Milliseconds 200
