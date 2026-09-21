@@ -1,7 +1,7 @@
 <script setup>
 // S101：登录页动效升级——粒子背景（ParticleField）+ 指挥雷达面板 + 入场动效。
 // 登录逻辑（S92 演示账号 chip 一键填入等）与 S97-d 分栏布局保持不变。
-import { ref, onMounted, onUnmounted } from 'vue'
+import { ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import request, { saveAuth } from '../api/request'
 import ParticleField from '../components/ParticleField.vue'
@@ -13,44 +13,6 @@ const username = ref('')
 const password = ref('')
 const error = ref('')
 const loading = ref(false)
-
-// S101 补充：自定义光标动效——光环弹性跟随 + 尾点（仅精确指针且未开启减少动效时启用）
-const ring = ref(null)
-const dot = ref(null)
-let raf = 0
-let tx = 0, ty = 0, rx = 0, ry = 0, dxx = 0, dyy = 0
-
-function onMove(e) { tx = e.clientX; ty = e.clientY }
-
-function loop() {
-  rx += (tx - rx) * 0.14   // 光环慢半拍（弹性跟随）
-  ry += (ty - ry) * 0.14
-  dxx += (tx - dxx) * 0.4  // 尾点跟得紧
-  dyy += (ty - dyy) * 0.4
-  if (ring.value) ring.value.style.transform = `translate(${rx - 16}px, ${ry - 16}px)`
-  if (dot.value) dot.value.style.transform = `translate(${dxx - 3}px, ${dyy - 3}px)`
-  raf = requestAnimationFrame(loop)
-}
-
-let cursorOn = false
-function startCursor() {
-  if (cursorOn) return
-  cursorOn = true
-  window.addEventListener('mousemove', onMove, { passive: true })
-  loop()
-}
-function stopCursor() {
-  cursorOn = false
-  cancelAnimationFrame(raf)
-  window.removeEventListener('mousemove', onMove)
-}
-
-onMounted(() => {
-  if (window.matchMedia('(hover: hover)').matches && !window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
-    startCursor()
-  }
-})
-onUnmounted(stopCursor)
 
 // S92 用户反馈：演示账号 chip 一键填入（成果保留）
 function fill(u, p) {
@@ -87,10 +49,6 @@ async function submit() {
   <div class="login-page">
     <!-- S101：粒子网络背景（主题自适应 + 光标引力响应） -->
     <ParticleField />
-
-    <!-- S101 补充：自定义光标（光环弹性跟随 + 尾点；触屏/减少动效设备不启用） -->
-    <div ref="ring" class="cursor-ring" aria-hidden="true"></div>
-    <div ref="dot" class="cursor-dot" aria-hidden="true"></div>
 
     <div class="login-inner">
       <!-- 左：指挥雷达动效面板（常暗大屏风，与主题解耦） -->
@@ -177,32 +135,6 @@ async function submit() {
   overflow: hidden;
   background: var(--bg-page);
   padding: 20px;
-}
-
-/* S101 补充：自定义光标（光环 + 尾点，不遮挡原生指针，仅可 hover 设备显示） */
-.cursor-ring, .cursor-dot {
-  position: fixed;
-  top: 0;
-  left: 0;
-  border-radius: 50%;
-  pointer-events: none;
-  z-index: 9998;
-  display: none;
-}
-.cursor-ring {
-  width: 32px;
-  height: 32px;
-  border: 1.5px solid var(--accent);
-  opacity: .55;
-}
-.cursor-dot {
-  width: 6px;
-  height: 6px;
-  background: var(--accent);
-  opacity: .9;
-}
-@media (hover: hover) and (prefers-reduced-motion: no-preference) {
-  .cursor-ring, .cursor-dot { display: block; }
 }
 .login-inner {
   position: relative;
