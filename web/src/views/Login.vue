@@ -11,6 +11,14 @@ const password = ref('')
 const error = ref('')
 const loading = ref(false)
 
+// S92 用户反馈：演示账号提示原为纯文本，点击不会填入表单（用户误以为点了就能登录）。
+// 现改为可点击的 chip，一键填入用户名与口令。
+function fill(u, p) {
+  username.value = u
+  password.value = p
+  error.value = ''
+}
+
 async function submit() {
   error.value = ''
   if (!username.value.trim() || !password.value) {
@@ -43,7 +51,7 @@ async function submit() {
 
       <label class="login-field">
         <span>用户名</span>
-        <input v-model="username" type="text" autocomplete="username" placeholder="admin" />
+        <input v-model="username" type="text" autocomplete="username" placeholder="admin" autofocus />
       </label>
       <label class="login-field">
         <span>口令</span>
@@ -56,7 +64,15 @@ async function submit() {
         {{ loading ? '登录中…' : '登 录' }}
       </button>
 
-      <p class="login-hint">演示账号：admin / admin123（管理员）、operator / operator123（值班员）</p>
+      <div class="login-demo">
+        <span class="demo-title">演示账号（点击自动填入）</span>
+        <button type="button" class="demo-chip" @click="fill('admin', 'admin123')">
+          admin / admin123 · 系统管理员
+        </button>
+        <button type="button" class="demo-chip" @click="fill('operator', 'operator123')">
+          operator / operator123 · 巡检值班员
+        </button>
+      </div>
     </form>
   </div>
 </template>
@@ -117,4 +133,26 @@ async function submit() {
 .login-btn:hover:not(:disabled) { background: #245ccd; }
 .login-btn:disabled { opacity: .6; cursor: not-allowed; }
 .login-hint { font-size: 12px; color: #9aa7b5; text-align: center; }
+
+/* S92：演示账号一键填入 */
+.login-demo {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-top: 4px;
+  padding-top: 12px;
+  border-top: 1px dashed #e2e7ee;
+}
+.demo-title { font-size: 12px; color: #9aa7b5; text-align: center; }
+.demo-chip {
+  padding: 8px 10px;
+  font-size: 12px;
+  color: #2f6fed;
+  background: #f2f6fe;
+  border: 1px solid #d8e3fb;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: background .15s, border-color .15s;
+}
+.demo-chip:hover { background: #e6effd; border-color: #b9cdf7; }
 </style>
