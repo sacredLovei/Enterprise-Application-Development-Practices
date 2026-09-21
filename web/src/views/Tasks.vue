@@ -11,6 +11,8 @@ const size = 15
 const result = ref({ total: 0, records: [] })
 const devices = ref([])
 const msg = ref('')
+const logTask = ref(null)   // S85：日志面板当前任务
+const logs = ref([])
 let timer, deviceTimer
 
 const needTarget = computed(() => ['POINT_REVIEW', 'AREA_COVER'].includes(form.value.taskType))
@@ -88,6 +90,30 @@ async function cancel(taskId) {
   }
 }
 
+// S85（课程任务项 2）：任务执行日志归档查询——时间轴展示
+const ACTION_LABEL = {
+  COMMAND_RECEIVED: '指令接收',
+  EXECUTING: '执行中',
+  DONE: '任务完成',
+  CANCELLED: '任务取消',
+  FAILED: '执行失败'
+}
+
+async function openLogs(t) {
+  logTask.value = t
+  try {
+    logs.value = await request.get(`/tasks/${t.taskId}/logs`)
+  } catch (e) {
+    logs.value = []
+    console.error('load task logs failed', e)
+  }
+}
+
+function closeLogs() {
+  logTask.value = null
+  logs.value = []
+}
+
 onMounted(() => {
   load()
   loadDevices()
@@ -143,7 +169,10 @@ onUnmounted(() => { clearInterval(timer); clearInterval(deviceTimer) })
           <td class="remark" :title="t.remark">{{ t.remark || '—' }}</td>
           <td>{{ formatTime(t.createTime) }}</td>
           <td>{{ t.status === 'DONE' || t.status === 'FAILED' || t.status === 'CANCELLED' ? formatTime(t.finishTime) : '—' }}</td>
-          <td><button v-if="t.status === 'DISPATCHED' || t.status === 'RUNNING'" class="ghost" @click="cancel(t.taskId)">取消</button></td>
+          <td>
+            <button class="ghost small" @click="openLogs(t)">日志</button>
+            <button v-if="t.status === 'DISPATCHED' || t.status === 'RUNNING'" class="ghost small" style="margin-left:6px" @click="cancel(t.taskId)">取消</button>
+          </td>
         </tr>
       </tbody>
     </table>
@@ -152,6 +181,27 @@ onUnmounted(() => { clearInterval(timer); clearInterval(deviceTimer) })
       <span>第 {{ page + 1 }} / {{ totalPages }} 页（每页 {{ size }} 条，共 {{ result.total }} 条）</span>
       <button class="ghost" :disabled="page + 1 >= totalPages" @click="goPage(page + 1)">下一页</button>
     </div>
+  </div>
+
+  <!-- S85：任务执行日志时间轴（归档回执完整追溯） -->
+  <div v-if="logTask" class="card">
+    <div class="detail-head">
+      <h3>执行日志：{{ logTask.taskId }}</h3>
+      <button class="ghost small" @click="closeLogs">关闭</button>
+    </div>
+    <div class="hint">
+      设备 {{ logTask.deviceId }} · 类型 {{ TYPE_LABEL[logTask.taskType] || logTask.taskType }} ·
+      状态 <span class="badge" :class="'st-' + (logTask.status || '').toLowerCase()">{{ logTask.status }}</span> ·
+      备注 {{ logTask.remark || '—' }} · 共 {{ logs.length }} 条回执
+    </div>
+    <ol class="timeline">
+      <li v-for="(l, i) in logs" :key="i">
+        <span class="tl-time">{{ formatTime(l.ts) }}</span>
+        <span class="tl-action">{{ ACTION_LABEL[l.action] || l.action }}</span>
+        <span class="tl-dev">{{ l.deviceId }}</span>
+      </li>
+    </ol>
+    <div v-if="logs.length === 0" class="hint">暂无归档日志（任务下发后由设备回执产生）</div>
   </div>
 </template>
 
@@ -166,4 +216,11 @@ button:disabled { opacity: .4; cursor: not-allowed; }
 .badge.st-done { background: #e3f7ec; color: #1a8a4a; }
 .badge.st-cancelled { background: #eef2f7; color: #7b8a99; }
 .badge.st-failed { background: #fdeaea; color: #c0392b; }
+.detail-head { display: flex; justify-content: space-between; align-items: center; }
+.small { font-size: 12px; padding: 3px 10px; }
+.timeline { list-style: none; padding: 0; margin: 10px 0 0; }
+.timeline li { display: flex; gap: 14px; align-items: center; padding: 7px 10px; border-left: 3px solid #cfd9e4; margin-bottom: 6px; background: #f8fafc; border-radius: 0 6px 6px 0; font-size: 13px; }
+.tl-time { color: #7b8a99; font-family: Consolas, monospace; font-size: 12px; min-width: 150px; }
+.tl-action { font-weight: 600; color: #24303c; }
+.tl-dev { color: #5c6b7a; font-size: 12px; }
 </style>

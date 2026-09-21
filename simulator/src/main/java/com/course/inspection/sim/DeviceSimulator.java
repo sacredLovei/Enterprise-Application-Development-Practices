@@ -261,7 +261,13 @@ public abstract class DeviceSimulator {
             default -> log.warn("未知任务类型: {}", cmd.taskType());
         }
         receipt(cmd.taskId(), "COMMAND_RECEIVED");
-        EXECUTOR.schedule(() -> receipt(cmd.taskId(), "EXECUTING"), 3, java.util.concurrent.TimeUnit.SECONDS);
+        // S85 修复：延迟 3s 的 EXECUTING 回执须校验任务仍是当前任务——
+        // 否则任务在 3s 内被取消时会补发 EXECUTING，归档时间线出现 CANCELLED 早于 EXECUTING
+        EXECUTOR.schedule(() -> {
+            if (cmd.taskId().equals(currentTaskId)) {
+                receipt(cmd.taskId(), "EXECUTING");
+            }
+        }, 3, java.util.concurrent.TimeUnit.SECONDS);
         log.info("任务开始执行 deviceId={} taskId={} type={} priority={}",
                 deviceId, cmd.taskId(), cmd.taskType(), cmd.priority());
     }

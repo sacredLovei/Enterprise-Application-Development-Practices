@@ -200,6 +200,15 @@ public class TaskService {
         }
     }
 
+    /** S85（课程任务项 2）：任务执行日志查询——按时间升序返回归档的全部回执。 */
+    public List<TaskLogDoc> logs(String taskId) {
+        return mongo.find(
+                Query.query(Criteria.where("taskId").is(taskId))
+                        .with(org.springframework.data.domain.Sort.by(
+                                org.springframework.data.domain.Sort.Direction.ASC, "ts")),
+                TaskLogDoc.class);
+    }
+
     /**
      * S61：POINT_REVIEW 任务完成 → 复核结论回填。
      * 结论规则（D-21，仿真口径）：alarmId 哈希 70% CONFIRMED / 30% FALSE_ALARM。

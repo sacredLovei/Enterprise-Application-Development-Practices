@@ -41,4 +41,10 @@ public class TaskController {
         }
         return "cancelled: " + taskId;
     }
+
+    /** S85（课程任务项 2）：任务执行日志归档查询——按时间升序返回该任务的全部回执记录。 */
+    @GetMapping("/{taskId}/logs")
+    public java.util.List<TaskLogDoc> logs(@PathVariable String taskId) {
+        return service.logs(taskId);
+    }
 }
