@@ -80,6 +80,9 @@ onMounted(() => {
   trackLayer = L.layerGroup().addTo(map)
   // S69：Leaflet 弹窗 HTML 无法绑定 Vue 事件，经 window 桥接转发轨迹请求
   window.__dshTrack = (id) => emit('track-requested', id)
+  // S102（用户反馈"轨迹消除不掉"）：弹窗关闭即通知父级清除轨迹——
+  // 轨迹由弹窗内的链接发起，面板消失轨迹随之消失（含点击地图/关闭按钮/打开其他弹窗）
+  map.on('popupclose', () => emit('track-clear'))
   window.addEventListener('inspection-theme-changed', onThemeChanged)
   render()
   renderTrack()
