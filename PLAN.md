@@ -479,3 +479,29 @@
 - **流程备注**：登记提交 1e3b592 的提交信息误标为"docs(S99) 登记"（实际带入的是 S97 验收结论修正行；S99 本块因 bash heredoc 通道 cat 缺失未写入，本次以 Edit 补登，如实记录）
 - **验收结论**（2026-09-21）：**全部达到**。提交 e3c5daf（一次成型，vite build 9.21s）：① 全局 `.content` 去除 1320px 上限满幅，新增 SubNav 二级标签条组件（route.path 精确匹配）；② 任务管理拆 `/tasks/dispatch`（左 360px 表单 + 右大地图 min(62vh,640px)）与 `/tasks/list`（满幅表格 + 日志时间轴），TargetPicker 支持 height prop；③ 告警中心拆母/子项：`/alarms/list` 满幅列表（行点击进详情）+ `/alarms/detail/:alarmId` 独立详情子页（信息条徽标元数据 + 证据照片两列大图带令牌取图 + 复核面板，S62~S96 逻辑原样）；④ 设备台账/总览/统计随满幅自动填满；业务逻辑/接口契约/刷新策略零改动。无头截图四页达标（docs/_s99-*.png）：二级标签激活态、大地图、满幅表格、详情照片带令牌加载全部正常。**待用户浏览器核验**；报告 5.2.7 页面结构描述（原"五页面"→ 含二级子项）随 S65 升版 v1.3
 - **提交**：1e3b592（登记，信息误标已补正）/ 89f6eb3 / e3c5daf；本收尾提交（HEAD）
+
+### S100 下发任务反馈强化（用户反馈"下发完任务之后没什么反馈"）
+- **状态**：done
+- **背景**：下发成功后仅表单卡内一行小字，不可感知。补齐 TDesign 式反馈链：全局 Toast 通知 + 按钮加载态 + 下发后实时状态卡（轮询该任务状态展示 DISPATCHED→RUNNING→DONE 流转）
+- **内容**：① `utils/toast.js` + `components/ToastHost.vue` 全局通知（右上角滑入，success/error）；② TasksDispatch：提交 loading 态、成功 toast + 状态卡（2.5s 轮询至终态）、失败 toast
+- **风险控制**：纯前端；快照随 S99 tag 体系
+- **产出物**：web 变更
+- **验收结论**（2026-09-21）：**全部达到**。提交 2f62956（vite build 13.96s）：① Toast 宿主挂 App 根部（登录页也可见），success/error/info 三型，点击即关；② 下发按钮 loading 态禁用；③ 成功 toast（任务号+类型+设备）+ 状态卡 2.5s 轮询该任务直至终态（DONE/FAILED 补 toast）；④ 端到端实测：无头注入真实下发周界巡逻（TASK-20260921173353-96a7fa2a），状态卡正确显示 DISPATCHED·等待设备接单（docs/_s100-feedback.png）。**待用户浏览器核验**
+- **提交**：2f62956
+
+### S101 登录页动效升级（用户反馈"登录页太素，要炫酷、有动效"）
+- **状态**：done
+- **内容**：① 全页 Canvas 粒子网络背景（主题自适应、rAF、resize 自适应、卸载清理、prefers-reduced-motion 降级）；② 左侧品牌区改"指挥雷达"动效面板——雷达扫描线（conic-gradient 旋转）+ 园区航迹 SVG（虚线流动 + animateMotion 光点）+ 状态灯；③ 登录卡入场动效（fadeUp）+ 按钮 hover 扫光；登录逻辑（fill/submit/S92 chip）零改动
+- **风险控制**：纯前端；动效均为 CSS/Canvas，无新依赖
+- **产出物**：web 变更
+- **验收结论**（2026-09-21）：**全部达到**。提交 1478a28（vite build 7.48s）：ParticleField.vue 粒子网络（颜色取 tokens 变量随主题自适应、reduced-motion 静态单帧）；雷达面板（SYSTEM ONLINE 呼吸灯 + 扫描扇面 + 航迹虚线流动 + animateMotion 光点 + 目标 ping）；登录卡 fadeUp 入场 + 按钮 hover 扫光 + chip 微浮起；无障碍降级完备。无头截图动效全部生效（docs/_s101-login.png）。**待用户浏览器核验**
+- **提交**：1478a28
+- **补充（用户追加"登录页光标加一点动效"）**：提交 113a9ca——① ParticleField 光标引力响应（170px 半径内粒子轻微牵引 + 向光标连线 + 光晕，限速防飞散）；② 自定义光标双层（accent 光环弹性跟随 + 尾点紧随），仅 hover:hover 且未开减少动效设备启用；不遮挡原生指针；触屏不渲染。headless 合成 mousemove 坐标不可靠（风险 #49 已知局限），引力/跟随效果以真实浏览器为准
+- **补充（cbe34bc，用户要求移除双圆点）**：删除自定义光标（光环/尾点），仅保留粒子引力响应
+- **补充（259db33，用户要求"这个圆也不要"）**：进一步删除光标处光晕大圆与中心点——光标动效最终形态为纯"粒子向光标连线"（注：这两行的 PLAN 登记补记于 S102 收尾，当时仅记入工作记忆，如实记录流程偏差）
+
+### S102 设备弹窗关闭自动清除轨迹（用户反馈"查询轨迹之后消除不掉"）
+- **状态**：done
+- **内容**：DeviceMap 监听 Leaflet `popupclose` → emit `track-clear`（弹窗 X / 点击地图 / 打开其他弹窗均触发）；Overview 接入该事件调用 clearTrack；图例文案同步"关闭弹窗后轨迹自动清除"；手动"清除轨迹"按钮保留
+- **验收结论**（2026-09-21）：达到。vite build 7.87s；纯事件桥接（弹窗关闭 ⇒ 父级 track=null ⇒ renderTrack 清空图层），链路直观
+- **提交**：c6d886c
