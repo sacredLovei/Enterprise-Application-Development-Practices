@@ -40,19 +40,19 @@ body {
   color: var(--text-1);
 }
 .brand svg { color: var(--accent); }
-.nav { display: flex; flex-direction: column; gap: 4px; }
+.nav { display: flex; flex-direction: column; gap: 5px; }
 .nav a {
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 12px;
   color: var(--text-2);
   text-decoration: none;
-  font-size: 14px;
-  padding: 11px 12px;
+  font-size: 15.5px;
+  padding: 15px 14px;
   border-radius: var(--radius-1);
   transition: background .15s, color .15s;
 }
-.nav a svg { color: var(--text-3); transition: color .15s; }
+.nav a svg { width: 20px; height: 20px; color: var(--text-3); transition: color .15s; }
 .nav a:hover { background: var(--accent-soft); color: var(--text-1); }
 .nav a:hover svg { color: var(--accent); }
 .nav a.router-link-active {
