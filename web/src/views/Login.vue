@@ -5,6 +5,8 @@ import { ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import request, { saveAuth } from '../api/request'
 import ParticleField from '../components/ParticleField.vue'
+import AppIcon from '../components/AppIcon.vue'
+import { getTheme, toggleThemeAt } from '../utils/theme'
 
 const route = useRoute()
 const router = useRouter()
@@ -13,6 +15,14 @@ const username = ref('')
 const password = ref('')
 const error = ref('')
 const loading = ref(false)
+
+// S102 补充：登录页主题切换（无边框 SVG 图标 + 文字；圆形扩散过渡与主界面一致）
+const theme = ref(getTheme())
+
+function onToggleTheme(e) {
+  const r = e?.currentTarget?.getBoundingClientRect()
+  theme.value = toggleThemeAt(r ? r.left + r.width / 2 : window.innerWidth - 60, r ? r.top + r.height / 2 : 30)
+}
 
 // S92 用户反馈：演示账号 chip 一键填入（成果保留）
 function fill(u, p) {
@@ -49,6 +59,12 @@ async function submit() {
   <div class="login-page">
     <!-- S101：粒子网络背景（主题自适应 + 光标引力响应） -->
     <ParticleField />
+
+    <!-- S102 补充：主题切换（无边框，SVG 图标 + 文字） -->
+    <button class="theme-switch" type="button" @click="onToggleTheme">
+      <AppIcon :name="theme === 'dark' ? 'sun' : 'moon'" :size="16" />
+      <span>{{ theme === 'dark' ? '亮色模式' : '暗色模式' }}</span>
+    </button>
 
     <div class="login-inner">
       <!-- 左：指挥雷达动效面板（常暗大屏风，与主题解耦） -->
@@ -136,6 +152,26 @@ async function submit() {
   background: var(--bg-page);
   padding: 20px;
 }
+
+/* S102 补充：登录页主题切换——无边框，仅 SVG 图标 + 文字 */
+.theme-switch {
+  position: absolute;
+  top: 18px;
+  right: 22px;
+  z-index: 5;
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 7px 10px;
+  background: transparent;
+  border: none;
+  border-radius: var(--radius-1);
+  color: var(--text-2);
+  font-size: 13px;
+  cursor: pointer;
+  transition: background .15s, color .15s;
+}
+.theme-switch:hover { background: var(--bg-hover); color: var(--text-1); }
 .login-inner {
   position: relative;
   z-index: 1;

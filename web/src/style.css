@@ -2,6 +2,18 @@
    全局样式（S97-a：全部颜色改引设计令牌 tokens.css，选择器名保持不变）
    ============================================================ */
 * { box-sizing: border-box; margin: 0; padding: 0; }
+
+/* S102 补充：主题切换圆形扩散动效（View Transitions API；不支持的浏览器无感知降级） */
+::view-transition-old(root),
+::view-transition-new(root) { animation: none; mix-blend-mode: normal; }
+::view-transition-new(root) {
+  animation: vt-reveal .55s ease-in;
+}
+@keyframes vt-reveal {
+  from { clip-path: circle(0px at var(--vt-x, 100%) var(--vt-y, 0%)); }
+  to   { clip-path: circle(150% at var(--vt-x, 100%) var(--vt-y, 0%)); }
+}
+
 body {
   font-family: var(--font-sans);
   background: var(--bg-page);

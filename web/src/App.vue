@@ -4,7 +4,7 @@ import { useRoute, useRouter } from 'vue-router'
 import request, { clearAuth, getUser } from './api/request'
 import AppIcon from './components/AppIcon.vue'
 import ToastHost from './components/ToastHost.vue'
-import { getTheme, toggleTheme } from './utils/theme'
+import { getTheme, toggleThemeAt } from './utils/theme'
 
 const route = useRoute()
 const router = useRouter()
@@ -16,8 +16,12 @@ const theme = ref(getTheme())   // S97-b：亮/暗主题状态（按钮图标随
 // 但 script 侧的 theme ref 与 toggleTheme import 缺失——模板引用未定义绑定，
 // 生产构建回退 ctx 查找得 undefined，点击即抛错且被 Vue 生产 errorHandler 吞掉
 // （无控制台几乎不可感知）。修复：补齐 script 定义；事件改具名函数引用（最保守形态）。
-function onToggleTheme() {
-  theme.value = toggleTheme()
+// S102 补充：从按钮位置做圆形扩散过渡（View Transitions API，降级直接切换）。
+function onToggleTheme(e) {
+  const r = e?.currentTarget?.getBoundingClientRect()
+  const x = r ? r.left + r.width / 2 : window.innerWidth - 40
+  const y = r ? r.top + r.height / 2 : 40
+  theme.value = toggleThemeAt(x, y)
 }
 
 // 登录态随路由变化刷新（App 实例常驻，登录成功跳转后需要重新读取 localStorage）
