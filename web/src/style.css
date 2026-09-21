@@ -16,12 +16,22 @@ html[data-vt="to-dark"]::view-transition-old(root) {
   z-index: 2;
 }
 @keyframes vt-expand {
-  from { clip-path: circle(0px at var(--vt-x, 50%) var(--vt-y, 0%)); }
-  to   { clip-path: circle(150% at var(--vt-x, 50%) var(--vt-y, 0%)); }
+  from { clip-path: circle(0px at var(--vt-x, 50%) var(--vt-y, 50%)); }
+  to   { clip-path: circle(150% at var(--vt-x, 50%) var(--vt-y, 50%)); }
 }
 @keyframes vt-contract {
-  from { clip-path: circle(142% at var(--vt-x, 50%) var(--vt-y, 0%)); }
-  to   { clip-path: circle(0px at var(--vt-x, 50%) var(--vt-y, 0%)); }
+  from { clip-path: circle(142% at var(--vt-x, 50%) var(--vt-y, 50%)); }
+  to   { clip-path: circle(0px at var(--vt-x, 50%) var(--vt-y, 50%)); }
+}
+
+/* S102 补充：仪表盘页面切换平滑动效（out-in：旧页淡出上移、新页淡入上浮） */
+.page-enter-active, .page-leave-active {
+  transition: opacity .16s ease, transform .16s ease;
+}
+.page-enter-from { opacity: 0; transform: translateY(10px); }
+.page-leave-to { opacity: 0; transform: translateY(-6px); }
+@media (prefers-reduced-motion: reduce) {
+  .page-enter-active, .page-leave-active { transition: none; }
 }
 
 body {

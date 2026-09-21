@@ -6,7 +6,7 @@ import { useRoute, useRouter } from 'vue-router'
 import request, { saveAuth } from '../api/request'
 import ParticleField from '../components/ParticleField.vue'
 import AppIcon from '../components/AppIcon.vue'
-import { getTheme, toggleThemeAt } from '../utils/theme'
+import { getTheme, toggleTheme } from '../utils/theme'
 
 const route = useRoute()
 const router = useRouter()
@@ -16,12 +16,11 @@ const password = ref('')
 const error = ref('')
 const loading = ref(false)
 
-// S102 补充：登录页主题切换（无边框 SVG 图标 + 文字；圆形扩散过渡与主界面一致）
+// S102 补充：登录页主题切换（无边框 SVG 图标 + 文字；圆心为屏幕中心的方向性过渡）
 const theme = ref(getTheme())
 
-function onToggleTheme(e) {
-  const r = e?.currentTarget?.getBoundingClientRect()
-  theme.value = toggleThemeAt(r ? r.left + r.width / 2 : window.innerWidth - 60, r ? r.top + r.height / 2 : 30)
+function onToggleTheme() {
+  theme.value = toggleTheme()
 }
 
 // S92 用户反馈：演示账号 chip 一键填入（成果保留）
