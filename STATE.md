@@ -110,6 +110,9 @@
 | 2026-09-21 | 本步 | **S98 地图设备实时移动（SSE + 插值）完成**：用户反馈"地图标记是隔段时间刷新而非实时移动"，三方案对比后选定**方案二 SSE 推送 + 前端插值**（Kafka 直推因双实例消费分区拆分需引入 Redis 跨实例转发，不采纳）。① backend `GET /api/stream/positions`：共享调度器 1 秒快照（与 /api/devices 同一套 DeviceVo 拼装口径），载荷变化才推送 + 15 周期注释心跳，emitter 三路回调回收；83dae52，单测 14/14；② nginx `/api/stream/` 专属 location：`proxy_buffering off`（SSE 关键）+ 读超时 3600s，ef96597；③ web：fetch 流式 SSE 客户端（可带 Bearer 头，EventSource 无法自定义头故不用；令牌不入 URL 与 S96 口径一致）+ liveMap 叠加层（3s 轮询保留兜底）+ DeviceMap 标记增量管理与 rAF 缓动插值（~900ms 连续滑动，>150m 大位移直接落点），386af85。部署：镜像重建 + 双容器 Recreate + nginx 重启（风险 #31）。**验收全过**：curl 经网关 200 且严格 1 秒节奏坐标变化；无头截图见绿色"实时推送中（1 秒级）"指示（docs/_s98-overview-live.png）；断线时 UI 明示轮询兜底。快照 tag `backup-20260921-s98-pre` | AI |
 | 2026-09-21 | 本步 | **S99 TDesign 式排版重构完成**：用户指定参考 tdesign.tencent.com/starter/vue/dashboard/base，要求内容填满页面、留白均匀，任务/告警开二级子项。① 全局 `.content` 去 1320px 上限满幅 + SubNav 二级标签条组件（route.path 精确匹配激活态）；② 任务管理拆二级子路由 `/tasks/dispatch`（左 360px 表单 + 右大地图 min(62vh,640px)）与 `/tasks/list`（满幅表格 + 日志时间轴）；③ 告警中心母/子项：`/alarms/list` 满幅列表（行点击进详情）+ `/alarms/detail/:alarmId` 独立详情子页（信息条 + 证据照片两列大图带令牌取图 + 复核面板，S62~S96 逻辑原样保留）；④ 设备台账/总览/统计随满幅自动填满。**纯前端重构，业务逻辑/接口契约/刷新策略零改动**。验证：vite build 9.21s；无头截图四页达标（docs/_s99-*.png）。流程偏差如实记录：登记提交 1e3b592 信息误标（bash heredoc cat 缺失致 S99 块未写入，误带入 S97 修正行），已以 89f6eb3 补正 | AI |
 
+| 2026-09-21 | 本步 | **S102 设备弹窗关闭自动清除轨迹完成**（用户反馈"查询轨迹之后消除不掉"）：DeviceMap 监听 Leaflet popupclose → emit track-clear（弹窗 X/点击地图/打开其他弹窗均触发），Overview 接入 clearTrack；手动清除按钮保留；图例文案同步。c6d886c，vite build 7.87s。另补登 PLAN：S101 光标两轮调整（cbe34bc 移除双圆点 / 259db33 移除光晕，当时仅记工作记忆） | AI |
+| 2026-09-21 | 本步 | **S102 页面过渡白屏修复**（用户反馈"从地图总览/统计看板切向其他页面加载不出来"）：根因是 **Vue Transition 的单根节点要求**——Overview/Stats/TasksList/AlarmsList/AlarmDetail 五个视图模板均为多根 fragment，Transition mode=out-in 下旧页无法被动画卸载、新页永不挂载 → 白屏且后续导航全部卡死。修复：五视图模板包一层 .page-root 单根容器（内容/逻辑零改动），d59e8e1。端到端验证：导航链 总览→任务管理→统计看板 正常渲染（docs/_s103-nav.png）。教训入风险 #54 | AI |
+
 ## 4. 决策记录（永不删除，只可被新决策取代）
 
 | 编号 | 决策 | 理由 | 状态 |
@@ -217,6 +220,7 @@
 51. **SSE 经 nginx 反代的三个必要条件（S98 已落地，预防性登记）**：① `proxy_buffering off`——开启时 nginx 攒满缓冲区才下发，事件实时性完全失效（表现为"很久才一次性收到一批"）；② `proxy_http_version 1.1` + `proxy_set_header Connection ""`——默认 1.0 逐请求断连；③ 应用层心跳——后端每 15s 发 SSE 注释帧（`":" keep-alive`），网关 `proxy_read_timeout 3600s` 兜底；三者缺一都会表现为连接莫心中断或事件延迟。另：原生 EventSource 无法携带 Authorization 头，鉴权 SSE 必须用 fetch 流式读取（本项目 `web/src/utils/live.js`）。
 52. **模板引用未定义绑定——生产构建静默失效（S97-b 埋雷，S98 期用户报告"点暗色模式没生效"后修复）**：App.vue 主题按钮模板引用 `theme`/`toggleTheme`，但 script 侧定义缺失（当时两次编辑只落了模板侧即提交，3c23540 即为残缺版）。生产构建对未定义绑定回退 ctx 查找得 `undefined`，点击抛 `TypeError` 且被 **Vue 生产 errorHandler 吞掉**（不触发 window.onerror、无界面表现）——"点了没反应"且极难排查。**三层教训**：① `vite build` 不校验模板绑定的存在性，"构建通过"≠"绑定有效"，提交前必须核对模板引用与 script 定义成对；② 生产环境排错可用**临时注入点击脚本 + DOM 属性叠加层**取证（docs/_s98-diag3~5.png 的 `ls/ds/err` 三元证据链）；③ 风险 #49 截图法的盲区——bootstrap 直写 localStorage 只能证明 CSS 生效，**必须模拟真实点击**才能证明交互链路（本次 CSS 链路通、点击链路断）。修复：提交 8d27b13 之后的 fix 提交（补 script 定义 + 具名函数引用），注入点击实测 `clicks=1 ls=dark ds=dark err=none`（docs/_s98-fix-verify2.png）。
 53. **Edge 无头诊断的陈旧数据依赖假象（S98 修复验证期踩到，与风险 #41 同族）**：复用旧 `__boot.html`（内嵌旧 token）+ 全新 Edge profile 时页面落回 /login 且 `clicks=0`——并非被测代码回归，而是诊断脚本自身的陈旧 token。**结论**：每次无头验证都用 fresh 登录重新生成 boot 页，截图后立即删除。
+54. **路由视图必须单根节点——多根 fragment 卡死 Transition（S102 白屏事故）**：为加页面过渡在 App.vue 用 Transition mode=out-in 包裹 RouterView，但 Overview/Stats/TasksList/AlarmsList/AlarmDetail 模板均为多根 fragment——out-in 模式下旧页无法被动画卸载、新页永不挂载，表现为"从某页切走白屏且后续导航全卡"（该页即多根页）。**结论**：① Transition 内的路由视图必须单一根元素（包一层容器即可）；② 新增路由页面时对照检查；③ 症状"从某页切走必白屏"时优先查该页根节点数量。
 
 ## 7. 下一步计划
 
@@ -229,4 +233,3 @@
 - **剩余待办（需用户参与）**：① S65 截图回填（17 张）；② 报告小组人工项——见 `docs/文档转换说明.md`；③ 浏览器最终核验（统计看板/告警证据链/人工复核与复判/大图/健康面板/Swagger）。
 - **恢复指引**：开机 → Docker Desktop（鲸鱼变绿）→ 需要构建/拉镜像时开 Clash → 对 AI 说"继续" → AI 先读 PLAN/STATE 执行开场协议（最新状态见时间线末尾与 v0.7 tag）。
 - 任何新工作先在此与 PLAN.md 登记，再执行。
-| 2026-09-21 | 本步 | **S102 设备弹窗关闭自动清除轨迹完成**（用户反馈"查询轨迹之后消除不掉"）：DeviceMap 监听 Leaflet popupclose → emit track-clear（弹窗 X/点击地图/打开其他弹窗均触发），Overview 接入 clearTrack；手动清除按钮保留；图例文案同步。c6d886c，vite build 7.87s。另补登 PLAN：S101 光标两轮调整（cbe34bc 移除双圆点 / 259db33 移除光晕，当时仅记工作记忆） | AI |
