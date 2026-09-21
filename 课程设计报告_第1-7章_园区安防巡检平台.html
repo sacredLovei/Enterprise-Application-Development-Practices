@@ -83,8 +83,32 @@ hr { border: none; border-top: 1px solid #ccc; margin: 24px 0; }
 <td>S66：补齐第 1 章（绪论：背景/任务/现状/成果/结构）与第 7 章（总结与展望：工作总结、8 项不足与改进方向 S68<del>S72、展望）；文档升为全一册 1</del>7 章</td>
 <td>随本修订提交</td>
 </tr>
+<tr>
+<td>v0.9</td>
+<td>2026-09-21</td>
+<td>S88：落地 FR-5.7 简易权限认证——新增 5.2.8 认证与鉴权模块实现（HMAC 自包含令牌 + 拦截器统一校验 + MongoDB 吊销表 + 前端登录闭环）；3.2 FR-5.7 与 3.3 安全性需求口径更新；新增 TC035/TC036、IT016~IT018 与 6.6.1 汇总行；验收 13 例全过（<code>docker/init/accept-s88.ps1</code>）</td>
+<td>随本修订提交</td>
+</tr>
+<tr>
+<td>v1.0</td>
+<td>2026-09-21</td>
+<td>S89：落地 5.2.9 统一异常处理与错误语义（<code>@RestControllerAdvice</code> 收敛五类异常，详见该节）；6.4.2 补统一错误响应体实测表；新增 6.4.3 单元测试（后端 14 + 仿真 6 = 20 例）与 TC037；修正 5.5 小结模块数与故障项数（八→九模块、15→17 项）；6.4.2 原文所述&quot;全局异常处理&quot;由本条落地为真实实现</td>
+<td>随本修订提交</td>
+</tr>
+<tr>
+<td>v1.1</td>
+<td>2026-09-21</td>
+<td>S90：测试资产适配鉴权与数据现状——全部 HTTP 脚本加登录取令牌（<code>docker/init/auth-helper.ps1</code>）、JMeter 计划以 <code>-Jtoken</code> 注入令牌并提供 <code>jmeter-run.ps1</code> 一键运行；修复 7 处陈旧断言（IT005 空闲设备选择、IT007 级联防护、IT009 由 UNIMPL 转实测并新增 IT009b、TC015 自注入坏消息、TC018 唯一临时文件 + <code>get</code> 校验、TC019 允许 <code>.jpg</code>、TC021 实环验证）；表 6-2 的 TC015/TC018/TC019/TC021 与 6.4.1 复跑结论、表 6-7 接口行按实测更新</td>
+<td>随本修订提交</td>
+</tr>
+<tr>
+<td>v1.2</td>
+<td>2026-09-21</td>
+<td>S92（用户反馈）：登录页演示账号由纯文本改为<strong>可点击 chip 一键填入</strong>（原提示不可点击，用户点击后表单仍为空并触发&quot;请输入用户名与口令&quot;校验提示）；5.2.8(6) 登录页行与图 5-17 描述同步</td>
+<td>随本修订提交</td>
+</tr>
 </tbody></table>
-<p><strong>本版本（v0.8）对应提交号</strong>：随本修订提交产生（<code>git log</code> HEAD）</p>
+<p><strong>本版本（v0.9）对应提交号</strong>：随本修订提交产生（<code>git log</code> HEAD）</p>
 <blockquote>
 <p>注：文档版本号与里程碑 tag 相互独立——文档升版随本修订生效；里程碑 tag 另行打标（STATE §1）。</p>
 </blockquote>
@@ -115,7 +139,7 @@ hr { border: none; border-top: 1px solid #ccc; margin: 24px 0; }
 <td>小组内部讨论后敲定</td>
 </tr>
 </tbody></table>
-<p>第 5.4 节系统运行效果截图仍为 <code>【待回填】</code>（截图需按 <code>docs/截图操作清单.md</code> 逐图补拍，图 5-1<del>5-16）；第 6 章测试实际结果、缺陷登记与测试结论已于 2026-09-12 S50 执行后据实回填，v0.6 迭代（S61</del>S64）的回归结论已同步——课程明确要求&quot;如实记录项目遇到的问题，不虚构测试结果&quot;，本章所有数字均可由 <code>docker/init/accept-s50-*.ps1</code>、<code>accept-v06.ps1</code> 与 <code>test/jmeter/</code> 下资产复现。</p>
+<p>第 5.4 节系统运行效果截图仍为 <code>【待回填】</code>（截图需按 <code>docs/截图操作清单.md</code> 逐图补拍，图 5-1<del>图 5-17，其中图 5-17 为 S88 登录页）；第 6 章测试实际结果、缺陷登记与测试结论已于 2026-09-12 S50 执行后据实回填，v0.6 迭代（S61</del>S64）与课程四项要求（S85~S88：日志归档查询、多设备并发压测、备份恢复演示、简单权限认证）的实测结论已同步——课程明确要求&quot;如实记录项目遇到的问题，不虚构测试结果&quot;，本章所有数字均可由 <code>docker/init/accept-s50-*.ps1</code>、<code>accept-v06.ps1</code>、<code>accept-s86-pt8.ps1</code>、<code>accept-s88.ps1</code>、<code>restore-demo.ps1</code> 与 <code>test/jmeter/</code> 下资产复现。</p>
 <hr>
 <h2>第 1 章 绪论</h2>
 <h3>1.1 项目背景与意义</h3>
@@ -786,7 +810,7 @@ hr { border: none; border-top: 1px solid #ccc; margin: 24px 0; }
 <tr>
 <td>FR-5.7</td>
 <td>【加分】简易权限认证</td>
-<td>登录签发 Token，Nginx 或后端做校验；本设计预留 <code>Authorization</code> 头透传与 <code>auth_request</code> 位置</td>
+<td>登录签发 Token，Nginx 或后端做校验；本设计预留 <code>Authorization</code> 头透传与 <code>auth_request</code> 位置。<strong>S88 已实现</strong>：<code>POST /api/auth/login</code> 签发 HMAC 签名令牌，后端拦截器统一校验 <code>/api/**</code>（白名单仅登录接口），未认证统一 401；实现细节见 5.2.8，验收见 TC035/TC036、IT016~IT018</td>
 </tr>
 </tbody></table>
 <h4>3.2.6 基础业务功能需求（FR-6）</h4>
@@ -892,7 +916,12 @@ hr { border: none; border-top: 1px solid #ccc; margin: 24px 0; }
 <tr>
 <td></td>
 <td>敏感配置（口令）不硬编码进源码</td>
-<td>环境变量注入</td>
+<td>环境变量注入（演示账号口令支持 <code>AUTH_ADMIN_PASSWORD</code> 等环境变量覆盖）</td>
+</tr>
+<tr>
+<td></td>
+<td>业务接口鉴权：除登录接口外全部 <code>/api/**</code> 需 Bearer 令牌，未认证返回 401</td>
+<td><code>docker/init/accept-s88.ps1</code>（13 例断言，S88 实测全过）</td>
 </tr>
 <tr>
 <td><strong>易用性</strong></td>
@@ -1314,12 +1343,17 @@ hr { border: none; border-top: 1px solid #ccc; margin: 24px 0; }
 <td>在线率、完成率、趋势聚合</td>
 <td><code>GET /api/stats/overview</code></td>
 </tr>
+<tr>
+<td>认证鉴权 <code>auth</code>（S88）</td>
+<td>登录签发令牌、令牌校验、登出吊销、当前用户查询</td>
+<td><code>POST /api/auth/login</code>、<code>GET /api/auth/me</code>、<code>POST /api/auth/logout</code></td>
+</tr>
 </tbody></table>
 <h4>4.4.4 分布式存储模块（storage）</h4>
 <ul>
 <li><strong>职责</strong>：把&quot;文件&quot;与&quot;元数据&quot;两条路径分开处理，对外只暴露元数据查询。</li>
 <li><strong>构成</strong>：<code>HdfsClient</code>（WebHDFS REST 封装，含重定向跟随）、<code>ImageMetaRepository</code>、<code>PathBuilder</code>（按日期分区拼路径）、<code>ChecksumUtil</code>（MD5 校验）。</li>
-<li><strong>路径规范</strong>：<code>/inspection/{imageType}/{yyyy}/{MM}/{dd}/{deviceId}/{uuid}.{ext}</code>，其中 <code>imageType ∈ {uav_patrol, dog_infrared, alarm_snapshot}</code>。</li>
+<li><strong>路径规范</strong>：<code>/inspection/{imageType}/{yyyy}/{MM}/{dd}/{deviceId}/{uuid}.{ext}</code>，其中 <code>imageType ∈ {uav_patrol, dog_infrared, alarm_snapshot, manual_review}</code>（<code>manual_review</code> 为 S75 新增：人工复核上传的现场照片）。</li>
 </ul>
 <h4>4.4.5 检索分析模块（search）</h4>
 <ul>
@@ -2743,6 +2777,220 @@ onMounted(search)
 </tr>
 </tbody></table>
 <p><strong>先轮询、后 WebSocket</strong>是有意的取舍：轮询实现成本几乎为零且天然容错，可保证功能完整；WebSocket 作为加分项，在核心功能稳定后再引入。</p>
+<h4>5.2.8 认证与鉴权模块实现（S88 · FR-5.7）</h4>
+<p><strong>(1) 设计定位</strong></p>
+<p>FR-5.7（加分项&quot;简易权限认证&quot;）的落地。设计上预留了两种校验位置（Nginx <code>auth_request</code> 或后端拦截器），实现选择<strong>后端统一拦截</strong>：理由是令牌语义（有效期、吊销、角色）属于业务域，放在后端才便于与任务/告警等业务权限衔接，而 Nginx 只做 <code>Authorization</code> 头透传，保持网关职责单一。</p>
+<p><strong>(2) 令牌方案：自包含 + HMAC 签名，零第三方依赖</strong></p>
+<pre><code>token = base64url(payloadJson) + &quot;.&quot; + base64url(HMAC-SHA256(payloadJson, secret))
+payload = { sub: 用户名, name: 显示名, role: 角色, jti: 令牌编号, exp: 过期毫秒时间戳 }
+</code></pre>
+<table>
+<thead>
+<tr>
+<th>设计点</th>
+<th>取舍与理由</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>不引入 JWT 库</td>
+<td>只用 JDK 的 <code>javax.crypto.Mac</code>，规避镜像构建期的依赖下载（本项目构建环境需代理，见 P-1 同族问题）；令牌格式语义与 JWT 一致，后续可平滑替换</td>
+</tr>
+<tr>
+<td>自包含令牌</td>
+<td>后端任一实例凭同一密钥即可校验，天然适配 Nginx 双实例负载均衡（D-4），无需共享会话存储</td>
+</tr>
+<tr>
+<td>签名比对</td>
+<td><code>MessageDigest.isEqual</code> 常量时间比较，避免签名逐字节比较的时序侧信道</td>
+</tr>
+<tr>
+<td>密钥管理</td>
+<td><code>app.auth.secret</code>（环境变量 <code>AUTH_SECRET</code> 覆盖）；<strong>双实例必须一致</strong>，否则跨实例校验必失败——这是本方案唯一的部署约束</td>
+</tr>
+</tbody></table>
+<p><strong>(3) 鉴权链路（<code>AuthInterceptor</code> + <code>WebConfig</code>）</strong></p>
+<p>拦截 <code>/api/**</code>，白名单仅 <code>/api/auth/login</code>；<code>/actuator/health</code>（容器健康探针）、<code>/swagger-ui/**</code>、<code>/v3/api-docs</code>（S76 接口文档）因不在 <code>/api/**</code> 前缀内天然放行，跨域预检 <code>OPTIONS</code> 亦放行。校验次序：</p>
+<pre><code>Bearer 头存在？ → 签名与有效期通过？ → jti 未在吊销表中？
+   否 ↓               否 ↓                    是 ↓
+        401（缺少访问令牌）  401（令牌无效或已过期）   401（令牌已登出）
+</code></pre>
+<p>失败统一返回 <strong>401</strong> 与结构化 JSON（<code>code</code>/<code>error</code>/<code>message</code>），三类失败语义可区分但不泄露内部细节。<strong>401 与 403 的语义边界</strong>：本步只实现&quot;是否认证&quot;（401）；基于角色的细粒度授权（如&quot;仅 ADMIN 可执行维护接口&quot;，403）未实现，属如实记录的简化。</p>
+<p><strong>(4) 登出与吊销表（为什么必须落库）</strong></p>
+<p>无状态令牌的固有问题是<strong>无法主动作废</strong>。登出时把该令牌的 <code>jti</code> 写入 MongoDB 集合 <code>auth_revoked</code>（字段 <code>_id=jti</code>、<code>username</code>、<code>revokedAt</code>、<code>exp</code>，其中 <code>exp</code> 建 <strong>TTL 索引</strong>过期自动清理），拦截器每请求按主键查一次（索引命中，代价极小）。</p>
+<blockquote>
+<p><strong>关键取舍</strong>：吊销表不能放单实例内存。后端为双实例负载均衡（D-4），内存黑名单会出现&quot;在 backend-1 登出、下一次请求落到 backend-2 仍然有效&quot;的错误——这是本模块唯一必须依赖分布式存储的地方。</p>
+</blockquote>
+<p><strong>(5) 账号与口径</strong></p>
+<table>
+<thead>
+<tr>
+<th>项</th>
+<th>值</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>演示账号</td>
+<td><code>admin</code> / <code>admin123</code>（ADMIN · 系统管理员）、<code>operator</code> / <code>operator123</code>（OPERATOR · 巡检值班员）</td>
+</tr>
+<tr>
+<td>口令来源</td>
+<td>配置文件 <code>app.auth.users</code>，支持 <code>AUTH_ADMIN_PASSWORD</code> / <code>AUTH_OPERATOR_PASSWORD</code> 环境变量覆盖（不硬编码进源码，对应 3.3 安全性需求）</td>
+</tr>
+<tr>
+<td>令牌有效期</td>
+<td>12 小时（<code>AUTH_TTL_HOURS</code> 可配）</td>
+</tr>
+<tr>
+<td>接口</td>
+<td><code>POST /api/auth/login</code>（唯一免鉴权）、<code>GET /api/auth/me</code>、<code>POST /api/auth/logout</code></td>
+</tr>
+</tbody></table>
+<p>已知简化（如实记录）：账号为配置化而非用户表，口令为明文比对而非加盐哈希；生产应改为用户表 + bcrypt/argon2，并增加登录失败次数限制与审计。</p>
+<p><strong>(6) 前端登录闭环</strong></p>
+<table>
+<thead>
+<tr>
+<th>环节</th>
+<th>实现</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>登录页</td>
+<td>新增 <code>/login</code> 路由（独立全屏布局，无侧边栏），表单校验 + 错误提示 + 加载态；<strong>S92 起演示账号以可点击 chip 呈现，点击即自动填入用户名与口令</strong>（此前为纯文本提示，用户点击无反应而误以为账号失效）</td>
+</tr>
+<tr>
+<td>登录态存储</td>
+<td><code>localStorage</code>（<code>inspection_token</code> / <code>inspection_user</code>），登录响应的用户名、显示名、角色、过期时间一并保存</td>
+</tr>
+<tr>
+<td>自动携带</td>
+<td>axios 请求拦截器统一注入 <code>Authorization: Bearer &lt;token&gt;</code>——业务页面代码零改动</td>
+</tr>
+<tr>
+<td>401 处理</td>
+<td>响应拦截器捕获 401 → 清空本地登录态 → 跳转 <code>/login?redirect=&lt;原地址&gt;</code>（回跳），已在登录页则不重复跳转</td>
+</tr>
+<tr>
+<td>路由守卫</td>
+<td>未登录访问任意业务路由 → 重定向登录页并带 <code>redirect</code>；已登录访问 <code>/login</code> → 直接进首页</td>
+</tr>
+<tr>
+<td>退出登录</td>
+<td>侧边栏&quot;退出登录&quot;先调用后端吊销接口，再清本地登录态并回登录页；侧边栏同时展示当前用户（👤 显示名 · 角色）</td>
+</tr>
+</tbody></table>
+<p><strong>(7) 实测结果（<code>docker/init/accept-s88.ps1</code>，13 例 13 通过）</strong></p>
+<table>
+<thead>
+<tr>
+<th>断言</th>
+<th>场景</th>
+<th>实测</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>A-1 / A-2 / A-3</td>
+<td>无令牌访问、错误口令、空口令</td>
+<td>401 / 401 / 400（异常路径无 500）</td>
+</tr>
+<tr>
+<td>A-4</td>
+<td><code>admin</code> 登录</td>
+<td>200，令牌长 204，<code>role=ADMIN</code>，返回 <code>expiresAt</code></td>
+</tr>
+<tr>
+<td>A-5</td>
+<td>带令牌访问 6 个业务接口</td>
+<td><code>/api/devices</code>、<code>/api/alarms</code>、<code>/api/tasks</code>、<code>/api/stats/overview</code>、<code>/api/system/health</code>、<code>/api/images/meta-stats</code> 全 200</td>
+</tr>
+<tr>
+<td>A-6 / A-7</td>
+<td>篡改令牌、伪造签名</td>
+<td>401 / 401</td>
+</tr>
+<tr>
+<td>A-8 / A-9</td>
+<td><code>/api/auth/me</code>、第二账号登录</td>
+<td>200（<code>user=admin</code>）/ 200（<code>role=OPERATOR</code>）</td>
+</tr>
+<tr>
+<td>A-10</td>
+<td>同一令牌跨双实例</td>
+<td>16 次请求命中 <code>backend-1</code> <strong>与</strong> <code>backend-2</code>，全部 200</td>
+</tr>
+<tr>
+<td>A-11</td>
+<td>接口文档白名单</td>
+<td><code>/v3/api-docs</code> 无令牌 200</td>
+</tr>
+<tr>
+<td>A-12</td>
+<td>登出吊销</td>
+<td>登出 200 → <code>auth_revoked</code> 文档 0→1 → 旧令牌复用 401</td>
+</tr>
+<tr>
+<td>A-13</td>
+<td>前端产物</td>
+<td>构建产物含登录页与令牌处理代码</td>
+</tr>
+</tbody></table>
+<p><strong>(8) 对既有测试资产的影响（如实记录）</strong>
+鉴权开启后，所有 <code>/api/**</code> 调用都必须携带令牌，因此<strong>历史 HTTP 测试脚本与性能脚本都需要先登录</strong>：</p>
+<ul>
+<li>主回归套件 <code>accept-v06.ps1</code> 已适配（开头登录一次并复用令牌），S88 后复跑：<strong>6/8 通过，无一例因鉴权失败</strong>（8 例请求均正常返回，无 401）；两例失败为<strong>测试资产数据依赖</strong>问题，与本步无关——V-5 硬编码的告警编号 <code>pt3k-00002</code> 已随 S74 测试数据清理删除（Mongo 现存 0 条）故返回 404；V-7 中文关键词&quot;红外温度&quot;在 24 小时窗口内 0 条（90 天窗口 5 条），语料随时间窗衰减。两项已登记为后续步骤修复测试资产。</li>
+<li><strong>S90 适配结果</strong>：<code>accept-s50-*.ps1</code> 与 <code>accept-s33.ps1</code>、<code>accept-s86-pt8.ps1</code>、<code>export-api-contract.ps1</code> 全部改为&quot;先登录再带令牌&quot;（共享 <code>docker/init/auth-helper.ps1</code>），并已实测复跑全绿；JMeter 两个计划已加 <code>Authorization: Bearer ${__P(token)}</code> 并参数化线程/时长（配套 <code>docker/init/jmeter-run.ps1</code> 自动取令牌运行），但<strong>尚未实测复跑</strong>（冒烟阶段按用户要求停止 JMeter 测试）——如实标注为&quot;已适配、待验证&quot;。第 6 章历史性能数据均为<strong>鉴权前</strong>测量值（口径不变，如实标注）。</li>
+</ul>
+<h4>5.2.9 统一异常处理与错误语义（S89）</h4>
+<p><strong>(1) 问题</strong>：没有统一处理器时，参数校验失败会以 500 抛出（接口测试判定原则要求异常路径 4xx），异常栈可能随响应体返回给客户端（信息泄露），错误体结构还随异常类型漂移，前端无法统一处理。</p>
+<p><strong>(2) 实现</strong>：<code>common/GlobalExceptionHandler</code>（<code>@RestControllerAdvice</code>），把五类异常收敛为统一契约：</p>
+<table>
+<thead>
+<tr>
+<th>异常类型</th>
+<th>状态码</th>
+<th>message</th>
+<th>附加字段</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><code>ResponseStatusException</code>（业务主动抛出）</td>
+<td><strong>保留原状态码</strong>（404 / 400 / 409 / 500）</td>
+<td>业务 reason 原样透出</td>
+<td>—</td>
+</tr>
+<tr>
+<td><code>MethodArgumentNotValidException</code>（<code>@Valid</code> 校验失败）</td>
+<td><strong>400</strong></td>
+<td>参数校验失败</td>
+<td><code>fields[]</code>：field / message / rejectedValue</td>
+</tr>
+<tr>
+<td><code>HttpMessageNotReadableException</code></td>
+<td><strong>400</strong></td>
+<td>请求体缺失或 JSON 格式错误</td>
+<td>—</td>
+</tr>
+<tr>
+<td><code>MissingServletRequestParameterException</code></td>
+<td><strong>400</strong></td>
+<td>缺少必填参数: xxx</td>
+<td>—</td>
+</tr>
+<tr>
+<td><code>MethodArgumentTypeMismatchException</code></td>
+<td><strong>400</strong></td>
+<td>参数类型错误: xxx</td>
+<td>—</td>
+</tr>
+<tr>
+<td><code>Exception</code>（兜底）</td>
+<td><strong>500</strong></td>
+<td>服务内部错误，请稍后重试（<strong>不吐异常栈</strong>，细节仅落服务端日志）</td>
+<td>—</td>
+</tr>
+</tbody></table>
+<p>统一响应体：<code>{timestamp, status, code, error, message, path[, fields]}</code>；401 由鉴权拦截器直接写出，结构保持一致（见 5.2.8）。</p>
+<p><strong>(3) 实测</strong>：经网关实测六类异常均返回预期状态码与中文语义（404 设备/告警不存在、400 非法 JSON、400 校验失败带字段明细、400 非法查询参数、401 无令牌），响应 <code>Content-Type: application/json;charset=UTF-8</code>；配套单测 5 例覆盖&quot;业务异常状态码保留 / 校验 400 带明细 / 请求体 400 / 兜底 500 不泄露异常类名与细节 / 错误体字段稳定&quot;，<code>mvn test</code> 后端 <strong>14/14</strong> 全绿（明细见 6.4.3，用例见 TC037）。</p>
 <h3>5.3 关键问题与解决方案</h3>
 <blockquote>
 <p>本节按&quot;<strong>现象 → 排查过程 → 根因 → 解决方案</strong>&quot;组织。这是答辩提问的集中方向，也是报告中最能体现真实工作量与个人贡献的部分。<strong>实施后必须用实际发生的现象与排查过程替换或补充下表内容</strong>——课程明确要求如实记录问题，不得虚构。</p>
@@ -2862,6 +3110,20 @@ onMounted(search)
 <td>卷必须命名并在 compose 中声明；演示前做一次数据备份；<strong>严禁在演示前执行 <code>down -v</code></strong></td>
 <td>预案</td>
 </tr>
+<tr>
+<td>P-16</td>
+<td>后端容器重建后，经 Nginx 访问 <code>/api/**</code> 持续 502，直连实例却正常</td>
+<td>Nginx 在启动时解析上游为 IP 并缓存，容器重建后 IP 变化，Nginx 仍指向旧 IP（<strong>非</strong>&quot;后端启动慢&quot;）</td>
+<td>部署固定动作：重建后端容器后执行 <code>docker compose restart nginx</code>；必要时对上游使用 <code>resolver</code> + 变量式 <code>proxy_pass</code> 动态解析</td>
+<td><strong>已命中并修复（S50/S63）</strong>，见下方补充</td>
+</tr>
+<tr>
+<td>P-17</td>
+<td>无状态令牌无法&quot;登出即失效&quot;；且双实例下内存黑名单会漏放行</td>
+<td>自包含令牌的有效性只由签名与有效期决定，服务端不留状态；后端为双实例负载均衡（D-4），单实例内存黑名单无法覆盖另一实例</td>
+<td>登出时把令牌编号 <code>jti</code> 写入 MongoDB 吊销表（<code>_id=jti</code> + TTL 索引），拦截器逐请求按主键校验——吊销状态必须落在共享存储而非进程内存</td>
+<td><strong>S88 已解决</strong>（见 5.2.8(4)）</td>
+</tr>
 </tbody></table>
 <p><strong>实施期实测补充（2026-09-12，S50）</strong>：实施中实际发生的问题与排查过程已按上述模板登记于 6.3.3 缺陷登记表（BUG-001~008），本表预案命中情况如下：</p>
 <ul>
@@ -2869,6 +3131,14 @@ onMounted(search)
 <li><strong>P-11 命中</strong>：ik 插件因网络受限未安装，按预案降级为短语级匹配（BUG-004）；</li>
 <li><strong>P-12 命中</strong>：重复消费防护在 TC016（按 alarmId 重放 2 次计数不变）实测生效；</li>
 <li>其余问题（缺索引、ES total 截断、取消竞态、限流缺失）为实施期新发现，不属预案范围，均已按&quot;现象→排查→根因→修复→回归&quot;闭环记录在 6.3.3。</li>
+</ul>
+<p><strong>实施期实测补充（2026-09-21，S85~S88 课程四项要求）</strong>：</p>
+<ul>
+<li><strong>P-17 命中（S88 权限认证）</strong>：实现登出时确认无状态令牌无法主动作废，且双实例下必须用共享吊销表（MongoDB <code>auth_revoked</code>）——实测登出后 <code>auth_revoked</code> 文档 0→1、旧令牌复用 401，令牌跨 <code>backend-1</code>/<code>backend-2</code> 均有效；</li>
+<li><strong>鉴权开启对测试资产的连带影响（S88 新发现）</strong>：所有 <code>/api/**</code> 调用需携带令牌，主回归套件 <code>accept-v06.ps1</code> 已适配并复跑（8 例请求无一 401，其中 2 例失败为硬编码测试数据的陈旧问题），JMeter 与 <code>accept-s50-*.ps1</code> 尚待适配——<strong>历史性能数据为鉴权前测量值</strong>，如实标注；</li>
+<li><strong>备份恢复比对（S87 新发现）</strong>：仅暂停仿真的导出窗口内，后端离线检测器补发了一条 <code>DEVICE_OFFLINE</code> 告警，导致 <code>alarm</code> 集合比对出现 1 条差异；改为同时暂停全部写入方（4 仿真 + 2 后端）后 6/6 集合计数一致——备份一致性验证必须构造完全静态窗口；</li>
+<li><strong>并发压测（S86 新发现）</strong>：逐条新开 <code>kafka-console-producer</code> 的写法因每次 JVM 启动约 0.5 s，实测只注入 1,122/3,000 条；改为每设备一个长驻生产者 + 定时喂流后注入 3,000/3,000 且丢失 0 条——<strong>压测脚本自身的性能缺陷会伪装成被测系统的缺陷</strong>。</li>
+<li><strong>测试资产陈旧（S90 集中修复，共 7 处）</strong>：鉴权开启与数据清理后复跑历史脚本，暴露出大量&quot;看起来是产品缺陷、实际是测试资产过期&quot;的假失败：① 硬编码告警编号 <code>pt3k-00002</code> 已被 S74 清理（V-5）；② 检索关键词 24 h 窗口内语料为 0（V-7）；③ <code>IT009</code> 仍是&quot;未实现&quot;的硬编码结论，而能力早在 v0.6 已交付；④ 建任务脚本硬编码设备，设备忙时服务端正确返回 409 被记为失败（IT005）；⑤ 固定临时文件名 + 未校验 <code>hdfs dfs -get</code>，S82 重生成证据图后读到遗留文件导致 MD5 误报不一致（TC018）；⑥ 目录规范脚本只认 <code>.png</code>，把 S75 的 5 张 <code>.jpg</code> 现场照片误判为违规（TC019）；⑦ <code>TC021</code> 仍是硬编码 <code>FAIL</code>（TC021）。<strong>教训</strong>：验收脚本必须自给自足（自注入数据、唯一临时文件、按当前状态动态选样），并用 <code>git grep</code> 复核&quot;结论性断言&quot;是否已被后续版本推翻——否则回归报告会持续发出错误的红色信号，掩盖真实缺陷。修复后基线：<code>accept-s50-it</code> 15/0/1、<code>accept-s50-tc</code> 22/0、<code>accept-s50-tc2</code> 14/0、<code>accept-v06</code> 8/0（2026-09-21 实测）。</li>
 </ul>
 <p><strong>【待回填】剩余项</strong>：① 每条问题的真实日志片段与截图（6.3.3 各 BUG 的定位过程已有命令与数据证据，日志截图可补）；② 实际耗时（用于 3.4.3 进度复盘）；③ 小组内&quot;谁排查的、怎么定位的&quot;——个人总结报告素材。</p>
 <h3>5.4 系统运行效果截图</h3>
@@ -2980,10 +3250,15 @@ onMounted(search)
 <td>关闭仿真后设备状态变为 OFFLINE 且生成告警</td>
 <td>【待回填】</td>
 </tr>
+<tr>
+<td>图 5-17</td>
+<td>登录页与鉴权（S88）</td>
+<td>登录页界面（含<strong>可点击的演示账号 chip</strong>，点击自动填入）；登录后侧边栏显示当前用户与&quot;退出登录&quot;；未登录直接访问业务地址被重定向回登录页</td>
+<td>【待回填】</td>
+</tr>
 </tbody></table>
 <h3>5.5 本章小结</h3>
-<p>本章按 4.4 节的模块划分给出了七个模块的详细设计与关键实现。设备仿真模块采用&quot;航点插值 + 噪声&quot;的连续移动模型保证数据真实感，并以心跳 5 s、遥测 2 s 的双节奏解耦上报；消息接入模块通过统一生产者与&quot;幂等消费 + 手动提交 + 死信兜底&quot;的模板基类，把 Kafka 至少一次投递语义下的可靠性责任集中到一处；存储模块采用 WebHDFS 规避 Hadoop 客户端依赖冲突，并明确&quot;图片本体进 HDFS、元数据进 MongoDB&quot;；数据库模块给出了心跳 upsert、遥测批量写、2dsphere 就近派单、离线检测、任务状态原子流转五个关键实现；检索模块强调 <code>filter</code> 上下文与 Bulk 写入两个性能要点；网关模块给出 Nginx 配置全文及可用于现场演示负载均衡的实例标识设计；前端模块给出了&quot;前端不感知后端拓扑&quot;的 API 封装与分页面刷新策略。5.3 节汇总了 15 项高频故障的现象、根因与预案，构成本章最具工程价值的部分。第 6 章将基于本章实现与第 3 章需求指标，设计并执行系统测试。</p>
-<hr>
+<h2>本章按 4.4 节的模块划分给出了九个模块的详细设计与关键实现。设备仿真模块采用&quot;航点插值 + 噪声&quot;的连续移动模型保证数据真实感，并以心跳 5 s、遥测 2 s 的双节奏解耦上报；消息接入模块通过统一生产者与&quot;幂等消费 + 手动提交 + 死信兜底&quot;的模板基类，把 Kafka 至少一次投递语义下的可靠性责任集中到一处；存储模块采用 WebHDFS 规避 Hadoop 客户端依赖冲突，并明确&quot;图片本体进 HDFS、元数据进 MongoDB&quot;；数据库模块给出了心跳 upsert、遥测批量写、2dsphere 就近派单、离线检测、任务状态原子流转五个关键实现；检索模块强调 <code>filter</code> 上下文与 Bulk 写入两个性能要点；网关模块给出 Nginx 配置全文及可用于现场演示负载均衡的实例标识设计；认证鉴权模块以&quot;HMAC 自包含令牌 + 拦截器统一校验 + MongoDB 共享吊销表&quot;实现 FR-5.7，并给出 401/403 语义边界与配置化账号的简化说明；统一异常处理模块（S89）把业务异常、参数校验失败、请求体不可解析、参数缺失/类型错误与兜底异常收敛为 <code>{timestamp,status,code,error,message,path[,fields]}</code> 一致契约，保证异常路径 4xx 而非 5xx、500 不泄露异常栈；前端模块给出了&quot;前端不感知后端拓扑&quot;的 API 封装、分页面刷新策略与登录态闭环（路由守卫 + 自动携带令牌 + 401 回跳）。5.3 节汇总了 17 项高频故障的现象、根因与预案，构成本章最具工程价值的部分。第 6 章将基于本章实现与第 3 章需求指标，设计并执行系统测试。</h2>
 <h2>第 6 章 系统测试与优化</h2>
 <blockquote>
 <p><strong>本章状态说明</strong>（2026-09-12 更新）：S50 测试执行完毕，6.1.2 数据准备、6.3.1 用例实际结果、6.3.3 缺陷登记、6.6 结果分析与结论、6.7 优化对比均已据实回填（执行脚本 <code>docker/init/accept-s50-*.ps1</code> 可复现）。</p>
@@ -3268,7 +3543,7 @@ python3 tools/gen_alarm_data.py --count 10000 \
 <td>Kafka 正常</td>
 <td>构造一条无法解析的消息并发送至告警主题</td>
 <td>重试 3 次后进入 <code>inspection.dlq</code>，不阻塞后续消息消费</td>
-<td>DLQ 中检出构造的坏消息，后续消息消费不受阻</td>
+<td>S90 复跑：脚本自行注入坏消息（<code>this-is-not-json-…</code>）后 DLQ 行数 3→4 且内容可检出，后续消费不受阻。<strong>注</strong>：原脚本依赖队列中的遗留消息，S78 死信重放清空队列后曾误报失败——已改为自注入（测试资产修复）</td>
 <td>通过</td>
 </tr>
 <tr>
@@ -3298,7 +3573,7 @@ python3 tools/gen_alarm_data.py --count 10000 \
 <td>已上传图片并有元数据</td>
 <td>1. 按路径下载图片；2. 计算 MD5 与元数据比对</td>
 <td>MD5 完全一致</td>
-<td>API 下载与 HDFS 源文件 MD5 均为 <code>5A35D7F0…4399</code></td>
+<td>S50 首测：API 与 HDFS 源文件 MD5 同为 <code>5A35D7F0…4399</code>（当时证据图 640×360）。S82 全量重生成 1280×720 后内容已变，<strong>S90 复跑</strong>：同一告警的 API 下载与 HDFS 源文件 MD5 同为 <code>8E1582EE…436C</code>，<code>hdfs dfs -get</code> 成功标志 <code>get=True</code>。<strong>注</strong>：原脚本用固定临时文件名且未校验 <code>hdfs dfs -get</code> 结果，重生成后曾读到上一轮遗留文件而误报不一致——已改为按运行号唯一命名并校验（测试资产修复）</td>
 <td>通过</td>
 </tr>
 <tr>
@@ -3308,7 +3583,7 @@ python3 tools/gen_alarm_data.py --count 10000 \
 <td>已上传多张图片</td>
 <td>查看 HDFS 目录结构</td>
 <td>路径符合 <code>/inspection/{type}/{yyyy}/{MM}/{dd}/{deviceId}/</code> 规范</td>
-<td>10,534 个文件全部符合规范，0 违规</td>
+<td>S90 复跑：<strong>11,541 个文件，0 违规</strong>；扩展名实测 <code>{.png, .jpg}</code>（<code>.jpg</code> 为 S75 人工复核上传的现场照片，规范本身允许任意图片扩展名，原脚本只认 <code>.png</code> 故曾把 5 张 <code>.jpg</code> 误判为违规——已修正正则）。<strong>注</strong>：文件数随仿真持续产生新证据图而变化，上值为 2026-09-21 采样；S93 清理 34 个测试告警影像后为 11,507</td>
 <td>通过</td>
 </tr>
 <tr>
@@ -3328,7 +3603,7 @@ python3 tools/gen_alarm_data.py --count 10000 \
 <td>2 台机器狗在线且空闲，位置不同</td>
 <td>在靠近机器狗 A 的位置产生告警，触发派单</td>
 <td>选中机器狗 A（2dsphere 查询生效）</td>
-<td>v0.6 实现（BUG-003 回归）：2dsphere nearSphere 就近派单——V-2/V-2b 分别在 ROBOT-001/002 位置注入告警，均派给地理最近的机器狗；DONE 回执回填复核结论与红外图（D-21 仿真结论规则）</td>
+<td>v0.6 实现（BUG-003 回归）：2dsphere nearSphere 就近派单——V-2/V-2b 分别在 ROBOT-001/002 位置注入告警，均派给地理最近的机器狗；DONE 回执回填复核结论与红外图（D-21 仿真结论规则）。<strong>S90</strong>：脚本原为硬编码 <code>FAIL</code>（遗留&quot;未实现&quot;结论），已改为实环验证&quot;告警→机器狗任务→复核回填&quot;链条（实测 <code>task=… device=ROBOT-002 review.conclusion=CONFIRMED</code>），&quot;最近&quot;的判定仍由 V-2/V-2b 证明</td>
 <td>通过（BUG-003 回归）</td>
 </tr>
 <tr>
@@ -3461,6 +3736,36 @@ python3 tools/gen_alarm_data.py --count 10000 \
 <td>4 台设备坐标均在园区 bbox，无经纬颠倒（S40 用户核验）</td>
 <td>通过（人工核验）</td>
 </tr>
+<tr>
+<td>TC035</td>
+<td>权限认证</td>
+<td>未登录访问受保护接口被拒</td>
+<td>后端与网关正常</td>
+<td>1. 不携带 <code>Authorization</code> 请求 <code>/api/devices</code>；2. 用错误口令登录；3. 空口令登录</td>
+<td>1. 401（缺令牌）；2. 401（口令错误）；3. 400（参数缺失），<strong>均不得返回 500</strong></td>
+<td>S88 实测（A-1/A-2/A-3）：401 / 401 / 400，响应体含明确 <code>message</code></td>
+<td>通过</td>
+</tr>
+<tr>
+<td>TC036</td>
+<td>权限认证</td>
+<td>登录后全链路可用与登出失效</td>
+<td>演示账号可用</td>
+<td>1. 登录取令牌；2. 带令牌访问 6 个业务接口；3. 登出；4. 复用旧令牌访问</td>
+<td>1. 全部 200；2. 登出后旧令牌 401；3. 令牌在双后端实例均有效</td>
+<td>S88 实测（A-4~A-12）：6/6 接口 200、命中 backend-1 与 backend-2、<code>auth_revoked</code> 文档 0→1、旧令牌复用 401</td>
+<td>通过</td>
+</tr>
+<tr>
+<td>TC037</td>
+<td>异常处理</td>
+<td>异常入参返回 4xx 而非 500，错误体结构统一</td>
+<td>已登录（S88 鉴权后）</td>
+<td>1. 请求不存在的设备/告警；2. 提交非法 JSON；3. 缺必填字段；4. 传非法时间格式；5. 不携带令牌</td>
+<td>1. 404；2. 400；3. <strong>400 且返回字段明细</strong>；4. 400；5. 401；<strong>均不得返回 500、不得泄露异常栈</strong></td>
+<td>S89 实测：404/404/400/400（含 <code>fields=[{field:deviceId,…}]</code>）/400/401，响应体统一为 <code>{timestamp,status,code,error,message,path[,fields]}</code>；配套单测 5 例（<code>GlobalExceptionHandlerTest</code>）全绿</td>
+<td>通过</td>
+</tr>
 </tbody></table>
 <h4>6.3.2 需求追溯矩阵（表 6-3）</h4>
 <table>
@@ -3525,6 +3830,21 @@ python3 tools/gen_alarm_data.py --count 10000 \
 <td>FR-5.1 ~ FR-5.7</td>
 <td>网关与访问控制</td>
 <td>TC008、TC028~TC031</td>
+</tr>
+<tr>
+<td>FR-5.7（加分项）</td>
+<td>简易权限认证（登录签发令牌 + 后端统一校验 + 登出吊销）</td>
+<td>TC035、TC036</td>
+</tr>
+<tr>
+<td>NFR-安全</td>
+<td>业务接口鉴权（除登录外全部 <code>/api/**</code> 需令牌）</td>
+<td>TC035、TC036、IT016~IT018</td>
+</tr>
+<tr>
+<td>G-2（接口正确性）</td>
+<td>异常入参返回明确错误码而非 500、错误体结构统一</td>
+<td>TC037</td>
 </tr>
 <tr>
 <td>FR-6</td>
@@ -3789,8 +4109,31 @@ python3 tools/gen_alarm_data.py --count 10000 \
 <td>同 IT010</td>
 <td>200，且响应头含 <code>X-Backend-Instance</code></td>
 </tr>
+<tr>
+<td>IT016</td>
+<td><code>/api/auth/login</code></td>
+<td>POST</td>
+<td>正确的用户名与口令</td>
+<td>200，返回令牌、角色与过期时间（<code>token</code>/<code>role</code>/<code>expiresAt</code>）</td>
+</tr>
+<tr>
+<td>IT017</td>
+<td><code>/api/auth/login</code></td>
+<td>POST</td>
+<td>错误口令 / 空口令</td>
+<td>401 / 400，响应体含明确 <code>message</code>，<strong>不得返回 500</strong></td>
+</tr>
+<tr>
+<td>IT018</td>
+<td><code>/api/devices</code></td>
+<td>GET</td>
+<td>无令牌 / 篡改令牌 / 伪造签名 / 登出后复用</td>
+<td>四种情形均 401，语义可区分，不得返回 500</td>
+</tr>
 </tbody></table>
 <p><strong>接口测试实测结果（2026-09-12，脚本 <code>docker/init/accept-s50-it.ps1</code> 可复现）</strong>：15 例中 <strong>13 通过、0 不通过、2 未实现</strong>。</p>
+<p><strong>接口测试复跑结果（2026-09-21，S90 测试资产修复后）</strong>：脚本共 <strong>16 项断言（IT001~IT015 + IT009b）→ 15 通过、0 不通过、1 未实现（仅 IT001 设计差异）</strong>。本步修复的三处测试资产陈旧问题：① <strong>IT009</strong> 原脚本硬编码&quot;review dispatch not implemented&quot;的 <code>UNIMPL</code> 结论，而该能力早在 S61/v0.6 已实现——改为动态选取未处置告警实测复核（200，<code>status=FALSE_ALARM</code>、<code>reviewerDeviceId=MANUAL</code>）；② <strong>IT005</strong> 原脚本硬编码向 <code>ROBOT-001</code> 建任务，设备恰好忙时服务端正确返回 <strong>409</strong>（单设备单活动任务）却被记为失败——改为先查询空闲在线设备再建任务；③ 新增 <strong>IT009b</strong>：非法复核结论必须返回 <strong>400</strong> 而非 500。</p>
+<p><strong>接口测试实测结果（鉴权接口，2026-09-21，脚本 <code>docker/init/accept-s88.ps1</code> 可复现）</strong>：IT016~IT018 三例<strong>全部通过</strong>——IT016 登录 200（令牌长 204、<code>role=ADMIN</code>、返回 <code>expiresAt</code>）；IT017 错误口令 401 / 空口令 400；IT018 无令牌、篡改令牌、伪造签名、登出后复用四种情形均 401。同一脚本还验证了令牌跨双后端实例有效（16 次请求命中 backend-1 与 backend-2）与前端产物含登录页，13 例断言全部通过。</p>
 <ul>
 <li>IT001（注册接口）：<strong>未实现——设计差异</strong>。设备注册由心跳 upsert 驱动（TC001 已验证注册语义），无独立注册端点；</li>
 <li>IT009（告警复核接口）：<strong>v0.6 已实现</strong>（S61，BUG-003 回归）——<code>POST /api/alarms/{alarmId}/review</code> 实测：合法结论 200（status/review 更新并同步 ES）、非法结论 400；</li>
@@ -3812,8 +4155,116 @@ curl -s -o /dev/null -w &#39;%{http_code}\n&#39; -X POST http://localhost:8080/a
 for i in $(seq 1 10); do
   curl -s -D - -o /dev/null http://localhost:8080/api/devices | grep -i x-backend-instance
 done
+
+# S88 权限认证：登录取令牌，后续请求统一携带（未携带一律 401）
+TOKEN=$(curl -s -X POST http://localhost:8080/api/auth/login \
+  -H &#39;Content-Type: application/json&#39; \
+  -d &#39;{&quot;username&quot;:&quot;admin&quot;,&quot;password&quot;:&quot;admin123&quot;}&#39; | jq -r .token)
+curl -s -o /dev/null -w &#39;%{http_code}\n&#39; http://localhost:8080/api/devices                      # 401（无令牌）
+curl -s -o /dev/null -w &#39;%{http_code}\n&#39; -H &quot;Authorization: Bearer $TOKEN&quot; http://localhost:8080/api/devices   # 200
+curl -s -X POST -H &quot;Authorization: Bearer $TOKEN&quot; http://localhost:8080/api/auth/logout | jq .
+curl -s -o /dev/null -w &#39;%{http_code}\n&#39; -H &quot;Authorization: Bearer $TOKEN&quot; http://localhost:8080/api/devices   # 401（已登出）
 </code></pre>
-<p><strong>接口测试的判定原则</strong>：不仅看&quot;正常路径返回 200&quot;，更要看<strong>异常路径是否返回 4xx 而非 5xx</strong>。把参数校验缺失导致的 500 当作通过，是接口测试最常见的自欺。本项目通过 <code>@Valid</code> + <code>@RestControllerAdvice</code> 全局异常处理统一保证。</p>
+<p><strong>接口测试的判定原则</strong>：不仅看&quot;正常路径返回 200&quot;，更要看<strong>异常路径是否返回 4xx 而非 5xx</strong>。把参数校验缺失导致的 500 当作通过，是接口测试最常见的自欺。本项目通过 <code>@Valid</code> + <code>GlobalExceptionHandler</code>（<code>@RestControllerAdvice</code>，S89 落地，详见 5.2.9）统一保证：业务异常保留原状态码与 message、参数校验失败返回 <strong>400 + 逐字段明细</strong>、兜底异常返回 <strong>500 且不吐异常栈</strong>。</p>
+<p><strong>统一错误响应体实测（2026-09-21，S89 部署后经网关实测）</strong>：</p>
+<pre><code class="language-json">{&quot;timestamp&quot;:&quot;2026-09-21T04:06:05.696Z&quot;,&quot;status&quot;:404,&quot;code&quot;:404,&quot;error&quot;:&quot;NOT_FOUND&quot;,
+ &quot;message&quot;:&quot;device not found: NOPE-999&quot;,&quot;path&quot;:&quot;/api/devices/NOPE-999&quot;}
+</code></pre>
+<table>
+<thead>
+<tr>
+<th>场景</th>
+<th>实测状态码</th>
+<th>响应关键字段</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><code>GET /api/devices/NOPE-999</code>（不存在的设备）</td>
+<td><strong>404</strong></td>
+<td><code>message=device not found: NOPE-999</code></td>
+</tr>
+<tr>
+<td><code>GET /api/alarms/NOPE-999</code>（不存在的告警）</td>
+<td><strong>404</strong></td>
+<td><code>message=alarm not found: NOPE-999</code></td>
+</tr>
+<tr>
+<td><code>POST /api/tasks</code> 请求体非法 JSON</td>
+<td><strong>400</strong></td>
+<td><code>message=请求体缺失或 JSON 格式错误</code></td>
+</tr>
+<tr>
+<td><code>POST /api/tasks</code> 缺少必填字段</td>
+<td><strong>400</strong></td>
+<td><code>fields=[{field:deviceId, message:&quot;deviceId 不能为空&quot;}]</code>（<strong>含字段明细</strong>）</td>
+</tr>
+<tr>
+<td><code>POST /api/search/alarms</code> 非法时间格式</td>
+<td><strong>400</strong></td>
+<td><code>message=查询参数错误: …</code>（ES 异常已转译为业务语义）</td>
+</tr>
+<tr>
+<td>无令牌访问任意业务接口（S88 鉴权）</td>
+<td><strong>401</strong></td>
+<td><code>Content-Type: application/json;charset=UTF-8</code>，<code>{code,error,message}</code></td>
+</tr>
+</tbody></table>
+<h4>6.4.3 单元测试（S77 建立，S89 扩充）</h4>
+<table>
+<thead>
+<tr>
+<th>模块</th>
+<th>用例数</th>
+<th>覆盖内容</th>
+<th>结果</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>后端 <code>common/JsonTest</code></td>
+<td>2</td>
+<td>消息 JSON 序列化往返（含中文描述，UTF-8 口径）</td>
+<td>通过</td>
+</tr>
+<tr>
+<td>后端 <code>storage/PathBuilderTest</code></td>
+<td>3</td>
+<td>HDFS 分区路径拼接规范</td>
+<td>通过</td>
+</tr>
+<tr>
+<td>后端 <code>task/TaskServiceTest</code></td>
+<td>4</td>
+<td>任务状态流转与取消语义（Mockito 隔离持久层）</td>
+<td>通过</td>
+</tr>
+<tr>
+<td>后端 <code>common/GlobalExceptionHandlerTest</code>（S89 新增）</td>
+<td>5</td>
+<td>业务异常状态码保留、校验失败 400 带字段明细、请求体不可解析 400、兜底 500 不泄露异常类名与细节、错误体字段稳定</td>
+<td>通过</td>
+</tr>
+<tr>
+<td>仿真 <code>TelemetryGeneratorTest</code></td>
+<td>3</td>
+<td>轨迹连续性、坐标范围、电量单调性</td>
+<td>通过</td>
+</tr>
+<tr>
+<td>仿真 <code>GroundNetworkTest</code></td>
+<td>3</td>
+<td>空地网络切换与连通性判定</td>
+<td>通过</td>
+</tr>
+<tr>
+<td><strong>合计</strong></td>
+<td><strong>20</strong></td>
+<td>后端 14 + 仿真 6</td>
+<td><strong>20/20 通过（<code>mvn test</code>，2026-09-21 复跑）</strong></td>
+</tr>
+</tbody></table>
+<blockquote>
+<p>单元测试的价值在 S89 立刻兑现：<code>GlobalExceptionHandlerTest</code> 在首次运行时就暴露了&quot;MockMvc 默认以 ISO-8859-1 解码响应体导致中文断言恒失败&quot;的测试写法缺陷——这是<strong>测试自身的缺陷</strong>，与&quot;把测试写绿&quot;相比，先证明测试会红更有意义。</p>
+</blockquote>
 <h3>6.5 简单性能测试</h3>
 <h4>6.5.1 性能测试场景（表 6-6）</h4>
 <table>
@@ -3875,6 +4326,13 @@ done
 <td>容器存活、内存增长</td>
 <td>无容器退出，内存增长 &lt; 10%</td>
 </tr>
+<tr>
+<td>PT008</td>
+<td><strong>多设备并发上报</strong>（S86 补测）</td>
+<td>4 台设备（2 无人机 + 2 机器狗）<strong>各自 12.5 msg/s 并发上报，持续 60 s</strong>（合计 ≈50 msg/s，共 3,000 条）</td>
+<td>零丢失、消费 LAG 回落、排水时延</td>
+<td>3,000 条全部落库（分设备各 750 条），LAG 峰值 0、排水 13.7 s</td>
+</tr>
 </tbody></table>
 <h4>6.5.2 JMeter 测试计划要点</h4>
 <ul>
@@ -3931,6 +4389,14 @@ docker stats --no-stream --format &#39;table {{.Name}}\t{{.CPUPerc}}\t{{.MemUsag
 <td>93.3%（已实现范围 100%）</td>
 </tr>
 <tr>
+<td>接口测试复跑（+IT009b，S90）</td>
+<td>16</td>
+<td>15</td>
+<td>0</td>
+<td>1（IT001 设计差异）</td>
+<td>93.8%（已实现范围 100%）</td>
+</tr>
+<tr>
 <td>性能测试（PT001~PT007）</td>
 <td>7</td>
 <td>7</td>
@@ -3938,9 +4404,49 @@ docker stats --no-stream --format &#39;table {{.Name}}\t{{.CPUPerc}}\t{{.MemUsag
 <td>0</td>
 <td>100%</td>
 </tr>
+<tr>
+<td>性能补测（PT008 多设备并发上报，S86）</td>
+<td>1</td>
+<td>1</td>
+<td>0</td>
+<td>0</td>
+<td>100%</td>
+</tr>
+<tr>
+<td>权限认证功能（TC035~TC036，S88）</td>
+<td>2</td>
+<td>2</td>
+<td>0</td>
+<td>0</td>
+<td>100%</td>
+</tr>
+<tr>
+<td>权限认证接口（IT016~IT018，S88）</td>
+<td>3</td>
+<td>3</td>
+<td>0</td>
+<td>0</td>
+<td>100%</td>
+</tr>
+<tr>
+<td>异常语义功能（TC037，S89）</td>
+<td>1</td>
+<td>1</td>
+<td>0</td>
+<td>0</td>
+<td>100%</td>
+</tr>
+<tr>
+<td>单元测试（后端 14 + 仿真 6，S77/S89）</td>
+<td>20</td>
+<td>20</td>
+<td>0</td>
+<td>0</td>
+<td>100%</td>
+</tr>
 </tbody></table>
 <blockquote>
-<p>唯一未实现项 IT001 为设计差异（设备注册由心跳 upsert 驱动，无独立注册端点，已登记 BUG-002）。v0.6 迭代将 S50 登记的两项遗留（BUG-003 复核派单、BUG-004 ik 分词）全部实现并回归通过；不通过数全程为 0。</p>
+<p>唯一未实现项 IT001 为设计差异（设备注册由心跳 upsert 驱动，无独立注册端点，已登记 BUG-002）。v0.6 迭代将 S50 登记的两项遗留（BUG-003 复核派单、BUG-004 ik 分词）全部实现并回归通过；<strong>S88 落地 FR-5.7 简易权限认证（新增 5 例断言全过：TC035/TC036、IT016~IT018）</strong>；不通过数全程为 0。</p>
 </blockquote>
 <h4>6.6.2 性能指标实测（表 6-8）</h4>
 <table>
@@ -3973,7 +4479,7 @@ docker stats --no-stream --format &#39;table {{.Name}}\t{{.CPUPerc}}\t{{.MemUsag
 <tr>
 <td>持续上报能力</td>
 <td>≥ 50 msg/s 零丢失</td>
-<td>批量 500 条注入增量 +556（含同期自然上报），LAG 回落 0</td>
+<td><strong>4 台设备并发上报 50 msg/s（3,000 条）零丢失、排水 13.7 s（PT008）</strong>；批量 500 条注入增量 +556（含同期自然上报），LAG 回落 0</td>
 <td>达标</td>
 </tr>
 <tr>
@@ -4003,7 +4509,7 @@ docker stats --no-stream --format &#39;table {{.Name}}\t{{.CPUPerc}}\t{{.MemUsag
 <li><strong>对架构的启示</strong>：① 检索链路在 10k 规模 P95 28 ms，无聚合瓶颈，O-19（预聚合索引）无需启用；② 遥测时序集合必须建立 <code>{deviceId, ts}</code> 复合索引支撑&quot;每设备最近位置&quot;类查询；③ ES 分页/统计接口必须显式 <code>track_total_hits</code>，否则数据量过万后总数静默失真；④ 部署链路需在容器重建后刷新 Nginx 上游解析（S50 期间曾因此出现 502，见 P-16）。</li>
 </ol>
 <h4>6.6.4 测试结论</h4>
-<p>系统满足第 3 章全部量化需求与验收标准：遥测端到端时延、检索 P95、持续上报零丢失、网关吞吐、负载均衡、限流、故障转移、数据一致性均实测达标（G-1~G-8 全部满足）。测试期间发现并修复 4 项真实缺陷（BUG-001 限流缺失、BUG-005 索引未落地、BUG-006 ES 总数截断、BUG-007 并发取消竞态），均为&quot;设计有、实现缺&quot;或&quot;默认行为陷阱&quot;类问题，全部回归通过；<strong>v0.6 迭代将 S50 登记的两项遗留全部实现并回归通过：BUG-003 复核派单闭环（TC021/IT009/TC032 转绿）、BUG-004 ik 中文分词（TC027 转绿，索引升版 v3）</strong>；<strong>S72 将 BUG-008 影像元数据链路打通（image_meta 集合流转）</strong>；唯一设计差异 BUG-002（注册端点由心跳驱动）不阻塞验收。测试数据规模按设计补齐（10,000 条告警注入），性能结论在 10k 数据规模下成立。</p>
+<p>系统满足第 3 章全部量化需求与验收标准：遥测端到端时延、检索 P95、持续上报零丢失、网关吞吐、负载均衡、限流、故障转移、数据一致性均实测达标（G-1<del>G-8 全部满足）。测试期间发现并修复 4 项真实缺陷（BUG-001 限流缺失、BUG-005 索引未落地、BUG-006 ES 总数截断、BUG-007 并发取消竞态），均为&quot;设计有、实现缺&quot;或&quot;默认行为陷阱&quot;类问题，全部回归通过；<strong>v0.6 迭代将 S50 登记的两项遗留全部实现并回归通过：BUG-003 复核派单闭环（TC021/IT009/TC032 转绿）、BUG-004 ik 中文分词（TC027 转绿，索引升版 v3）</strong>；<strong>S72 将 BUG-008 影像元数据链路打通（image_meta 集合流转）</strong>；**S85</del>S88 补齐课程的&quot;简单权限认证 / 任务日志完整归档 / 多设备并发上报 / 备份恢复演示&quot;四项要求：日志按任务可查（S85）、四设备并发 3,000 条零丢失（S86/PT008）、备份恢复 6 集合计数一致（S87）、FR-5.7 简易权限认证 13 例全过（S88）**；唯一设计差异 BUG-002（注册端点由心跳驱动）不阻塞验收。测试数据规模按设计补齐（10,000 条告警注入），性能结论在 10k 数据规模下成立。</p>
 <h3>6.7 系统优化措施</h3>
 <p>本节措施分两类：<strong>已在设计阶段落实的</strong>（表格中标&quot;设计内&quot;，第 5 章已体现）与<strong>压测后按瓶颈追加的</strong>（标&quot;待评估&quot;，须在 6.6 节定位瓶颈后针对性采用，不可无差别全上）。</p>
 <table>
