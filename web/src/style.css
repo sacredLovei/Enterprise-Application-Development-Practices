@@ -67,6 +67,27 @@ body {
   align-self: flex-start;
 }
 
+/* S88：登录用户与退出登录 */
+.user {
+  color: #5c6b7a;
+  font-size: 12px;
+  line-height: 1.4;
+  padding: 2px 0;
+}
+.logout {
+  align-self: flex-start;
+  margin: 2px 0 4px;
+  padding: 5px 12px;
+  font-size: 12px;
+  color: #c0392b;
+  background: #fdecec;
+  border: 1px solid #f6d0cc;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: background .15s;
+}
+.logout:hover { background: #fbdcd8; }
+
 /* ===== 主内容区 ===== */
 .content { flex: 1; padding: 22px 26px; max-width: 1320px; min-width: 0; }
 .page-title {

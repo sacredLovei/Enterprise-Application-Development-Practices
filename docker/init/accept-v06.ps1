@@ -3,6 +3,23 @@
 $base = "http://127.0.0.1:8080"
 $pass = 0; $fail = 0
 
+# S88: business APIs now require a bearer token (course task item 1).
+# Login once with the demo admin account and reuse the token for every request below.
+$script:token = $null
+function Login() {
+    $p = @{ Uri = "$base/api/auth/login"; Method = "POST"; TimeoutSec = 20; UseBasicParsing = $true
+            ContentType = "application/json; charset=utf-8"
+            Body = '{"username":"admin","password":"admin123"}' }
+    $r = Invoke-WebRequest @p
+    return ($r.Content | ConvertFrom-Json).token
+}
+try {
+    $script:token = Login
+    Write-Output ("[S88] logged in as admin, tokenLen=" + $script:token.Length)
+} catch {
+    Write-Output "[S88] LOGIN FAILED - subsequent cases will report 401"
+}
+
 function V([string]$id, [string]$name, [bool]$ok, [string]$ev) {
     Write-Output ("[{0}] {1} {2}  |  {3}" -f $(if($ok){"PASS"}else{"FAIL"}), $id, $name, $ev)
     if ($ok) { $script:pass++ } else { $script:fail++ }
@@ -11,6 +28,7 @@ function V([string]$id, [string]$name, [bool]$ok, [string]$ev) {
 function Req([string]$method, [string]$url, [string]$body) {
     try {
         $p = @{ Uri = $url; Method = $method; TimeoutSec = 20; UseBasicParsing = $true }
+        if ($script:token) { $p.Headers = @{ Authorization = "Bearer $($script:token)" } }
         if ($body) { $p.ContentType = "application/json; charset=utf-8"; $p.Body = $body }
         $r = Invoke-WebRequest @p
         return @{ code = [int]$r.StatusCode; body = $r.Content }
@@ -136,7 +154,7 @@ $r = Req "GET" "$base/api/files/$aid1/review" $null
 $bytes = 0
 if ($r.code -eq 200) {
     try {
-        Invoke-WebRequest -Uri "$base/api/files/$aid1/review" -OutFile $tmp -UseBasicParsing -TimeoutSec 20 | Out-Null
+        Invoke-WebRequest -Uri "$base/api/files/$aid1/review" -OutFile $tmp -UseBasicParsing -TimeoutSec 20 -Headers @{ Authorization = "Bearer $script:token" } | Out-Null
         if (Test-Path $tmp) { $bytes = (Get-Item $tmp).Length }
     } catch { $bytes = -1 }
 }
@@ -158,7 +176,7 @@ V "V-6" "TC032 detail evidence chain API" $ok6 ("snapshot=" + $(if($a6){$a6.snap
 function CSearch([string]$kw) {
     $body = '{"keyword":"' + $kw + '","from":"now-24h","to":"now","page":0,"size":5}'
     try {
-        $r = Invoke-WebRequest -Uri "$base/api/search/alarms" -Method POST -ContentType "application/json; charset=utf-8" -Body ([System.Text.Encoding]::UTF8.GetBytes($body)) -UseBasicParsing -TimeoutSec 20
+        $r = Invoke-WebRequest -Uri "$base/api/search/alarms" -Method POST -ContentType "application/json; charset=utf-8" -Body ([System.Text.Encoding]::UTF8.GetBytes($body)) -UseBasicParsing -TimeoutSec 20 -Headers @{ Authorization = "Bearer $script:token" }
         return [long](( $r.Content | ConvertFrom-Json).total)
     } catch { return -1 }
 }

@@ -358,8 +358,34 @@
 - **提交号/完成时间**：本步提交（2026-09-21）
 
 ### S88 简单权限认证（课程任务项 1：登录与鉴权）
-- **状态**：pending
+- **状态**：done
+- **开始时间**：2026-09-21（说明：本步 PLAN 的 `in_progress` 标记未单独提交，与完成记录合并在同一次提交中——如实登记该流程偏差，未伪造开始标记提交）
 - **目标**：最小可用的登录 + Token 鉴权（覆盖全部业务接口）
 - **内容**：① 后端 `/api/auth/login`（用户名/密码 → Token）、`/api/auth/me`、拦截器统一校验（白名单：auth/健康检查/Swagger/静态资源），未授权返回 401 明确语义；② 前端登录页 + Token 存储 + axios 自动携带 + 401 跳登录 + 退出登录；③ 演示账号写入 STATE 口径
 - **验收标准**：无 Token 访问受保护接口 401；登录成功可访问；错误密码 401；前端登录/登出闭环可用
-- **产出物**：backend+web 变更 + 验收记录
+- **验收结论**（2026-09-21）：**全部达到，13/13 断言通过**（`docker/init/accept-s88.ps1`）。① 无令牌/错误口令/空口令 → **401 / 401 / 400**（异常路径无 500）；② 登录 200（令牌长 204、`role=ADMIN`、返回 `expiresAt`），带令牌访问 6 个业务接口全 200；③ 篡改令牌与伪造签名均 401；④ 登出 200 → `auth_revoked` 文档 **0→1** → 旧令牌复用 **401**；⑤ 同一令牌 16 次请求命中 **backend-1 与 backend-2**（证明自包含令牌适配双实例负载均衡）；⑥ `/v3/api-docs` 无令牌 200（白名单）；⑦ 前端构建产物含登录页与令牌处理；`mvn package` 单测 **9/9 全绿**。回归：主套件 `accept-v06.ps1` 适配令牌后复跑 6/8，**8 例请求无一 401**，2 例失败为硬编码测试数据陈旧（`pt3k-00002` 已删、关键词 24h 窗口 0 条）→ 与本步无关，登记 S90。执行中发现"报告声称 `@RestControllerAdvice` 全局异常处理但代码不存在"的不一致，按纪律不夹带，登记 S89（D-24）
+- **产出物**：后端 `com.course.inspection.auth`（`AuthProperties`/`TokenService`/`AuthInterceptor`/`AuthController`/`RevokedToken`/`WebConfig`）+ `application.yml` 认证配置；前端 `views/Login.vue`、`router/index.js` 守卫、`api/request.js` 令牌注入与 401 回跳、`App.vue` 用户信息与退出登录；`docker/init/accept-s88.ps1`；`docs/权限认证说明.md`；报告 v0.9 回填（5.2.8、TC035/TC036、IT016~IT018、表 6-7、P-16/P-17、图 5-17）
+- **提交号/完成时间**：本步提交（2026-09-21）
+
+### S89 报告"全局异常处理"口径修正（待用户决策）
+- **状态**：pending
+- **背景**：报告 5.2/6.4.2 声称"通过 `@Valid` + `@RestControllerAdvice` 全局异常处理统一保证"错误语义，实际代码全项目检索无 `@ControllerAdvice`/`@ExceptionHandler`（依赖 Spring 默认错误响应 + `server.error.include-message: always`）。见 STATE 风险 #42 / 决策 D-24
+- **目标**：消除报告与实现的矛盾
+- **内容（二选一，由用户决定）**：A. **补实现**——新增 `GlobalExceptionHandler`（`@RestControllerAdvice`）：`ResponseStatusException` → `{code,error,message}`、`MethodArgumentNotValidException` → 400 含字段明细、兜底 500 不含栈信息，并回归全部接口用例；B. **改报告**——把表述改为"各控制器以 `@Valid` 与显式状态码返回语义，未引入全局异常处理器（如实记录）"
+- **验收标准**：`grep` 报告所述组件在代码中可查到（方案 A），或报告表述与代码一致（方案 B）；回归无新增失败
+- **产出物**：backend 变更或报告修订（视决策）
+
+### S90 测试资产适配与修复（数据依赖 + 鉴权）
+- **状态**：pending
+- **背景**：① S88 后 `/api/**` 需 Bearer 令牌，`accept-s50-*.ps1` 与 `test/jmeter/` 尚未适配；② `accept-v06.ps1` 的 V-5 硬编码告警编号 `pt3k-00002` 已随 S74 清理删除、V-7 关键词"红外温度"24h 窗口 0 条（见 STATE 风险 #41）
+- **目标**：测试资产与当前数据/鉴权口径一致，可一键复跑
+- **内容**：① V-5 改为动态选取现存含复核结论的告警（实测 124 条可选）；② V-7 检索窗口与语料对齐（24h → 与数据存在区间一致）或改关键词；③ 为 `accept-s50-tc/tc2/it/pt.ps1` 与 JMeter 脚本统一加登录取令牌步骤；④ 在报告与 STATE 标注"历史性能数据为鉴权前测量值"
+- **验收标准**：`accept-v06.ps1` 复跑 8/8；`accept-s50-it.ps1` 复跑与既有结论一致（或差异有据可查）；脚本均带令牌
+- **产出物**：脚本变更 + 复跑记录
+
+### S91 报告转换与截图回填收尾（S65 兑现）
+- **状态**：pending
+- **目标**：报告 md（v0.9）→ HTML → docx 全链重生成；17 张截图回填 5.4
+- **内容**：① `tools/md2html/convert.js` 重生成 HTML 与 docx（修正 `docs/文档转换说明.md` 中的工具路径笔误）；② 用户按 `docs/截图操作清单.md` 截 17 张图 → AI 回填 5.4 表格状态列
+- **验收标准**：docx 段落/表格数与 v0.9 内容一致；5.4 全部图号状态非 `【待回填】`
+- **产出物**：HTML/docx 新版本 + 5.4 回填

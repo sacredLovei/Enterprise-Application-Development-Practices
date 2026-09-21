@@ -6,6 +6,20 @@ server:
 
 app:
   instance-id: ${APP_INSTANCE_ID:backend-1}
+  # S88 简单权限认证（课程任务项 1）：演示账号 + HMAC 签名令牌
+  # 注意：双实例（backend-1/backend-2）必须使用同一 secret，否则跨实例校验失败（负载均衡下必现）
+  auth:
+    secret: ${AUTH_SECRET:inspection-course-demo-secret-2026}
+    ttl-hours: ${AUTH_TTL_HOURS:12}
+    users:
+      - username: admin
+        password: ${AUTH_ADMIN_PASSWORD:admin123}
+        display-name: 系统管理员
+        role: ADMIN
+      - username: operator
+        password: ${AUTH_OPERATOR_PASSWORD:operator123}
+        display-name: 巡检值班员
+        role: OPERATOR
 
 spring:
   application:
