@@ -56,3 +56,49 @@
   --font-sans: "Inter", "HarmonyOS Sans SC", "MiSans", "Segoe UI", "Microsoft YaHei", sans-serif;
   --font-mono: "JetBrains Mono", "Cascadia Code", Consolas, monospace;
 }
+
+/* ============================================================
+   S97-b 暗色令牌（克制指挥中心风：中性深灰，非纯黑；Linear 原则——
+   分区靠边框不靠阴影，去玻璃拟态高光）
+   切换：document.documentElement.dataset.theme = 'dark'（utils/theme.js）
+   ============================================================ */
+[data-theme="dark"] {
+  --bg-page: #0f1720;
+  --bg-card: #1a2433;
+  --bg-hover: #223047;
+  --bg-sidebar: rgba(15, 23, 32, 0.88);
+  --bg-inset: #16202e;
+  --bg-code: #1c2739;
+
+  --text-1: #e6edf5;
+  --text-2: #a8b6c8;
+  --text-3: #64748b;
+  --text-4: #3b4a5e;
+
+  --accent: #38bdf8;
+  --accent-hover: #7dd3fc;
+  --accent-soft: rgba(56, 189, 248, 0.12);
+
+  --ok: #34d399;
+  --warn: #fbbf24;
+  --danger: #f87171;
+  --info: #38bdf8;
+  --ok-soft: rgba(52, 211, 153, 0.14);
+  --warn-soft: rgba(251, 191, 36, 0.14);
+  --danger-soft: rgba(248, 113, 113, 0.14);
+  --info-soft: rgba(56, 189, 248, 0.14);
+  --neutral-soft: rgba(100, 116, 139, 0.18);
+
+  --chart-1: #38bdf8;
+  --chart-2: #818cf8;
+  --chart-3: #34d399;
+  --chart-4: #fbbf24;
+  --chart-5: #f472b6;
+  --chart-6: #c084fc;
+  --chart-7: #2dd4bf;
+
+  --border: #26334a;
+  --border-strong: #33425e;
+  --shadow-1: 0 1px 3px rgba(0, 0, 0, 0.40);
+  --shadow-2: 0 8px 24px rgba(0, 0, 0, 0.55);
+}

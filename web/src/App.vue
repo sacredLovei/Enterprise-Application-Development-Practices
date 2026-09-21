@@ -57,6 +57,15 @@ async function logout() {
         <button v-if="user" class="logout" type="button" @click="logout">
           <AppIcon name="logout" :size="14" /><span>退出登录</span>
         </button>
+        <button
+          class="logout theme-toggle"
+          type="button"
+          :title="theme === 'dark' ? '切换为亮色主题' : '切换为暗色主题'"
+          @click="theme = toggleTheme()"
+        >
+          <AppIcon :name="theme === 'dark' ? 'sun' : 'moon'" :size="14" />
+          <span>{{ theme === 'dark' ? '亮色模式' : '暗色模式' }}</span>
+        </button>
         <span class="ver">v0.7 · 空地协同</span>
       </div>
     </aside>

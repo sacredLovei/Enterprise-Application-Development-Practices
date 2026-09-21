@@ -106,6 +106,13 @@ body {
 }
 .logout:hover { background: rgba(220, 38, 38, 0.18); }
 
+/* S97-b：主题切换按钮（复用 .logout 的布局，配色中性） */
+.theme-toggle {
+  color: var(--text-2);
+  background: var(--neutral-soft);
+}
+.theme-toggle:hover { background: var(--bg-hover); color: var(--text-1); }
+
 /* ===== 主内容区 ===== */
 .content { flex: 1; padding: 22px 26px; max-width: 1320px; min-width: 0; }
 .page-title {
