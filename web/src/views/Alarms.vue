@@ -1,7 +1,8 @@
 <script setup>
-import { ref, onMounted, onUnmounted } from 'vue'
+import { ref, computed, onMounted, onUnmounted } from 'vue'
 import request from '../api/request'
 import { formatTime } from '../utils/time'
+import { useAuthImage } from '../utils/authImage'
 
 const form = ref({ alarmType: '', level: '', deviceId: '', keyword: '', from: 'now-24h', to: 'now' })
 const devices = ref([])
@@ -14,6 +15,17 @@ const reviewing = ref(false) // S74：复核提交中（按钮禁用防重复点
 const reviewMsg = ref('')    // S74：复核成功提示（3 秒后消失）
 const photoFile = ref(null)  // S75：人工复核现场照片
 const bigImg = ref('')       // S81：大图预览
+
+// S96（用户反馈"告警中心的图没了"）：/api/files/** 需要 Authorization 头，而 <img> 不会带本地令牌，
+// 故改为经 axios 带令牌取 blob 再交给 <img>（详见 utils/authImage.js）。
+const snapPath = computed(() => (detail.value ? '/files/' + detail.value.alarmId : ''))
+const reviewPath = computed(() => (detail.value && detail.value.review && detail.value.review.imagePath
+  ? '/files/' + detail.value.alarmId + '/review' : ''))
+const photoPath = computed(() => (detail.value && detail.value.review && detail.value.review.manualPhotoPath
+  ? '/files/' + detail.value.alarmId + '/review-photo' : ''))
+const snapSrc = useAuthImage(snapPath)
+const reviewSrc = useAuthImage(reviewPath)
+const photoSrc = useAuthImage(photoPath)
 
 // S84（用户反馈）：复核入口状态锁——
 // PENDING 可人工初判；机器狗已初判（reviewer != MANUAL）可人工复判推翻；
@@ -220,13 +232,14 @@ onUnmounted(() => { clearInterval(timer); clearTimeout(debounceTimer); clearInte
     <div class="evidence-row">
       <div class="evidence">
         <div class="evidence-title">{{ sourceLabel(detail) }}</div>
-        <img :src="'/api/files/' + detail.alarmId" :alt="sourceLabel(detail)" class="evidence-img" @click="zoomImg('/api/files/' + detail.alarmId)" />
+        <img v-if="snapSrc" :src="snapSrc" :alt="sourceLabel(detail)" class="evidence-img" @click="zoomImg(snapSrc)" />
+        <div v-else class="hint" style="padding: 40px 0; text-align: center">证据图加载中…</div>
       </div>
       <!-- S74 复核结果面板：有复核记录即展示结论+方式+备注；图可选（自动复核红外图/人工现场照片） -->
       <div class="evidence">
         <div class="evidence-title">② 复核结果</div>
         <template v-if="detail.review">
-          <img v-if="detail.review.imagePath" :src="'/api/files/' + detail.alarmId + '/review'" alt="红外复核图" class="evidence-img" @click="zoomImg('/api/files/' + detail.alarmId + '/review')" />
+          <img v-if="reviewSrc" :src="reviewSrc" alt="红外复核图" class="evidence-img" @click="zoomImg(reviewSrc)" />
           <div v-if="detail.review.autoConclusion" class="hint" style="margin-top:6px">
             机器狗初判：
             <span class="badge" :class="{ ok: detail.review.autoConclusion === 'CONFIRMED', warn: detail.review.autoConclusion === 'FALSE_ALARM' }">
@@ -246,7 +259,7 @@ onUnmounted(() => { clearInterval(timer); clearTimeout(debounceTimer); clearInte
           <div class="hint" v-if="detail.review.note">备注：{{ detail.review.note }}</div>
           <div v-if="detail.review.manualPhotoPath" style="margin-top:10px">
             <div class="evidence-title" style="font-size:12px">📷 现场照片（人工拍摄）</div>
-            <img :src="'/api/files/' + detail.alarmId + '/review-photo'" alt="现场照片" class="evidence-img" @click="zoomImg('/api/files/' + detail.alarmId + '/review-photo')" />
+            <img v-if="photoSrc" :src="photoSrc" alt="现场照片" class="evidence-img" @click="zoomImg(photoSrc)" />
           </div>
         </template>
         <div v-else class="hint" style="padding: 60px 0; text-align: center">
