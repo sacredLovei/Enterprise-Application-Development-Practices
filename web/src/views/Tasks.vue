@@ -206,21 +206,21 @@ onUnmounted(() => { clearInterval(timer); clearInterval(deviceTimer) })
 </template>
 
 <style scoped>
-.inner { background: #f8fafc; border: 1px dashed #c9d4df; }
-.pager { display: flex; gap: 14px; align-items: center; justify-content: center; margin-top: 12px; font-size: 13px; color: #5c6b7a; }
+.inner { background: var(--bg-inset); border: 1px dashed var(--border-strong); }
+.pager { display: flex; gap: 14px; align-items: center; justify-content: center; margin-top: 12px; font-size: 13px; color: var(--text-2); }
 button:disabled { opacity: .4; cursor: not-allowed; }
-.mono { font-family: Consolas, monospace; font-size: 12px; }
+.mono { font-family: var(--font-mono); font-size: 12px; }
 .remark { max-width: 140px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.badge.st-dispatched { background: #e8effd; color: #2f5fb3; }
-.badge.st-running { background: #fdf3e0; color: #b97a12; }
-.badge.st-done { background: #e3f7ec; color: #1a8a4a; }
-.badge.st-cancelled { background: #eef2f7; color: #7b8a99; }
-.badge.st-failed { background: #fdeaea; color: #c0392b; }
+.badge.st-dispatched { background: var(--info-soft); color: var(--info); }
+.badge.st-running { background: var(--warn-soft); color: var(--warn); }
+.badge.st-done { background: var(--ok-soft); color: var(--ok); }
+.badge.st-cancelled { background: var(--neutral-soft); color: var(--text-3); }
+.badge.st-failed { background: var(--danger-soft); color: var(--danger); }
 .detail-head { display: flex; justify-content: space-between; align-items: center; }
 .small { font-size: 12px; padding: 3px 10px; }
 .timeline { list-style: none; padding: 0; margin: 10px 0 0; }
-.timeline li { display: flex; gap: 14px; align-items: center; padding: 7px 10px; border-left: 3px solid #cfd9e4; margin-bottom: 6px; background: #f8fafc; border-radius: 0 6px 6px 0; font-size: 13px; }
-.tl-time { color: #7b8a99; font-family: Consolas, monospace; font-size: 12px; min-width: 150px; }
-.tl-action { font-weight: 600; color: #24303c; }
-.tl-dev { color: #5c6b7a; font-size: 12px; }
+.timeline li { display: flex; gap: 14px; align-items: center; padding: 7px 10px; border-left: 3px solid var(--border-strong); margin-bottom: 6px; background: var(--bg-inset); border-radius: 0 6px 6px 0; font-size: 13px; }
+.tl-time { color: var(--text-3); font-family: var(--font-mono); font-size: 12px; min-width: 150px; }
+.tl-action { font-weight: 600; color: var(--text-1); }
+.tl-dev { color: var(--text-2); font-size: 12px; }
 </style>

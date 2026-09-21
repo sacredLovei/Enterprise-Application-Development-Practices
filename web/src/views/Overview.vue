@@ -101,18 +101,20 @@ onUnmounted(() => { clearInterval(timer); clearInterval(healthTimer) })
 <style scoped>
 .cards { display: flex; gap: 14px; margin-bottom: 16px; }
 .stat {
-  flex: 1; background: #fff; border-radius: 10px; padding: 14px;
-  text-align: center; box-shadow: 0 1px 4px rgba(20,33,46,.08);
+  flex: 1; background: var(--bg-card); border: 1px solid var(--border);
+  border-radius: var(--radius-2); padding: 14px;
+  text-align: center; box-shadow: var(--shadow-1);
 }
-.num { font-size: 26px; font-weight: 700; }
-.num.green { color: #1a8a4a; }
-.num.orange { color: #b97a12; }
-.num.red { color: #c0392b; }
-.label { color: #7b8a99; font-size: 12px; margin-top: 4px; }
-.health-row { display: flex; gap: 18px; flex-wrap: wrap; align-items: center; font-size: 13px; color: #33414e; }
+.num { font-size: 26px; font-weight: 700; font-family: var(--font-mono); }
+.num.green { color: var(--ok); }
+.num.orange { color: var(--warn); }
+.num.red { color: var(--danger); }
+.label { color: var(--text-3); font-size: 12px; margin-top: 4px; }
+.health-row { display: flex; gap: 18px; flex-wrap: wrap; align-items: center; font-size: 13px; color: var(--text-2); }
 .health-item { display: inline-flex; align-items: center; gap: 6px; }
-.health-item.lag { color: #7b8a99; }
+.health-item.lag { color: var(--text-3); }
+.health-item.lag b { color: var(--text-2); font-family: var(--font-mono); }
 .dot { width: 9px; height: 9px; border-radius: 50%; display: inline-block; }
-.dot.up { background: #1a8a4a; }
-.dot.down { background: #c0392b; }
+.dot.up { background: var(--ok); }
+.dot.down { background: var(--danger); }
 </style>

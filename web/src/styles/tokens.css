@@ -1,0 +1,58 @@
+/* ============================================================
+   S97 设计令牌（路线 C：双主题 Token 化）——全站唯一颜色来源
+   规则：任何组件不得硬编码颜色，一律引用本文件的 CSS 变量；
+   暗色令牌（[data-theme="dark"]）于 S97-b 追加。
+   对标：Ant Design 5 Token 思想 + shadcn/ui 亮色审美（docs/前端视觉焕新方案.md §4）
+   ============================================================ */
+:root {
+  /* ---- 色面 ---- */
+  --bg-page: #f7f8fa;                 /* 页面底 */
+  --bg-card: #ffffff;                 /* 卡片 */
+  --bg-hover: #f0f3f8;                /* 行/项悬停 */
+  --bg-sidebar: rgba(255, 255, 255, 0.85);
+  --bg-inset: #f8fafc;                /* 卡内嵌块（时间轴/内层卡片） */
+  --bg-code: #f4f6f9;                 /* 代码/等宽底 */
+
+  /* ---- 文字四级灰阶 ---- */
+  --text-1: #1f2937;
+  --text-2: #4b5563;
+  --text-3: #9ca3af;
+  --text-4: #c3cad4;
+
+  /* ---- 品牌与强调 ---- */
+  --accent: #2563eb;
+  --accent-hover: #1d4ed8;
+  --accent-soft: rgba(37, 99, 235, 0.10);
+
+  /* ---- 语义状态色（在线/告警/严重/提示） ---- */
+  --ok: #16a34a;
+  --warn: #d97706;
+  --danger: #dc2626;
+  --info: #0ea5e9;
+  --ok-soft: #e8f7ee;
+  --warn-soft: #fdf3e0;
+  --danger-soft: #fdeaea;
+  --info-soft: #e6f4fb;
+  --neutral-soft: #eef2f7;
+
+  /* ---- 图表 7 色板（ECharts 主题同步使用，见 utils/chartTheme.js） ---- */
+  --chart-1: #2563eb;
+  --chart-2: #0ea5e9;
+  --chart-3: #16a34a;
+  --chart-4: #d97706;
+  --chart-5: #8b5cf6;
+  --chart-6: #ec4899;
+  --chart-7: #14b8a6;
+
+  /* ---- 形状 / 边框 / 阴影 ---- */
+  --radius-1: 8px;
+  --radius-2: 12px;
+  --border: #e5e9f0;
+  --border-strong: #d3dae4;
+  --shadow-1: 0 1px 3px rgba(16, 24, 40, 0.06);
+  --shadow-2: 0 8px 24px rgba(16, 24, 40, 0.10);   /* 仅弹层/大图遮罩使用 */
+
+  /* ---- 字体 ---- */
+  --font-sans: "Inter", "HarmonyOS Sans SC", "MiSans", "Segoe UI", "Microsoft YaHei", sans-serif;
+  --font-mono: "JetBrains Mono", "Cascadia Code", Consolas, monospace;
+}

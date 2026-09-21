@@ -2,6 +2,7 @@
 import { computed, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import request, { clearAuth, getUser } from './api/request'
+import AppIcon from './components/AppIcon.vue'
 
 const route = useRoute()
 const router = useRouter()
@@ -40,20 +41,22 @@ async function logout() {
   <RouterView v-if="isLogin" />
 
   <div v-else class="shell">
-    <!-- 左侧导航：毛玻璃白 + 灰色分隔线 -->
+    <!-- 左侧导航（S97-a：SVG 图标 + 令牌化配色） -->
     <aside class="sidebar">
-      <div class="brand">🚁 空地协同巡检平台</div>
+      <div class="brand"><AppIcon name="target" :size="20" /><span>空地协同巡检平台</span></div>
       <nav class="nav">
-        <RouterLink to="/overview">🗺️ 地图总览</RouterLink>
-        <RouterLink to="/devices">📟 设备台账</RouterLink>
-        <RouterLink to="/tasks">📋 任务管理</RouterLink>
-        <RouterLink to="/alarms">🚨 告警中心</RouterLink>
-        <RouterLink to="/stats">📊 统计看板</RouterLink>
+        <RouterLink to="/overview"><AppIcon name="map" /><span>地图总览</span></RouterLink>
+        <RouterLink to="/devices"><AppIcon name="cpu" /><span>设备台账</span></RouterLink>
+        <RouterLink to="/tasks"><AppIcon name="clipboard" /><span>任务管理</span></RouterLink>
+        <RouterLink to="/alarms"><AppIcon name="alarm" /><span>告警中心</span></RouterLink>
+        <RouterLink to="/stats"><AppIcon name="stats" /><span>统计看板</span></RouterLink>
       </nav>
       <div class="side-footer">
         <span v-if="backend" class="instance">后端：{{ backend }}</span>
-        <span v-if="user" class="user">👤 {{ user.displayName || user.username }} · {{ roleText }}</span>
-        <button v-if="user" class="logout" type="button" @click="logout">退出登录</button>
+        <span v-if="user" class="user user-line"><AppIcon name="user" :size="13" /><span>{{ user.displayName || user.username }} · {{ roleText }}</span></span>
+        <button v-if="user" class="logout" type="button" @click="logout">
+          <AppIcon name="logout" :size="14" /><span>退出登录</span>
+        </button>
         <span class="ver">v0.7 · 空地协同</span>
       </div>
     </aside>
