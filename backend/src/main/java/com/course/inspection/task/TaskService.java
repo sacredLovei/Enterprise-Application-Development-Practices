@@ -133,6 +133,15 @@ public class TaskService {
                     "设备离线或不存在，请先检查/维修/重启设备: " + deviceId);
         }
 
+        // S104（用户需求）：派任务的地点限定在园区内，不可外派——
+        // 选点型任务（定点复核/区域覆盖）的目标坐标越界即拒绝
+        if (("POINT_REVIEW".equals(taskType) || "AREA_COVER".equals(taskType))
+                && !com.course.inspection.common.CampusBounds.contains(targetLng, targetLat)) {
+            throw new org.springframework.web.server.ResponseStatusException(
+                    org.springframework.http.HttpStatus.BAD_REQUEST,
+                    "目标位置必须在园区范围内，不可外派");
+        }
+
         Instant now = Instant.now();
         // 任务编号：时间戳 + UUID 后缀——双实例各自自增计数器会同秒撞号（风险 #28）
         String taskId = "TASK-" + SEQ.format(now.atZone(ZoneId.of("Asia/Shanghai")))
