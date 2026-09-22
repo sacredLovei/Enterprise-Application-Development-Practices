@@ -3,6 +3,7 @@ import { ref, onMounted, onUnmounted } from 'vue'
 import * as echarts from 'echarts'
 import request from '../api/request'
 import { registerChartThemes, currentChartTheme } from '../utils/chartTheme'
+import { typeLabel } from '../utils/alarmTypes'
 
 const pieEl = ref(null)
 const trendEl = ref(null)
@@ -47,7 +48,7 @@ function renderPie(buckets) {
     series: [{
       type: 'pie', radius: ['35%', '65%'],
       itemStyle: { borderColor: 'transparent', borderWidth: 2 },
-      data: buckets.map(b => ({ name: b.key, value: b.count }))
+      data: buckets.map(b => ({ name: typeLabel(b.key), value: b.count }))
     }]
   })
 }

@@ -5,6 +5,7 @@ import { ref, computed, onMounted, onUnmounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import request from '../api/request'
 import { formatTime } from '../utils/time'
+import { typeLabel } from '../utils/alarmTypes'
 import { useAuthImage } from '../utils/authImage'
 
 const route = useRoute()
@@ -108,7 +109,7 @@ function zoomImg(src) {
           <h3 class="alarm-title">{{ detail.alarmId }}</h3>
           <div class="meta">
             <span class="badge" :class="detail.level === 'CRITICAL' ? 'critical' : 'warn'">{{ detail.level }}</span>
-            <span class="meta-item">{{ detail.alarmType }}</span>
+            <span class="meta-item">{{ typeLabel(detail.alarmType) }}</span>
             <span class="meta-item">设备 {{ detail.deviceId }}</span>
             <span class="meta-item">{{ formatTime(detail.occurredTime) }}</span>
             <span class="badge" :class="{ ok: detail.status === 'CONFIRMED', warn: detail.status === 'FALSE_ALARM' }">{{ statusText(detail.status) }}</span>

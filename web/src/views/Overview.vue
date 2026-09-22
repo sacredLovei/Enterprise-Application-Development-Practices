@@ -38,7 +38,9 @@ function onLiveState(s) { liveState.value = s }
 async function load() {
   try {
     devices.value = await request.get('/devices')
-    const r = await request.post('/search/alarms', { from: 'now-1h', to: 'now', page: 0, size: 50 })
+    // S103：主页只显示"重要告警"=安防类（周界入侵/烟火）+ 升级 CRITICAL 的设备离线，
+    // 设备常规运维告警（过热/低电/常规离线）不再弹主页
+    const r = await request.post('/search/alarms', { from: 'now-1h', to: 'now', category: 'IMPORTANT', page: 0, size: 50 })
     alarms.value = r.records || []
     const tp = await request.get('/tasks', { params: { page: 0, size: 50 } })
     tasks.value = tp.records || []

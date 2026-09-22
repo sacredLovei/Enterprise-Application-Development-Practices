@@ -1,14 +1,16 @@
 <script setup>
 // S99-b：告警列表子页（母项）——满幅检索 + 表格，详情跳独立子路由
 // 业务逻辑与原 Alarms.vue 列表部分一致（防抖检索 / 5s 自动刷新 / 竞态守卫 / 深分页防护）
+// S103：分类过滤——默认只显示安防类告警，设备运维类需主动选择才可见
 import { ref, onMounted, onUnmounted } from 'vue'
 import { useRouter } from 'vue-router'
 import request from '../api/request'
 import { formatTime } from '../utils/time'
+import { typeLabel } from '../utils/alarmTypes'
 
 const router = useRouter()
 
-const form = ref({ alarmType: '', level: '', deviceId: '', keyword: '', from: 'now-24h', to: 'now' })
+const form = ref({ category: 'SECURITY', alarmType: '', level: '', deviceId: '', keyword: '', from: 'now-24h', to: 'now' })
 const devices = ref([])
 const page = ref(0)
 const size = 15
@@ -28,6 +30,7 @@ async function search() {
   const my = ++seq
   try {
     const data = await request.post('/search/alarms', {
+      category: form.value.category || null,
       alarmType: form.value.alarmType || null,
       level: form.value.level || null,
       deviceId: form.value.deviceId || null,
@@ -88,9 +91,15 @@ onUnmounted(() => { clearInterval(timer); clearTimeout(debounceTimer); clearInte
       <span class="hint" style="margin:0">MongoDB 权威 + Elasticsearch 检索副本 · 每 5 秒自动刷新 · 筛选即输即查</span>
     </div>
     <div class="form-row">
+      <select v-model="form.category" @change="onFilterInput" title="设备运维类告警（过热/低电/离线）默认隐藏">
+        <option value="SECURITY">安防告警（默认）</option>
+        <option value="DEVICE">设备运维告警</option>
+        <option value="">全部告警</option>
+      </select>
       <select v-model="form.alarmType" @change="onFilterInput">
         <option value="">全部类型</option>
         <option value="PERIMETER_BREACH">周界入侵</option>
+        <option value="FIRE_SMOKE">烟火告警</option>
         <option value="DEVICE_OVERHEAT">设备过热</option>
         <option value="BATTERY_LOW">电量不足</option>
         <option value="DEVICE_OFFLINE">设备离线</option>
@@ -123,7 +132,7 @@ onUnmounted(() => { clearInterval(timer); clearTimeout(debounceTimer); clearInte
       <tbody>
         <tr v-for="a in result.records" :key="a.alarmId" class="row-click" @click="openDetail(a.alarmId)">
           <td class="mono">{{ a.alarmId }}</td>
-          <td>{{ a.alarmType }}</td>
+          <td>{{ typeLabel(a.alarmType) }}</td>
           <td><span class="badge" :class="a.level === 'CRITICAL' ? 'critical' : 'warn'">{{ a.level }}</span></td>
           <td>{{ a.deviceId }}</td>
           <td class="desc" :title="a.description">{{ a.description }}</td>
