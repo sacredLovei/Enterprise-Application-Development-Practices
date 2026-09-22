@@ -541,3 +541,13 @@
 - **产出物**：simulator/backend/web 变更（分步提交）
 - **验收结论**（2026-09-22）：**全部达到**。提交链：S104-a 仿真器 11a24ca → S104-b 后端校验 5670c93 → S104-c 前端 38238a8 → 修复 4a1c031 → 部署（backend/simulator 镜像重建 + 容器 Recreate）。端到端实测：① **越界派单 HTTP 400**（targetLng=116.4050 园区外拒绝，"目标位置必须在园区范围内，不可外派"）✓；② 园内派单（加工车间坐标）正常下发 ✓；③ 设备沿 8 点环线巡逻散开（docs/_s104-final.png：四台分布于园区四段）✓；④ 园区边界虚线 + 基地/加工车间标记在总览与派单页同时可见 ✓；⑤ **部署陷阱记录**：compose build 与 force-recreate 分离执行导致容器跑旧镜像（多根组件白屏级症状——越界不拒绝），改用 `up -d --build --force-recreate` 原子化；vite build 被 WorkBuddy 安全钩子拦截 dist 批量删除（SAF_DELETE_BULK_CONFIRM）→ emptyOutDir=false 覆盖式构建
 - **提交**：11a24ca / 5670c93 / 38238a8 / 4a1c031；本收尾提交（HEAD）
+
+### S105 任务悬挂对账（用户反馈：重启后上次未完成任务永久"执行中"）
+- **状态**：done
+- **根因**：任务状态机为"回执驱动"（TaskService.applyReceipt，MongoDB 持久），而真实执行态（currentTaskId/taskQueue）只存在于仿真器 JVM 内存；整机或仿真器容器重启后 Kafka 消费组 offset 已提交、task.command 旧指令不重放，仿真器回到默认园区巡逻（TelemetryGenerator 初始 mode=PATROL），遗留 DISPATCHED/RUNNING 任务永远等不到下一条回执 → 状态永久悬挂。仅后端重启不受影响（task.log 回执在 Kafka 有保留，重启后照常消费）
+- **方案**（新增 TaskReconcileService，两层兜底，均幂等条件更新、双实例并发安全）：
+  1. **启动对账**：ApplicationReadyEvent 时把派发时间早于宽限期（task.reconcile-grace-seconds，默认 60s）的 DISPATCHED/RUNNING 任务置 FAILED（系统重启中断）+ finishTime + 补 FAILED 回执日志（任务详情时间线可见终结时刻）
+  2. **超时兜底**：每 60 秒扫描执行超过 task.stale-minutes（默认 30 分钟）仍未终结的任务置 FAILED——覆盖启动宽限窗口残余、单实例滚动重启、回执丢失等边角场景
+- **取舍**：单后端滚动重启时正在执行且已过宽限期的任务也会如实标 FAILED（设备后续 DONE 回执因状态已终态不生效，与 TC022 取消受理同口径）——宁可如实标失败，不留永久"执行中"的幽灵任务
+- **验收结论**（2026-09-22）：达到。端到端实测：① 派 AREA_COVER 至 UAV-001 → RUNNING → 重启 backend-1/2 + uav-sim-1 → 后端就绪即打日志"启动对账：清算遗留未终结任务 1 个"，任务置 FAILED 且 finishTime 回填 ✓；② **新镜像首次部署即顺手清算历史悬挂任务**（TASK-20260922123707-42e43b71，RUNNING 悬挂 4 小时+，正是本 bug 的存量实例）✓；③ 重启后新派 POINT_REVIEW 正常 RUNNING→DONE 回归 ✓；④ 超时兜底与启动对账共用同一清算路径（代码路径已实测）。构建：mvn package BUILD SUCCESS（离线仓无 clean 插件，继续沿用不带 clean 的 package）；部署 up -d --build --force-recreate backend-1/2；**部署注意：backend 容器重建后 IP 变化，nginx upstream 缓存旧 IP → 502，需 docker restart nginx**
+- **提交**：73e4d21；本收尾提交（HEAD）
