@@ -135,10 +135,15 @@ public abstract class DeviceSimulator {
     }
 
     protected void emitAlarm(String alarmType, String level, String description) {
+        emitAlarmAt(track.currentLng(), track.currentLat(), alarmType, level, description);
+    }
+
+    /** S103：带指定坐标的告警产生（烟火告警固定发生于加工车间位置，不随设备移动）。 */
+    protected void emitAlarmAt(double lng, double lat, String alarmType, String level, String description) {
         String alarmId = "ALM-" + UUID.randomUUID().toString().substring(0, 8);
         AlarmMsg msg = new AlarmMsg(
                 alarmId, deviceId, deviceType, alarmType, level, description,
-                track.currentLng(), track.currentLat(),
+                lng, lat,
                 System.currentTimeMillis());
         send("inspection.alarm", msg);
         // S72：同步产生影像元数据（BUG-008 设计差异兑现），打通 inspection.image.meta 链路
@@ -146,7 +151,7 @@ public abstract class DeviceSimulator {
                 "IMG-" + UUID.randomUUID().toString().substring(0, 8),
                 deviceId, deviceType,
                 "UAV".equals(deviceType) ? "uav_patrol" : "dog_infrared",
-                track.currentLng(), track.currentLat(), System.currentTimeMillis(), alarmId);
+                lng, lat, System.currentTimeMillis(), alarmId);
         send("inspection.image.meta", meta);
         log.info("告警产生 {} {} {} deviceId={}（含影像元数据 {}）",
                 alarmType, level, description, deviceId, meta.imageId());

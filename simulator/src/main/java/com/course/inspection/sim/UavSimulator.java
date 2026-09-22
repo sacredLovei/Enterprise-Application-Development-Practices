@@ -43,7 +43,12 @@ public class UavSimulator extends DeviceSimulator {
     /** 随机隐患发现：每 30 秒以约 5% 概率产生周界入侵告警（演示数据，FR-1.4 语义）。
      *  S63 调整：原 15% 概率下告警流入约 0.6 条/分钟，与 2 台机器狗复核吞吐（每单 1~2 分钟）
      *  持平偏紧，复核队列持续积压；降至 5%（约 0.2 条/分钟）匹配复核容量（配合 D-22 派单节流）。
-     *  S72：每次巡逻扫描同时产生一张巡逻影像元数据（uav_patrol，无告警关联）。 */
+     *  S72：每次巡逻扫描同时产生一张巡逻影像元数据（uav_patrol，无告警关联）。
+     *  S103：另以 3% 概率发现"加工车间"烟火——FIRE_SMOKE CRITICAL（安防类，告警坐标固定为
+     *  加工车间位置而非设备当前位置；REVIEWABLE_TYPES 已含，走机器狗复核闭环）。 */
+    private static final double WORKSHOP_LNG = 116.3977;
+    private static final double WORKSHOP_LAT = 39.9095;
+
     @Scheduled(fixedDelay = 30_000)
     public void patrolScan() {
         if (!isCommUp() || isPoweredOff()) {
@@ -54,6 +59,11 @@ public class UavSimulator extends DeviceSimulator {
                 deviceId, deviceType, "uav_patrol",
                 track.currentLng(), track.currentLat(), System.currentTimeMillis(), null);
         send("inspection.image.meta", photo);
+        if (random.nextDouble() < 0.03) {
+            emitAlarmAt(WORKSHOP_LNG, WORKSHOP_LAT, "FIRE_SMOKE", "CRITICAL",
+                    "无人机巡检发现加工车间疑似烟火，立即复核处置");
+            return;
+        }
         if (random.nextDouble() >= 0.05) {
             return;
         }
