@@ -86,32 +86,23 @@ public class AlarmSearchService {
             if (StringUtils.hasText(q.status())) {
                 filters.add(term("status", q.status()));
             }
-            // S103：分类过滤（类型静态映射派生，见 AlarmCategories）
-            if ("SECURITY".equals(q.category())) {
-                filters.add(co.elastic.clients.elasticsearch._types.query_dsl.Query.of(b -> b
-                        .terms(t -> t.field("alarmType")
-                                .terms(v -> v.value(AlarmCategories.SECURITY_TYPES.stream()
-                                        .map(co.elastic.clients.elasticsearch._types.FieldValue::of)
-                                        .toList())))));
-            } else if ("DEVICE".equals(q.category())) {
-                filters.add(co.elastic.clients.elasticsearch._types.query_dsl.Query.of(b -> b
-                        .terms(t -> t.field("alarmType")
-                                .terms(v -> v.value(AlarmCategories.DEVICE_TYPES.stream()
-                                        .map(co.elastic.clients.elasticsearch._types.FieldValue::of)
-                                        .toList())))));
-            } else if ("IMPORTANT".equals(q.category())) {
-                // 主页口径：安防类全部 + 设备类中已升级 CRITICAL 的（如异常离线过久）
-                filters.add(co.elastic.clients.elasticsearch._types.query_dsl.Query.of(b -> b
-                        .bool(bb -> bb.should(java.util.List.of(
-                                co.elastic.clients.elasticsearch._types.query_dsl.Query.of(x -> x
-                                        .terms(t -> t.field("alarmType")
-                                                .terms(v -> v.value(AlarmCategories.SECURITY_TYPES.stream()
-                                                        .map(co.elastic.clients.elasticsearch._types.FieldValue::of)
-                                                        .toList())))),
-                                co.elastic.clients.elasticsearch._types.query_dsl.Query.of(x -> x
-                                        .term(t -> t.field("level").value("CRITICAL"))))
-                        ).minimumShouldMatch("1"))));
-            }
+                co.elastic.clients.elasticsearch._types.query_dsl.Query importantShould = null;
+                if ("SECURITY".equals(q.category())) {
+                    filters.add(termsQuery("alarmType", AlarmCategories.SECURITY_TYPES));
+                } else if ("DEVICE".equals(q.category())) {
+                    filters.add(termsQuery("alarmType", AlarmCategories.DEVICE_TYPES));
+                } else if ("IMPORTANT".equals(q.category())) {
+                    // 主页口径：安防类全部 + 设备类中已升级 CRITICAL 且未处置的（异常离线过久；
+                    // 已 RESOLVED 的历史升级记录不计入）。注意：should+minimumShouldMatch 必须在
+                    // query 上下文（musts）——放 filter 上下文会被 ES 忽略（S103 实测）
+                    importantShould = co.elastic.clients.elasticsearch._types.query_dsl.Query.of(b -> b.bool(bb -> bb
+                            .should(termsQuery("alarmType", AlarmCategories.SECURITY_TYPES))
+                            .should(co.elastic.clients.elasticsearch._types.query_dsl.Query.of(x -> x
+                                    .bool(yb -> yb.filter(java.util.List.of(
+                                            term("level", "CRITICAL"),
+                                            termsQuery("status", java.util.List.of("PENDING", "CONFIRMED")))))))
+                            .minimumShouldMatch("1")));
+                }
 
             String from = StringUtils.hasText(q.from()) ? q.from() : "now-24h";
             String to = StringUtils.hasText(q.to()) ? q.to() : "now";
@@ -125,6 +116,10 @@ public class AlarmSearchService {
             }
 
             List<co.elastic.clients.elasticsearch._types.query_dsl.Query> musts = new ArrayList<>();
+            if (importantShould != null) {
+                musts.add(importantShould);   // S103：IMPORTANT 走 query 上下文
+            }
+
             if (StringUtils.hasText(q.keyword())) {
                 musts.add(co.elastic.clients.elasticsearch._types.query_dsl.Query.of(b -> b
                         .match(m -> m.field("description").query(q.keyword()))));
@@ -212,5 +207,14 @@ public class AlarmSearchService {
     private static co.elastic.clients.elasticsearch._types.query_dsl.Query term(String field, String value) {
         return co.elastic.clients.elasticsearch._types.query_dsl.Query.of(b -> b
                 .term(t -> t.field(field).value(value)));
+    }
+
+    /** S103：terms 精确过滤（分类口径共用）。 */
+    private static co.elastic.clients.elasticsearch._types.query_dsl.Query termsQuery(String field, java.util.Collection<String> values) {
+        return co.elastic.clients.elasticsearch._types.query_dsl.Query.of(b -> b
+                .terms(t -> t.field(field)
+                        .terms(v -> v.value(values.stream()
+                                .map(co.elastic.clients.elasticsearch._types.FieldValue::of)
+                                .toList()))));
     }
 }

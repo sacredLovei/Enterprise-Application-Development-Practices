@@ -15,6 +15,9 @@ export default defineConfig({
   },
   build: {
     outDir: 'dist',
+    // S104：emptyOutDir=false——WorkBuddy 安全钩子会拦截 vite 清空 dist 的批量删除导致构建中断；
+    // 覆盖式构建（旧 hash chunk 残留不影响 index.html 引用，定期手动清理）
+    emptyOutDir: false,
     sourcemap: false
   }
 })

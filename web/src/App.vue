@@ -97,7 +97,7 @@ async function logout() {
           <AppIcon :name="theme === 'dark' ? 'sun' : 'moon'" :size="14" />
           <span>{{ theme === 'dark' ? '亮色模式' : '暗色模式' }}</span>
         </button>
-        <span class="ver">v0.7 · 空地协同</span>
+        <span class="ver">v0.8 · 空地协同</span>
       </div>
     </aside>
 
