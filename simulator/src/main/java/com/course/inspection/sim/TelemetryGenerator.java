@@ -14,23 +14,30 @@ public class TelemetryGenerator {
     public enum Mode { PATROL, PATH, GOTO, LOITER, SWEEP, HOME }
 
     private static final double ARRIVE_METERS = 10.0;
-    /** 基地（返航目的地）。 */
-    public static final double HOME_LNG = 116.3974;
-    public static final double HOME_LAT = 39.9092;
+    /** 基地（返航目的地）。S104：基地位于园区西南内侧。 */
+    public static final double HOME_LNG = 116.3956;
+    public static final double HOME_LAT = 39.9082;
 
-    /** 周界航点（园区周界一圈）。 */
+    /**
+     * 周界航点（S104：大型工业园区巡逻环线，8 点含内凹路口，顺时针一圈）。
+     * 园区范围 lng 116.3952~116.4000 × lat 39.9076~39.9110（约 425m × 380m）。
+     */
     private static final List<double[]> WAYPOINTS = List.of(
-            new double[]{116.3968, 39.9088},
-            new double[]{116.3982, 39.9088},
-            new double[]{116.3982, 39.9102},
-            new double[]{116.3968, 39.9102});
+            new double[]{116.3954, 39.9078},
+            new double[]{116.3998, 39.9078},
+            new double[]{116.3998, 39.9108},
+            new double[]{116.3976, 39.9108},
+            new double[]{116.3976, 39.9092},
+            new double[]{116.3964, 39.9092},
+            new double[]{116.3964, 39.9108},
+            new double[]{116.3954, 39.9108});
 
     private final Random random = new Random();
 
     private Mode mode = Mode.PATROL;
     private double lng;
     private double lat;
-    private int waypointIndex = random.nextInt(4);
+    private int waypointIndex = random.nextInt(WAYPOINTS.size());
     private double progress = random.nextDouble();
     private int loopsCompleted = 0;
     private boolean loopDoneFlag = false;
