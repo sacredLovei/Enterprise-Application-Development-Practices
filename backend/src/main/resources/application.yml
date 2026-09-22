@@ -21,6 +21,13 @@ app:
         display-name: 巡检值班员
         role: OPERATOR
 
+# S105 任务悬挂对账（TaskReconcileService）：重启后遗留的 DISPATCHED/RUNNING 任务清算
+task:
+  # 启动对账宽限期（秒）：启动前该时长内派发的任务不动（防误杀刚下发的任务）
+  reconcile-grace-seconds: ${TASK_RECONCILE_GRACE_SECONDS:60}
+  # 超时兜底阈值（分钟）：执行超过该时长仍未终结的任务自动置 FAILED
+  stale-minutes: ${TASK_STALE_MINUTES:30}
+
 spring:
   application:
     name: inspection-backend
