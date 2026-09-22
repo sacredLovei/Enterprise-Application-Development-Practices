@@ -3,6 +3,7 @@ import { ref, onMounted, onUnmounted, watch } from 'vue'
 import L from 'leaflet'
 import 'leaflet/dist/leaflet.css'
 import { attachThemedBasemap } from '../utils/basemap'
+import { buildCampusLayer, campusContains, CAMPUS_CENTER, CAMPUS_ZOOM } from '../utils/campus'
 
 const props = defineProps({
   modelValue: { type: Object, default: null },   // { lng, lat } | null
@@ -11,6 +12,7 @@ const props = defineProps({
 const emit = defineEmits(['update:modelValue'])
 
 const mapEl = ref(null)
+const outOfCampus = ref(false)   // S104：点击越界提示
 let map, marker, detachBasemap
 
 // S98 修补：选点标记与 DeviceMap 任务目标点同款——红色十字靶标 SVG（替换 📍 emoji），
@@ -23,11 +25,19 @@ const PIN_ICON = L.divIcon({
 })
 
 onMounted(() => {
-  map = L.map(mapEl.value).setView([39.9092, 116.3974], 15)
+  // S104：视野对准扩容后的工业园区，园区边界/基地/车间可视化（选点页可见边界）
+  map = L.map(mapEl.value).setView(CAMPUS_CENTER, CAMPUS_ZOOM)
   detachBasemap = attachThemedBasemap(map)
+  map.addLayer(buildCampusLayer(L))
   map.on('click', e => {
     const lng = Math.round(e.latlng.lng * 1000000) / 1000000
     const lat = Math.round(e.latlng.lat * 1000000) / 1000000
+    // S104（用户需求）：派任务的地点限定在园区内，不可外派——越界点击忽略并提示
+    if (!campusContains(lng, lat)) {
+      outOfCampus.value = true
+      return
+    }
+    outOfCampus.value = false
     setMarker(lng, lat)
     emit('update:modelValue', { lng, lat })
   })
@@ -53,7 +63,13 @@ function setMarker(lng, lat) {
   <div>
     <div ref="mapEl" class="picker-map" :style="{ height }"></div>
     <div class="hint">
-      {{ modelValue ? `已选目标：lng=${modelValue.lng}, lat=${modelValue.lat}` : '点击地图选取目标位置（准星光标处单击）' }}
+      <template v-if="outOfCampus">
+        <span style="color:var(--danger);font-weight:600">✗ 目标位置必须在园区范围内（虚线边界内），不可外派</span>
+      </template>
+      <template v-else-if="modelValue">
+        已选目标：lng={{ modelValue.lng }}, lat={{ modelValue.lat }}
+      </template>
+      <template v-else>点击园区内选取目标位置（蓝虚线为园区边界）</template>
     </div>
   </div>
 </template>
@@ -104,4 +120,17 @@ function setMarker(lng, lat) {
   color: var(--text-3);
 }
 :deep(.leaflet-control-attribution a) { color: var(--text-2); }
+
+/* S104：园区标注（基地/加工车间永久标签） */
+:deep(.campus-label) {
+  background: var(--bg-card);
+  border: 1px solid var(--border-strong);
+  border-radius: 6px;
+  padding: 1px 6px;
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--text-2);
+  box-shadow: var(--shadow-1);
+}
+:deep(.campus-label::before) { display: none; }
 </style>

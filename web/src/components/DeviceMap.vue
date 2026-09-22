@@ -4,6 +4,7 @@ import L from 'leaflet'
 import 'leaflet/dist/leaflet.css'
 import { getTheme } from '../utils/theme'
 import { attachThemedBasemap } from '../utils/basemap'
+import { buildCampusLayer, CAMPUS_CENTER, CAMPUS_ZOOM } from '../utils/campus'
 
 const props = defineProps({
   devices: { type: Array, default: () => [] },
@@ -72,8 +73,11 @@ function onThemeChanged() {
 let detachBasemap = null
 
 onMounted(() => {
-  map = L.map(mapEl.value).setView([39.9092, 116.3974], 16)
+  // S104：视野对准扩容后的大型工业园区
+  map = L.map(mapEl.value).setView(CAMPUS_CENTER, CAMPUS_ZOOM)
   detachBasemap = attachThemedBasemap(map)
+  // S104：园区可视化——边界虚线 + 淡填充 + 基地/加工车间标记
+  map.addLayer(buildCampusLayer(L))
   deviceLayer = L.layerGroup().addTo(map)
   alarmLayer = L.layerGroup().addTo(map)
   targetLayer = L.layerGroup().addTo(map)
