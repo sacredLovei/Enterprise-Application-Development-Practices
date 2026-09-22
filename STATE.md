@@ -126,6 +126,8 @@
 
 | 2026-09-22 | 73e4d21 | **S105 任务悬挂对账（用户反馈"重启后未完成任务永久执行中"）**：根因=任务状态回执驱动（MongoDB 持久）而执行态仅存仿真器内存，整机/仿真器重启后 task.command 不重放 + 仿真器回默认巡逻，遗留 DISPATCHED/RUNNING 永久悬挂。修复 TaskReconcileService：① 启动对账（ApplicationReadyEvent，宽限期 60s 内派发的不动，其余未终结任务置 FAILED+补回执日志）；② 超时兜底（每 60s 扫描执行超 30 分钟任务置 FAILED）；均幂等条件更新双实例安全，配置 task.reconcile-grace-seconds / task.stale-minutes。E2E：RUNNING 中重启 backend×2+uav-sim-1 → 就绪即清算 FAILED ✓；新镜像首启清算历史悬挂任务 1 条（挂 4h+）✓；重启后新任务 RUNNING→DONE 回归 ✓。部署注意：backend 容器重建后 nginx upstream 缓存旧 IP 致 502，需 docker restart nginx | AI |
 
+| 2026-09-22 | a9025c2 | **报告升版 v1.4（用户要求"把本次 bug 写进文档"）**：S105 任务悬挂对账回填课程设计报告——修订记录 v1.4 行；**5.2.4 新增 (6) 回执驱动状态机的悬挂风险与对账兜底**（根因叙述 + TaskReconcileService 代码 + 设计取舍）；5.3 预案表新增 **P-18**（已命中并修复）+ 实施期实测补充段；6.3.3 补登记 **BUG-009**（现象/定位过程/根因/修复/E2E 回归全记录，累计 9 项：修复 8、设计差异 1、遗留 0）；4.4.3 职责与 5.5 小结计数同步。HTML（248,821 B）/docx（252,004 B，4,033 段/51 表）重新生成，zip 解包核验 S105 新标记全命中；文档转换说明产物表更新至 v1.4。**工具坑**：本会话 PowerShell 工具 stdout 通道失灵（副作用仍执行）——用 `命令 | Out-File` 落盘 + bash 验证 flag 文件的方式驱动 to-docx.ps1 成功 | AI |
+
 ## 4. 决策记录（永不删除，只可被新决策取代）
 
 | 编号 | 决策 | 理由 | 状态 |
