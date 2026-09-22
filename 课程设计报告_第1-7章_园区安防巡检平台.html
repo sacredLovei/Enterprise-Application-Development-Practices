@@ -113,6 +113,12 @@ hr { border: none; border-top: 1px solid #ccc; margin: 24px 0; }
 <td>S96~S104 前端与告警体系升级批次：5.2.7 重写为实际实现口径（Esri 灰度底图 + 园区可视化 + SSE 实时位置流），新增 (5) 界面视觉与主题体系、(6) 实时位置流、(7) 告警分类与离线分级升级、(8) 园区扩容与派单限内；5.2.1(4) 补园区与告警仿真；告警类型新增烟火告警（FIRE_SMOKE），设备运维类告警默认隐藏、异常离线过久升级严重</td>
 <td>随本修订提交</td>
 </tr>
+<tr>
+<td>v1.4</td>
+<td>2026-09-22</td>
+<td>S105 任务悬挂对账（运行期真实缺陷 BUG-009，用户报障）：回执驱动任务状态机在整机/仿真器重启后的&quot;永久执行中&quot;悬挂——5.2.4 新增 (6) 启动对账与超时兜底（TaskReconcileService）；5.3 预案表新增 P-18；6.3.3 补登记 BUG-009；4.4.3 任务调度职责同步</td>
+<td>随本修订提交</td>
+</tr>
 </tbody></table>
 <p><strong>本版本（v0.9）对应提交号</strong>：随本修订提交产生（<code>git log</code> HEAD）</p>
 <blockquote>
@@ -1326,7 +1332,7 @@ hr { border: none; border-top: 1px solid #ccc; margin: 24px 0; }
 </tr>
 <tr>
 <td>任务调度 <code>task</code></td>
-<td>任务创建、下发指令、状态流转、日志归档</td>
+<td>任务创建、下发指令、状态流转、日志归档、重启对账与超时兜底（S105）</td>
 <td><code>POST /api/tasks</code>、<code>GET /api/tasks</code>、<code>POST /api/tasks/{id}/cancel</code></td>
 </tr>
 <tr>
@@ -2454,6 +2460,23 @@ public boolean transit(String taskId, Set&lt;String&gt; allowedFrom, String to) 
     return r.getModifiedCount() &gt; 0;
 }
 </code></pre>
+<p><strong>(6) 回执驱动状态机的悬挂风险与对账兜底（S105）</strong></p>
+<p>任务状态机是&quot;回执驱动&quot;的：<code>COMMAND_RECEIVED → RUNNING</code>、<code>DONE → DONE</code>，状态持久于 MongoDB；而任务的<strong>真实执行态</strong>（当前任务 <code>currentTaskId</code>、优先级队列 <code>taskQueue</code>）只存在于仿真器 JVM 内存。这一&quot;持久层有状态、执行器无痕&quot;的不对称在<strong>整机或仿真器容器重启</strong>时暴露：Kafka 消费组 offset 已提交、<code>task.command</code> 旧指令不会重放，仿真器重启后回到默认园区巡逻（轨迹模式初始即 PATROL），遗留的 <code>DISPATCHED/RUNNING</code> 任务永远等不到下一条回执——任务列表出现&quot;永久执行中&quot;的幽灵任务（实测存量一条悬挂 4 小时以上）。仅后端重启不受影响：<code>task.log</code> 回执在 Kafka 有保留，后端恢复后照常消费。</p>
+<p>修复采用<strong>启动对账 + 超时兜底</strong>两层机制（<code>TaskReconcileService</code>，均为幂等条件更新，双实例并发安全）：</p>
+<pre><code class="language-java">/** 启动对账：应用就绪即清算上次运行遗留的未终结任务（宽限期内派发的不动） */
+@EventListener(ApplicationReadyEvent.class)
+public void reconcileOnBoot() {
+    Instant cutoff = Instant.now().minusSeconds(reconcileGraceSeconds);   // task.reconcile-grace-seconds，默认 60
+    abortOpenTasks(cutoff, &quot;系统重启中断&quot;);
+}
+
+/** 超时兜底：每 60 秒扫描执行超过阈值仍未终结的任务（覆盖宽限窗口残余、单实例滚动重启、回执丢失） */
+@Scheduled(fixedDelay = 60_000)
+public void sweepStale() {
+    abortOpenTasks(Instant.now().minus(staleMinutes, ChronoUnit.MINUTES), &quot;执行超时自动终结&quot;);   // task.stale-minutes，默认 30
+}
+</code></pre>
+<p><code>abortOpenTasks</code> 仅当任务仍处于 <code>DISPATCHED/RUNNING</code> 时才条件更新为 <code>FAILED</code> 并回填 <code>finishTime</code>，同时补一条 <code>FAILED</code> 回执日志，使任务详情时间线可见终结时刻。设计取舍：单后端滚动重启时，正在执行且已过宽限期的个别任务也会被如实标记为失败（设备后续 <code>DONE</code> 回执因状态已终态不生效，与 BUG-007 取消受理同口径）——<strong>宁可如实标失败，不留永久&quot;执行中&quot;的悬挂</strong>。</p>
 <h4>5.2.5 Elasticsearch 检索接口实现</h4>
 <p><strong>(1) 启动时幂等建索引（对应 4.5.2 mapping 设计）</strong></p>
 <pre><code class="language-java">@Component
@@ -3163,6 +3186,13 @@ payload = { sub: 用户名, name: 显示名, role: 角色, jti: 令牌编号, ex
 <td>登出时把令牌编号 <code>jti</code> 写入 MongoDB 吊销表（<code>_id=jti</code> + TTL 索引），拦截器逐请求按主键校验——吊销状态必须落在共享存储而非进程内存</td>
 <td><strong>S88 已解决</strong>（见 5.2.8(4)）</td>
 </tr>
+<tr>
+<td>P-18</td>
+<td>整机/仿真器重启后，重启时未完成的任务永久显示&quot;执行中&quot;，设备实际在默认园区巡逻</td>
+<td>任务状态由回执驱动（MongoDB 持久），而执行态仅存仿真器内存；重启后 <code>task.command</code> 不重放、仿真器回默认巡逻，遗留任务永远等不到下一条回执</td>
+<td>新增 <code>TaskReconcileService</code>：启动对账（宽限 60 s）+ 每 60 s 超时兜底（执行超 30 min 置 FAILED），均幂等条件更新并补回执日志（见 5.2.4(6)）</td>
+<td><strong>已命中并修复（S105 / BUG-009）</strong></td>
+</tr>
 </tbody></table>
 <p><strong>实施期实测补充（2026-09-12，S50）</strong>：实施中实际发生的问题与排查过程已按上述模板登记于 6.3.3 缺陷登记表（BUG-001~008），本表预案命中情况如下：</p>
 <ul>
@@ -3178,6 +3208,10 @@ payload = { sub: 用户名, name: 显示名, role: 角色, jti: 令牌编号, ex
 <li><strong>备份恢复比对（S87 新发现）</strong>：仅暂停仿真的导出窗口内，后端离线检测器补发了一条 <code>DEVICE_OFFLINE</code> 告警，导致 <code>alarm</code> 集合比对出现 1 条差异；改为同时暂停全部写入方（4 仿真 + 2 后端）后 6/6 集合计数一致——备份一致性验证必须构造完全静态窗口；</li>
 <li><strong>并发压测（S86 新发现）</strong>：逐条新开 <code>kafka-console-producer</code> 的写法因每次 JVM 启动约 0.5 s，实测只注入 1,122/3,000 条；改为每设备一个长驻生产者 + 定时喂流后注入 3,000/3,000 且丢失 0 条——<strong>压测脚本自身的性能缺陷会伪装成被测系统的缺陷</strong>。</li>
 <li><strong>测试资产陈旧（S90 集中修复，共 7 处）</strong>：鉴权开启与数据清理后复跑历史脚本，暴露出大量&quot;看起来是产品缺陷、实际是测试资产过期&quot;的假失败：① 硬编码告警编号 <code>pt3k-00002</code> 已被 S74 清理（V-5）；② 检索关键词 24 h 窗口内语料为 0（V-7）；③ <code>IT009</code> 仍是&quot;未实现&quot;的硬编码结论，而能力早在 v0.6 已交付；④ 建任务脚本硬编码设备，设备忙时服务端正确返回 409 被记为失败（IT005）；⑤ 固定临时文件名 + 未校验 <code>hdfs dfs -get</code>，S82 重生成证据图后读到遗留文件导致 MD5 误报不一致（TC018）；⑥ 目录规范脚本只认 <code>.png</code>，把 S75 的 5 张 <code>.jpg</code> 现场照片误判为违规（TC019）；⑦ <code>TC021</code> 仍是硬编码 <code>FAIL</code>（TC021）。<strong>教训</strong>：验收脚本必须自给自足（自注入数据、唯一临时文件、按当前状态动态选样），并用 <code>git grep</code> 复核&quot;结论性断言&quot;是否已被后续版本推翻——否则回归报告会持续发出错误的红色信号，掩盖真实缺陷。修复后基线：<code>accept-s50-it</code> 15/0/1、<code>accept-s50-tc</code> 22/0、<code>accept-s50-tc2</code> 14/0、<code>accept-v06</code> 8/0（2026-09-21 实测）。</li>
+</ul>
+<p><strong>实施期实测补充（2026-09-22，S105 运行期报障）</strong>：</p>
+<ul>
+<li><strong>P-18 命中（S105，运行期真实报障）</strong>：用户反馈&quot;重启系统后，上次未完成的任务一直显示执行中，实际设备在默认园区巡逻&quot;。排查确认三处断链——任务状态持久于 MongoDB 但由仿真器回执驱动流转、执行态仅存仿真器内存、Kafka 消费组 offset 已提交致 <code>task.command</code> 不重放；后端无启动对账、无超时兜底，幽灵任务永久悬挂。修复为&quot;启动对账 + 超时兜底&quot;两层清算（详见 5.2.4(6)，缺陷全记录见 6.3.3 BUG-009）。</li>
 </ul>
 <p><strong>【待回填】剩余项</strong>：① 每条问题的真实日志片段与截图（6.3.3 各 BUG 的定位过程已有命令与数据证据，日志截图可补）；② 实际耗时（用于 3.4.3 进度复盘）；③ 小组内&quot;谁排查的、怎么定位的&quot;——个人总结报告素材。</p>
 <h3>5.4 系统运行效果截图</h3>
@@ -3297,7 +3331,7 @@ payload = { sub: 用户名, name: 显示名, role: 角色, jti: 令牌编号, ex
 </tr>
 </tbody></table>
 <h3>5.5 本章小结</h3>
-<h2>本章按 4.4 节的模块划分给出了九个模块的详细设计与关键实现。设备仿真模块采用&quot;航点插值 + 噪声&quot;的连续移动模型保证数据真实感，并以心跳 5 s、遥测 2 s 的双节奏解耦上报；消息接入模块通过统一生产者与&quot;幂等消费 + 手动提交 + 死信兜底&quot;的模板基类，把 Kafka 至少一次投递语义下的可靠性责任集中到一处；存储模块采用 WebHDFS 规避 Hadoop 客户端依赖冲突，并明确&quot;图片本体进 HDFS、元数据进 MongoDB&quot;；数据库模块给出了心跳 upsert、遥测批量写、2dsphere 就近派单、离线检测、任务状态原子流转五个关键实现；检索模块强调 <code>filter</code> 上下文与 Bulk 写入两个性能要点；网关模块给出 Nginx 配置全文及可用于现场演示负载均衡的实例标识设计；认证鉴权模块以&quot;HMAC 自包含令牌 + 拦截器统一校验 + MongoDB 共享吊销表&quot;实现 FR-5.7，并给出 401/403 语义边界与配置化账号的简化说明；统一异常处理模块（S89）把业务异常、参数校验失败、请求体不可解析、参数缺失/类型错误与兜底异常收敛为 <code>{timestamp,status,code,error,message,path[,fields]}</code> 一致契约，保证异常路径 4xx 而非 5xx、500 不泄露异常栈；前端模块给出了&quot;前端不感知后端拓扑&quot;的 API 封装、分页面刷新策略与登录态闭环（路由守卫 + 自动携带令牌 + 401 回跳）。5.3 节汇总了 17 项高频故障的现象、根因与预案，构成本章最具工程价值的部分。第 6 章将基于本章实现与第 3 章需求指标，设计并执行系统测试。</h2>
+<h2>本章按 4.4 节的模块划分给出了九个模块的详细设计与关键实现。设备仿真模块采用&quot;航点插值 + 噪声&quot;的连续移动模型保证数据真实感，并以心跳 5 s、遥测 2 s 的双节奏解耦上报；消息接入模块通过统一生产者与&quot;幂等消费 + 手动提交 + 死信兜底&quot;的模板基类，把 Kafka 至少一次投递语义下的可靠性责任集中到一处；存储模块采用 WebHDFS 规避 Hadoop 客户端依赖冲突，并明确&quot;图片本体进 HDFS、元数据进 MongoDB&quot;；数据库模块给出了心跳 upsert、遥测批量写、2dsphere 就近派单、离线检测、任务状态原子流转与悬挂对账兜底六个关键实现；检索模块强调 <code>filter</code> 上下文与 Bulk 写入两个性能要点；网关模块给出 Nginx 配置全文及可用于现场演示负载均衡的实例标识设计；认证鉴权模块以&quot;HMAC 自包含令牌 + 拦截器统一校验 + MongoDB 共享吊销表&quot;实现 FR-5.7，并给出 401/403 语义边界与配置化账号的简化说明；统一异常处理模块（S89）把业务异常、参数校验失败、请求体不可解析、参数缺失/类型错误与兜底异常收敛为 <code>{timestamp,status,code,error,message,path[,fields]}</code> 一致契约，保证异常路径 4xx 而非 5xx、500 不泄露异常栈；前端模块给出了&quot;前端不感知后端拓扑&quot;的 API 封装、分页面刷新策略与登录态闭环（路由守卫 + 自动携带令牌 + 401 回跳）。5.3 节汇总了 18 项高频故障的现象、根因与预案，构成本章最具工程价值的部分。第 6 章将基于本章实现与第 3 章需求指标，设计并执行系统测试。</h2>
 <h2>第 6 章 系统测试与优化</h2>
 <blockquote>
 <p><strong>本章状态说明</strong>（2026-09-12 更新）：S50 测试执行完毕，6.1.2 数据准备、6.3.1 用例实际结果、6.3.3 缺陷登记、6.6 结果分析与结论、6.7 优化对比均已据实回填（执行脚本 <code>docker/init/accept-s50-*.ps1</code> 可复现）。</p>
@@ -4027,10 +4061,21 @@ python3 tools/gen_alarm_data.py --count 10000 \
 <td><strong>S72 已实现</strong>：仿真巡逻扫描（30s）与告警均产生影像元数据（含 alarmId 关联）→ <code>biz-image-consumer</code> 落 <code>image_meta</code> 集合 → <code>/api/images/meta</code> 查询接口</td>
 <td>回归通过：S72 实测 topic 流转、75s 内入库 8 条、告警关联元数据 1 条；TC005/TC018/TC019 覆盖证据图链路不变</td>
 </tr>
+<tr>
+<td>BUG-009</td>
+<td>TC033（延伸场景）</td>
+<td>整机/仿真器重启后，重启时未完成的任务永久显示&quot;执行中&quot;（实测存量一条悬挂 4 小时以上），设备实际在默认园区巡逻；仅后端重启不复现</td>
+<td>严重</td>
+<td>用户报障 → 复现条件确认为&quot;重启瞬间有任务处于 DISPATCHED/RUNNING&quot;→ 代码走查：任务状态由 <code>task.log</code> 回执驱动（MongoDB 持久），而 <code>currentTaskId</code>/<code>taskQueue</code> 仅存仿真器 JVM 内存 → 再核对 Kafka 消费组 offset 已提交、<code>task.command</code> 不重放；后端无启动对账、无超时清理</td>
+<td>回执驱动状态机与内存态执行器在重启时断链：持久层保留 RUNNING，内存态清零且轨迹回默认巡逻，幽灵任务永远等不到下一条回执</td>
+<td><strong>S105 已修复</strong>：新增 <code>TaskReconcileService</code> 两层兜底——① 启动对账：应用就绪即清算派发超宽限期（60 s）的未终结任务；② 超时兜底：每 60 s 扫描执行超 30 min 的任务；均条件更新置 FAILED + finishTime + 补 FAILED 回执日志（详见 5.2.4(6)）</td>
+<td>E2E 回归：AREA_COVER 执行中重启 backend×2 + uav-sim-1，后端就绪即清算 FAILED 且 finishTime 回填 ✓；新镜像首启清算历史悬挂任务（挂 4 h+）✓；重启后新派任务 RUNNING→DONE 正常 ✓</td>
+</tr>
 </tbody></table>
 <blockquote>
 <p>说明：S50 期间测试脚本自身缺陷（PS 5.1 引号传递、计数提取、批号幂等）经 4 轮修正，属测试资产缺陷而非产品缺陷，过程记录于 STATE 风险 #16 族。</p>
 </blockquote>
+<p><strong>缺陷补充登记（2026-09-22，S105 运行期报障）</strong>——BUG-009 为系统运行期真实报障（用户反馈&quot;重启后上次未完成任务永久执行中&quot;），按表 6-4 模板补登记。累计 9 项：修复 8 项（BUG-001/003/004/005/006/007/008/009）、设计差异 1 项（BUG-002）、遗留 0 项。</p>
 <h3>6.4 接口测试</h3>
 <h4>6.4.1 接口清单与用例（表 6-5）</h4>
 <table>
