@@ -59,10 +59,12 @@ public class AlarmSearchService {
         bulkIndex(List.of(doc));
     }
 
+    /** S103：category 分类过滤——SECURITY 安防类（默认显示）/ DEVICE 设备运维类（默认隐藏）/
+     *  IMPORTANT 主页口径（安防类 + 升级 CRITICAL 的设备离线）；null = 全部。 */
     public record AlarmQuery(String alarmType, String deviceId, String level, String status,
                              String keyword, String from, String to,
                              Double lng, Double lat, String distance,
-                             int page, int size) {
+                             String category, int page, int size) {
     }
 
     public record SearchResult(long total, List<AlarmEsDoc> records) {
@@ -83,6 +85,32 @@ public class AlarmSearchService {
             }
             if (StringUtils.hasText(q.status())) {
                 filters.add(term("status", q.status()));
+            }
+            // S103：分类过滤（类型静态映射派生，见 AlarmCategories）
+            if ("SECURITY".equals(q.category())) {
+                filters.add(co.elastic.clients.elasticsearch._types.query_dsl.Query.of(b -> b
+                        .terms(t -> t.field("alarmType")
+                                .terms(v -> v.value(AlarmCategories.SECURITY_TYPES.stream()
+                                        .map(co.elastic.clients.elasticsearch._types.FieldValue::of)
+                                        .toList())))));
+            } else if ("DEVICE".equals(q.category())) {
+                filters.add(co.elastic.clients.elasticsearch._types.query_dsl.Query.of(b -> b
+                        .terms(t -> t.field("alarmType")
+                                .terms(v -> v.value(AlarmCategories.DEVICE_TYPES.stream()
+                                        .map(co.elastic.clients.elasticsearch._types.FieldValue::of)
+                                        .toList())))));
+            } else if ("IMPORTANT".equals(q.category())) {
+                // 主页口径：安防类全部 + 设备类中已升级 CRITICAL 的（如异常离线过久）
+                filters.add(co.elastic.clients.elasticsearch._types.query_dsl.Query.of(b -> b
+                        .bool(bb -> bb.should(java.util.List.of(
+                                co.elastic.clients.elasticsearch._types.query_dsl.Query.of(x -> x
+                                        .terms(t -> t.field("alarmType")
+                                                .terms(v -> v.value(AlarmCategories.SECURITY_TYPES.stream()
+                                                        .map(co.elastic.clients.elasticsearch._types.FieldValue::of)
+                                                        .toList())))),
+                                co.elastic.clients.elasticsearch._types.query_dsl.Query.of(x -> x
+                                        .term(t -> t.field("level").value("CRITICAL"))))
+                        ).minimumShouldMatch("1"))));
             }
 
             String from = StringUtils.hasText(q.from()) ? q.from() : "now-24h";

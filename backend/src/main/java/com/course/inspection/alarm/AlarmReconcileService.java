@@ -73,7 +73,7 @@ public class AlarmReconcileService {
         while (true) {
             var resp = searchService.search(new AlarmSearchService.AlarmQuery(
                     null, null, null, null, null,
-                    String.valueOf(from.toEpochMilli()), "now", null, null, null, page, 1000));
+                    String.valueOf(from.toEpochMilli()), "now", null, null, null, null, page, 1000));
             if (resp.records().isEmpty()) {
                 break;
             }

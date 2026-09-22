@@ -34,11 +34,11 @@ public class AlarmSearchController {
         this.paths = paths;
     }
 
-    /** POST /api/search/alarms：组合条件检索（类型/设备/等级/时间/地理半径/关键词）。 */
+    /** POST /api/search/alarms：组合条件检索（类型/设备/等级/状态/时间/地理半径/关键词/分类）。 */
     @PostMapping("/api/search/alarms")
     public AlarmSearchService.SearchResult search(@RequestBody(required = false) AlarmSearchService.AlarmQuery query) {
         AlarmSearchService.AlarmQuery q = query == null
-                ? new AlarmSearchService.AlarmQuery(null, null, null, null, null, null, null, null, null, null, 0, 20)
+                ? new AlarmSearchService.AlarmQuery(null, null, null, null, null, null, null, null, null, null, null, 0, 20)
                 : query;
         // S71 深分页防护：ES from+size 累计上限 10,000（与 BUG-006 同类陷阱），显式 400 + 明确提示
         if ((long) q.page() * q.size() + q.size() > 10_000) {
@@ -58,7 +58,7 @@ public class AlarmSearchController {
     public AlarmSearchService.SearchResult list(
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "15") int size) {
-        return search(new AlarmSearchService.AlarmQuery(null, null, null, null, null, "now-24h", "now", null, null, null, page, size));
+        return search(new AlarmSearchService.AlarmQuery(null, null, null, null, null, "now-24h", "now", null, null, null, null, page, size));
     }
 
     /** GET /api/search/stats：24 小时统计聚合。 */
