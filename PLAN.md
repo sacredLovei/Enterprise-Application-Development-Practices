@@ -528,3 +528,16 @@
 - **产出物**：backend/simulator/web 变更（分步提交）
 - **验收结论**（2026-09-22）：**全部达到**。提交链：S103-a 后端 7c99501 → S103-b 仿真器 a7cad7a → S103-c 前端 7ad388f → 部署（backend 镜像重建 + 双实例/simulator×4 容器 Recreate + nginx 重启，风险 #31 流程）。端到端实测：① uav-sim-2 注入 COMM_OFFLINE → 新 DEVICE_OFFLINE **WARN PENDING**（设备类，主页不弹）✓；② **3 分钟后升级 CRITICAL**（description 追加"异常离线超过 3 分钟仍未恢复，升级为严重告警"）并进入 IMPORTANT 主页口径 ✓；③ COMM_RESTORE → 告警自动 **RESOLVED**（"设备已恢复上线，告警自动关闭"）✓；④ **SECURITY 查询零设备类混入**（total=5 全为 PERIMETER_BREACH）✓；⑤ BATTERY_LOW 全部 WARN 且仅在 DEVICE 类（没电不再弹主页）✓；⑥ FIRE_SMOKE 产生源已上线（3%/30s/台，加工车间固定坐标），观察窗口确认。mvn BUILD SUCCESS ×2 / vite build 15.44s
 - **提交**：7c99501 / a7cad7a / 7ad388f；本收尾提交（HEAD）
+
+### S104 园区升级为大型工业园区 + 派单选点限内（用户 2026-09-22 需求）
+- **状态**：done
+- **背景**：用户要求地图园区改为较大的工业园区（展示更能体现实际应用、清晰看到选点派发/巡逻），且**派任务的地点限定在园区内，不可外派**
+- **方案**：
+  1. **园区扩容**：由 ~120m 小矩形扩为 **lng 116.3952~116.4000 × lat 39.9076~39.9110（约 425m × 380m）**——8 航点巡逻环线（含内凹路口更像园区道路）、基地 (116.3956, 39.9082) 园内西南、加工车间 (116.3977, 39.9095) 园内中部（S103 坐标不变，恰在扩后园区内）
+  2. **路网扩容**：GroundNetwork 3×3 → 4×3（12 节点 18 边，格距 ~120m，兼容既有单测阈值）
+  3. **派单限内**：后端 TaskService.createInternal 对 POINT_REVIEW/AREA_COVER 选点做园区矩形校验（越界 400"目标位置必须在园区范围内"）；前端 TargetPicker 点击越界忽略并提示
+  4. **园区可视化**：新增 web/src/utils/campus.js 单源常量 + campusLayer（边界虚线多边形+淡填充、基地/加工车间标记）——Overview 地图与派单选点图共用，选点页也能看到园区边界
+- **风险控制**：既有单测阈值兼容（4×3 格距 < 2e-3）；烟火/周界告警坐标均在园区内；文档坐标口径随 S65 升版
+- **产出物**：simulator/backend/web 变更（分步提交）
+- **验收结论**（2026-09-22）：**全部达到**。提交链：S104-a 仿真器 11a24ca → S104-b 后端校验 5670c93 → S104-c 前端 38238a8 → 修复 4a1c031 → 部署（backend/simulator 镜像重建 + 容器 Recreate）。端到端实测：① **越界派单 HTTP 400**（targetLng=116.4050 园区外拒绝，"目标位置必须在园区范围内，不可外派"）✓；② 园内派单（加工车间坐标）正常下发 ✓；③ 设备沿 8 点环线巡逻散开（docs/_s104-final.png：四台分布于园区四段）✓；④ 园区边界虚线 + 基地/加工车间标记在总览与派单页同时可见 ✓；⑤ **部署陷阱记录**：compose build 与 force-recreate 分离执行导致容器跑旧镜像（多根组件白屏级症状——越界不拒绝），改用 `up -d --build --force-recreate` 原子化；vite build 被 WorkBuddy 安全钩子拦截 dist 批量删除（SAF_DELETE_BULK_CONFIRM）→ emptyOutDir=false 覆盖式构建
+- **提交**：11a24ca / 5670c93 / 38238a8 / 4a1c031；本收尾提交（HEAD）

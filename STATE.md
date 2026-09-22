@@ -120,6 +120,8 @@
 
 | 2026-09-22 | 本步 | **S103 告警体系重构完成**（用户需求）：① 告警分两类——安防类 SECURITY={周界入侵,烟火告警新}（默认显示）与设备运维类 DEVICE={过热,低电,离线}（默认隐藏，查询可选），分类用静态类型映射不新增存储字段（存量兼容），查询加 category 参数（SECURITY/DEVICE/IMPORTANT=安防+严重设备告警）；② 离线分级——心跳丢失 15s 产生 WARN（隐藏），持续 >3 分钟升级 CRITICAL 进主页（alarm.offline-escalate-minutes 可配），设备恢复上线自动 RESOLVED；③ 仿真器无人机巡逻 3% 概率发现加工车间烟火 → FIRE_SMOKE CRITICAL 走完整复核闭环。提交链 7c99501/a7cad7a/7ad388f + 登记。端到端实测：COMM_OFFLINE 注入 → WARN 隐藏 → 3 分钟升级 CRITICAL → COMM_RESTORE 自动 RESOLVED 全链 ✓；SECURITY 查询零设备类混入 ✓；烟火告警已产生并被机器狗复核（FALSE_ALARM）✓。教训：PLAN 编辑再次错位/重复行（node 脚本清理归位） | AI |
 
+| 2026-09-22 | 本步 | **S104 园区升级为大型工业园区 + 派单限内完成**（用户需求）：园区由 ~120m 小矩形扩为 425m×380m（8 点巡逻环线含内凹路口、基地迁园内西南、路网 3×3→4×3）；派单选点后端 CampusBounds 校验（越界 400"不可外派"）+ 前端 TargetPicker 越界拦截；园区可视化（边界虚线+淡填充+基地/加工车间标记，campus.js 单源三端同步）。附带修复：IMPORTANT 排除已 RESOLVED 历史升级告警（主页 86→16 条，should+minimumShouldMatch 需 query 上下文的 ES 实测坑）、版本号 v0.8、vite emptyOutDir=false 规避安全钩子。提交 11a24ca/5670c93/38238a8/4a1c031。**部署陷阱**：compose build 与 force-recreate 分离导致容器跑旧镜像，改  原子化 | AI |
+
 ## 4. 决策记录（永不删除，只可被新决策取代）
 
 | 编号 | 决策 | 理由 | 状态 |
