@@ -118,6 +118,8 @@
 
 | 2026-09-21 | 8683118 | **已推送远端**：master（7016847→8683118，含 S96~S102 全部提交）+ 标签 v0.8 推送至 GitHub origin；历史 v0.1~v0.7 此前已在远端 | AI |
 
+| 2026-09-22 | 本步 | **S103 告警体系重构完成**（用户需求）：① 告警分两类——安防类 SECURITY={周界入侵,烟火告警新}（默认显示）与设备运维类 DEVICE={过热,低电,离线}（默认隐藏，查询可选），分类用静态类型映射不新增存储字段（存量兼容），查询加 category 参数（SECURITY/DEVICE/IMPORTANT=安防+严重设备告警）；② 离线分级——心跳丢失 15s 产生 WARN（隐藏），持续 >3 分钟升级 CRITICAL 进主页（alarm.offline-escalate-minutes 可配），设备恢复上线自动 RESOLVED；③ 仿真器无人机巡逻 3% 概率发现加工车间烟火 → FIRE_SMOKE CRITICAL 走完整复核闭环。提交链 7c99501/a7cad7a/7ad388f + 登记。端到端实测：COMM_OFFLINE 注入 → WARN 隐藏 → 3 分钟升级 CRITICAL → COMM_RESTORE 自动 RESOLVED 全链 ✓；SECURITY 查询零设备类混入 ✓；烟火告警已产生并被机器狗复核（FALSE_ALARM）✓。教训：PLAN 编辑再次错位/重复行（node 脚本清理归位） | AI |
+
 ## 4. 决策记录（永不删除，只可被新决策取代）
 
 | 编号 | 决策 | 理由 | 状态 |

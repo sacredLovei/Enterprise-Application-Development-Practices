@@ -514,3 +514,17 @@
 - **重构（98f24ba，用户复测"还是左边导航栏那种动画"）**：scoped 修复后子页切换仍走外层过渡——根因是外层 Transition key=route.path，子页切换时**整个布局壳被重建**、外层动画覆盖内层；且嵌套两层 out-in Transition × 异步路由组件存在切换失效（新组件不挂载，无头诊断 roots=0）。**重构为单层方案**：App.vue 顶层 Transition name 动态化（watch route.path 按路由深度判定：同模块子页间=slide-left/right 水平滑动，跨模块=page 上移淡出），key=route.path，:duration=170 显式计时；布局壳恢复纯 RouterView。无头验证受限于动画时序（virtual-time 缺 transitionend / timeout 模式 load 即截，风险 #49/#53），以真实浏览器为准
 - **补充（db2cf4c 之后的连续微调）**：移除"清除轨迹"手动按钮后，另按用户反馈调侧边栏导航项（字号 14→15.5px、内边距 11→15px、图标 18→20px）
 - **补充（用户要求）**：移除"清除轨迹"手动按钮——弹窗关闭自动清除已覆盖该场景（clearTrack 函数保留供 track-clear 事件使用）
+
+
+### S103 告警体系重构（用户 2026-09-22 需求：设备类默认隐藏 + 烟火告警 + 离线分级升级）
+- **状态**：done
+- **背景**：用户反馈 ① 设备问题告警（过热/低电/离线）应归为一类，默认不显示、查询可见；② 园区有车床等设备，怕烟火爆炸，新增烟火告警；③ 只有"异常离线过久"才升级严重告警弹主页——现状设备一没电就 BATTERY_LOW + DEVICE_OFFLINE 两条告警弹主页，实际无事发生
+- **方案**：
+  1. **分类**：告警分两类（静态类型映射，不新增存储字段——存量数据天然兼容）：安防类 SECURITY={PERIMETER_BREACH, FIRE_SMOKE 新增}（默认显示）；设备运维类 DEVICE={DEVICE_OVERHEAT, BATTERY_LOW, DEVICE_OFFLINE}（默认隐藏，查询可选）
+  2. **离线分级**：心跳丢失 15s → DEVICE_OFFLINE（WARN，设备类，主页不显示）；**持续离线 >3 分钟**（OFFLINE_ESCALATE_MINUTES）→ 升级 CRITICAL（主页显示）；设备恢复上线 → 未终态 DEVICE_OFFLINE 自动 RESOLVED（description 记录自动关闭原因）
+  3. **烟火告警**：仿真器无人机巡逻扫描 3% 概率发现"加工车间"烟火 → FIRE_SMOKE CRITICAL（安防类），走完整复核闭环（REVIEWABLE_TYPES 已含）
+  4. **查询**：AlarmQuery 加 category 参数（SECURITY/DEVICE/IMPORTANT=安防+严重设备告警[主页用]/null 全部）
+- **风险控制**：不改 Kafka 消息 schema（category 为查询层派生）；升级/恢复幂等条件更新（双实例安全）；前端类型标签统一 utils/alarmTypes.js
+- **产出物**：backend/simulator/web 变更（分步提交）
+- **验收结论**（2026-09-22）：**全部达到**。提交链：S103-a 后端 7c99501 → S103-b 仿真器 a7cad7a → S103-c 前端 7ad388f → 部署（backend 镜像重建 + 双实例/simulator×4 容器 Recreate + nginx 重启，风险 #31 流程）。端到端实测：① uav-sim-2 注入 COMM_OFFLINE → 新 DEVICE_OFFLINE **WARN PENDING**（设备类，主页不弹）✓；② **3 分钟后升级 CRITICAL**（description 追加"异常离线超过 3 分钟仍未恢复，升级为严重告警"）并进入 IMPORTANT 主页口径 ✓；③ COMM_RESTORE → 告警自动 **RESOLVED**（"设备已恢复上线，告警自动关闭"）✓；④ **SECURITY 查询零设备类混入**（total=5 全为 PERIMETER_BREACH）✓；⑤ BATTERY_LOW 全部 WARN 且仅在 DEVICE 类（没电不再弹主页）✓；⑥ FIRE_SMOKE 产生源已上线（3%/30s/台，加工车间固定坐标），观察窗口确认。mvn BUILD SUCCESS ×2 / vite build 15.44s
+- **提交**：7c99501 / a7cad7a / 7ad388f；本收尾提交（HEAD）
